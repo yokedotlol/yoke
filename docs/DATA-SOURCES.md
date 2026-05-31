@@ -9,7 +9,7 @@ Yoke pulls data from a variety of third-party services to build its domain intel
 | Service | What Yoke Uses It For | Link |
 |---------|----------------------|------|
 | **Google PageSpeed Insights** | Core Web Vitals, performance scores, and Lighthouse audits | [developers.google.com/speed](https://developers.google.com/speed/pagespeed/insights/) |
-| **SSL Labs (Qualys)** | TLS/SSL certificate grading and configuration analysis | [ssllabs.com](https://www.ssllabs.com) |
+| **Yoke Fly Probe** | Direct TLS handshake, cipher enumeration, OCSP stapling, Certificate Transparency SCTs, forward secrecy, HTTP content fallback | Self-hosted on Fly.io |
 | **Have I Been Pwned** | Data breach exposure lookups for domains | [haveibeenpwned.com](https://haveibeenpwned.com) |
 | **crt.sh** | Certificate Transparency log searches | [crt.sh](https://crt.sh) |
 | **Cert Spotter (SSLMate)** | Certificate Transparency monitoring | [sslmate.com/certspotter](https://sslmate.com/certspotter) |
@@ -43,10 +43,6 @@ Yoke pulls data from a variety of third-party services to build its domain intel
 ### Have I Been Pwned
 
 Breach data is sourced from [Have I Been Pwned](https://haveibeenpwned.com), created by Troy Hunt. HIBP data is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-
-### SSL Labs
-
-TLS/SSL assessments are performed on [Qualys SSL Labs](https://www.ssllabs.com) servers. Yoke is not affiliated with or officially supported by SSL Labs or Qualys.
 
 ### Green Web Foundation
 

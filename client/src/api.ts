@@ -237,6 +237,11 @@ export interface AnalysisResult {
     protocols: string[];
     key_exchange: string | null;
     error: string | null;
+    ciphers: Array<{ name: string; id: number; strength: string }> | null;
+    ocsp_stapling: boolean | null;
+    has_scts: boolean | null;
+    sct_count: number | null;
+    forward_secrecy: boolean | null;
   } | null;
   headers: { raw: Record<string, string>; security_audit: SecurityCheck[]; security_grade: string } | null;
   tech_stack: TechItem[] | null;

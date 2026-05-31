@@ -332,6 +332,21 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// HTTP content fallback probe — full HTTP fetch from Fly's IPs
+	if r.URL.Path == "/probe-http" {
+		domain := r.URL.Query().Get("domain")
+		if domain == "" || !domainRe.MatchString(domain) {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, `{"error":"invalid or missing domain parameter"}`, 400)
+			return
+		}
+		result := probeHTTP(domain)
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-cache")
+		json.NewEncoder(w).Encode(result)
+		return
+	}
+
 	// PageSpeed Insights proxy — avoids Cloudflare Worker IP blocks
 	if r.URL.Path == "/pagespeed" {
 		domain := r.URL.Query().Get("domain")
@@ -519,22 +534,35 @@ func tryIpWhois(ip string) *GeoResult {
 
 // ─── SSL Probe ──────────────────────────────────────────────────────
 
+type CipherInfo struct {
+	Name     string `json:"name"`
+	ID       uint16 `json:"id"`
+	Strength string `json:"strength"` // "strong", "acceptable", "weak", "insecure"
+}
+
 type SSLResult struct {
-	Grade       string   `json:"grade"`
-	Issuer      string   `json:"issuer"`
-	Subject     string   `json:"subject"`
-	ValidFrom   string   `json:"valid_from"`
-	ValidTo     string   `json:"valid_to"`
-	KeyAlg      string   `json:"key_alg"`
-	KeySize     int      `json:"key_size"`
-	Protocols   []string `json:"protocols"`
-	ChainDepth  int      `json:"chain_depth"`
-	ChainValid  bool     `json:"chain_valid"`
-	SANs        []string `json:"sans"`
-	Serial      string   `json:"serial"`
-	Fingerprint string   `json:"fingerprint"`
-	ProbeMs     int      `json:"probe_ms"`
-	Error       *string  `json:"error"`
+	Grade          string       `json:"grade"`
+	Issuer         string       `json:"issuer"`
+	Subject        string       `json:"subject"`
+	ValidFrom      string       `json:"valid_from"`
+	ValidTo        string       `json:"valid_to"`
+	KeyAlg         string       `json:"key_alg"`
+	KeySize        int          `json:"key_size"`
+	Protocols      []string     `json:"protocols"`
+	ChainDepth     int          `json:"chain_depth"`
+	ChainValid     bool         `json:"chain_valid"`
+	SANs           []string     `json:"sans"`
+	Serial         string       `json:"serial"`
+	Fingerprint    string       `json:"fingerprint"`
+	ProbeMs        int          `json:"probe_ms"`
+	Error          *string      `json:"error"`
+	// SSL expansion fields
+	Ciphers        []CipherInfo `json:"ciphers"`
+	OCSPStapling   bool         `json:"ocsp_stapling"`
+	SCTCount       int          `json:"sct_count"`
+	HasSCTs        bool         `json:"has_scts"`
+	ForwardSecrecy bool         `json:"forward_secrecy"`
+	KeyExchange    string       `json:"key_exchange"`
 }
 
 func probeSSL(domain string) SSLResult {
@@ -664,22 +692,142 @@ func probeSSL(domain string) SSLResult {
 		serial = fmt.Sprintf("%X", leaf.SerialNumber)
 	}
 
+	// ─── SSL Expansion: OCSP, SCTs, Forward Secrecy, Ciphers ────────
+	ocspStapling := len(connState.OCSPResponse) > 0
+	scts := connState.SignedCertificateTimestamps
+	sctCount := len(scts)
+	hasSCTs := sctCount > 0
+	forwardSecrecy, keyExchange := extractForwardSecrecy(connState)
+
+	// Cipher enumeration (runs in parallel-ish, ~3s per cipher)
+	ciphers := enumerateCiphers(domain)
+
 	return SSLResult{
-		Grade:      grade,
-		Issuer:     leaf.Issuer.String(),
-		Subject:    leaf.Subject.String(),
-		ValidFrom:  leaf.NotBefore.UTC().Format(time.RFC3339),
-		ValidTo:    leaf.NotAfter.UTC().Format(time.RFC3339),
-		KeyAlg:     keyAlg,
-		KeySize:    keySize,
-		Protocols:  protocols,
-		ChainDepth: len(connState.PeerCertificates),
-		ChainValid: chainValid,
-		SANs:       sans,
-		Serial:     serial,
-		ProbeMs:    elapsed,
-		Error:      nil,
+		Grade:          grade,
+		Issuer:         leaf.Issuer.String(),
+		Subject:        leaf.Subject.String(),
+		ValidFrom:      leaf.NotBefore.UTC().Format(time.RFC3339),
+		ValidTo:        leaf.NotAfter.UTC().Format(time.RFC3339),
+		KeyAlg:         keyAlg,
+		KeySize:        keySize,
+		Protocols:      protocols,
+		ChainDepth:     len(connState.PeerCertificates),
+		ChainValid:     chainValid,
+		SANs:           sans,
+		Serial:         serial,
+		ProbeMs:        int(time.Since(start).Milliseconds()),
+		Error:          nil,
+		Ciphers:        ciphers,
+		OCSPStapling:   ocspStapling,
+		SCTCount:       sctCount,
+		HasSCTs:        hasSCTs,
+		ForwardSecrecy: forwardSecrecy,
+		KeyExchange:    keyExchange,
 	}
+}
+
+// classifyCipher returns a strength rating for a TLS cipher suite.
+func classifyCipher(cs *tls.CipherSuite) string {
+	if cs == nil {
+		return "unknown"
+	}
+	// Insecure ciphers are in tls.InsecureCipherSuites()
+	for _, ic := range tls.InsecureCipherSuites() {
+		if ic.ID == cs.ID {
+			return "insecure"
+		}
+	}
+	name := cs.Name
+	// Weak: CBC mode ciphers (vulnerable to padding oracles), non-ECDHE, 3DES
+	if strings.Contains(name, "3DES") {
+		return "weak"
+	}
+	if strings.Contains(name, "CBC") && !strings.Contains(name, "ECDHE") {
+		return "weak"
+	}
+	// Strong: TLS 1.3 suites or ECDHE+AESGCM/CHACHA
+	for _, v := range cs.SupportedVersions {
+		if v == tls.VersionTLS13 {
+			return "strong"
+		}
+	}
+	if strings.Contains(name, "ECDHE") && (strings.Contains(name, "GCM") || strings.Contains(name, "CHACHA")) {
+		return "strong"
+	}
+	return "acceptable"
+}
+
+// enumerateCiphers probes a domain to find which cipher suites it supports.
+func enumerateCiphers(domain string) []CipherInfo {
+	var supported []CipherInfo
+
+	// Test TLS 1.3 ciphers (always offered by the client, negotiated by server)
+	conn13, err := safeTLSDial(domain, 5*time.Second, &tls.Config{
+		ServerName:         domain,
+		InsecureSkipVerify: true,
+		MinVersion:         tls.VersionTLS13,
+		MaxVersion:         tls.VersionTLS13,
+	})
+	if err == nil {
+		state := conn13.ConnectionState()
+		cs := tls.CipherSuiteName(state.CipherSuite)
+		supported = append(supported, CipherInfo{
+			Name:     cs,
+			ID:       state.CipherSuite,
+			Strength: "strong", // all TLS 1.3 ciphers are strong
+		})
+		conn13.Close()
+	}
+
+	// Test TLS 1.2 ciphers one-by-one
+	allSuites := append(tls.CipherSuites(), tls.InsecureCipherSuites()...)
+	for _, cs := range allSuites {
+		// Skip TLS 1.3-only suites (already tested above)
+		tls13Only := true
+		for _, v := range cs.SupportedVersions {
+			if v != tls.VersionTLS13 {
+				tls13Only = false
+				break
+			}
+		}
+		if tls13Only {
+			continue
+		}
+
+		conn, err := safeTLSDial(domain, 3*time.Second, &tls.Config{
+			ServerName:         domain,
+			InsecureSkipVerify: true,
+			MaxVersion:         tls.VersionTLS12,
+			MinVersion:         tls.VersionTLS10,
+			CipherSuites:       []uint16{cs.ID},
+		})
+		if err == nil {
+			supported = append(supported, CipherInfo{
+				Name:     cs.Name,
+				ID:       cs.ID,
+				Strength: classifyCipher(cs),
+			})
+			conn.Close()
+		}
+	}
+
+	return supported
+}
+
+// extractForwardSecrecy checks if the negotiated cipher uses ECDHE key exchange.
+func extractForwardSecrecy(state *tls.ConnectionState) (bool, string) {
+	name := tls.CipherSuiteName(state.CipherSuite)
+	// TLS 1.3 always uses forward secrecy
+	if state.Version == tls.VersionTLS13 {
+		return true, "ECDHE (TLS 1.3)"
+	}
+	if strings.Contains(name, "ECDHE") {
+		return true, "ECDHE"
+	}
+	if strings.Contains(name, "DHE") && !strings.Contains(name, "ECDHE") {
+		return true, "DHE"
+	}
+	return false, "RSA (no forward secrecy)"
 }
 
 func computeGrade(state *tls.ConnectionState, leaf *x509.Certificate, chainValid bool, protocols []string) string {
@@ -996,6 +1144,76 @@ func probeTiming(host string) TimingResult {
 
 	result.TotalMs = result.DnsMs + result.TcpMs + result.TlsMs
 	return result
+}
+
+// ─── HTTP Content Fallback Probe ─────────────────────────────────────
+
+type HTTPProbeResult struct {
+	StatusCode    int               `json:"status_code"`
+	Headers       map[string]string `json:"headers"`
+	BodyPreview   string            `json:"body_preview"`
+	ResponseMs    int               `json:"response_time_ms"`
+	RedirectChain []string          `json:"redirect_chain"`
+	FinalURL      string            `json:"final_url"`
+	Error         *string           `json:"error"`
+}
+
+func probeHTTP(domain string) HTTPProbeResult {
+	start := time.Now()
+	chain := []string{}
+	currentURL := "https://" + domain
+
+	client := &http.Client{
+		Timeout:   15 * time.Second,
+		Transport: safeTransport(),
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return fmt.Errorf("too many redirects")
+			}
+			chain = append(chain, req.URL.String())
+			return nil
+		},
+	}
+
+	req, err := http.NewRequest("GET", currentURL, nil)
+	if err != nil {
+		elapsed := int(time.Since(start).Milliseconds())
+		errStr := err.Error()
+		return HTTPProbeResult{ResponseMs: elapsed, Error: &errStr, RedirectChain: chain}
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		elapsed := int(time.Since(start).Milliseconds())
+		errStr := err.Error()
+		return HTTPProbeResult{ResponseMs: elapsed, Error: &errStr, RedirectChain: chain}
+	}
+	defer resp.Body.Close()
+
+	// Collect headers (lowercase keys)
+	headers := make(map[string]string)
+	for k := range resp.Header {
+		headers[strings.ToLower(k)] = resp.Header.Get(k)
+	}
+
+	// Read body preview (first 32KB)
+	bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 32*1024))
+	bodyPreview := string(bodyBytes)
+
+	elapsed := int(time.Since(start).Milliseconds())
+
+	return HTTPProbeResult{
+		StatusCode:    resp.StatusCode,
+		Headers:       headers,
+		BodyPreview:   bodyPreview,
+		ResponseMs:    elapsed,
+		RedirectChain: chain,
+		FinalURL:      resp.Request.URL.String(),
+		Error:         nil,
+	}
 }
 
 // ─── PageSpeed Insights Proxy ────────────────────────────────────────

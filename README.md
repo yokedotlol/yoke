@@ -17,7 +17,7 @@
 
 ## What is Yoke?
 
-Yoke pulls 142 scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
+Yoke pulls 155 scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
 
 ```bash
 curl yoke.lol/stripe.com | jq
@@ -243,7 +243,7 @@ Analysis checks use a registry pattern — each check is a self-contained file u
 
 Yoke is designed to be self-hosted on Cloudflare's free/paid tiers. You'll need a **Workers Paid plan** ($5/mo).
 
-> **Why not the free tier?** The free plan caps CPU time at 10ms per request. A single domain analysis runs ~30 external API calls, parses HTML, scores 142 signals, and writes results to KV/D1 — that needs hundreds of milliseconds of CPU time minimum. The free tier also limits subrequests to 50/request (compare mode alone exceeds that) and KV writes to 1,000/day (a few hundred analyses would exhaust it). The $5/mo paid plan removes all three constraints.
+> **Why not the free tier?** The free plan caps CPU time at 10ms per request. A single domain analysis runs ~30 external API calls, parses HTML, scores 155 signals, and writes results to KV/D1 — that needs hundreds of milliseconds of CPU time minimum. The free tier also limits subrequests to 50/request (compare mode alone exceeds that) and KV writes to 1,000/day (a few hundred analyses would exhaust it). The $5/mo paid plan removes all three constraints.
 
 ### Prerequisites
 

@@ -111,7 +111,6 @@ const API_REGISTRY: { api: string; label: string; url: string }[] = [
   { api: "pagespeed", label: "Google PageSpeed", url: "googleapis.com/pagespeedonline" },
   { api: "hibp", label: "Have I Been Pwned", url: "haveibeenpwned.com" },
   { api: "hackertarget", label: "HackerTarget", url: "api.hackertarget.com" },
-  { api: "ssllabs", label: "SSL Labs", url: "api.ssllabs.com" },
   { api: "ssl", label: "SSL (fallback)", url: "direct TLS connect" },
   { api: "shodan", label: "Shodan InternetDB", url: "internetdb.shodan.io" },
   { api: "greynoise", label: "GreyNoise", url: "api.greynoise.io" },

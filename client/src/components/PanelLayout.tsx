@@ -214,7 +214,39 @@ export function PanelGrid({ tabId, panels, grid = true }: { tabId: string; panel
     );
   });
 
-  return <div className={grid ? "yoke-grid" : "yoke-stack"}>{items}</div>;
+  if (!grid) {
+    return <div className="yoke-stack">{items}</div>;
+  }
+
+  // Split into two independent columns for masonry-style layout.
+  // Full-width items span both; others alternate left/right.
+  const left: React.ReactNode[] = [];
+  const right: React.ReactNode[] = [];
+  const full: { node: React.ReactNode; afterIndex: number }[] = [];
+  let col = 0;
+  let halfIndex = 0;
+  for (let i = 0; i < items.length; i++) {
+    if (ordered[i]?.fullWidth) {
+      full.push({ node: items[i], afterIndex: halfIndex });
+    } else {
+      if (col === 0) left.push(items[i]);
+      else right.push(items[i]);
+      col = 1 - col;
+      halfIndex++;
+    }
+  }
+
+  // If there are full-width items, fall back to a simple flex wrap approach
+  if (full.length > 0) {
+    return <div className="yoke-grid-masonry">{items}</div>;
+  }
+
+  return (
+    <div className="yoke-grid-masonry">
+      <div className="yoke-grid-col">{left}</div>
+      <div className="yoke-grid-col">{right}</div>
+    </div>
+  );
 }
 
 // ─── ResetLayoutButton ───────────────────────────────────────────

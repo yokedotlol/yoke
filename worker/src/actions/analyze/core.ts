@@ -25,7 +25,7 @@ import {
 import { calculateDomainScore } from "./contextual-scoring";
 import { analyzeCookieConsent } from "./cookie-consent";
 import { checkDns, dohQuery, isSubdomain } from "./dns";
-import { analyzeHttp, auditSecurityHeaders, detectTechStack } from "./http";
+import { analyzeHttpWithFallback, auditSecurityHeaders, detectTechStack } from "./http";
 import { type NetworkHealth } from "./network-health";
 import { detectCompression } from "./performance";
 import { auditCookies, detectHosting, isActuallyCloudflare, sanitizeCfHeaders } from "./security";
@@ -478,7 +478,7 @@ async function runAnalysisCore(
   {
     const [dnsResult, httpResult] = await Promise.allSettled([
       checkDns(domain),
-      analyzeHttp(domain, instanceHost, env),
+      analyzeHttpWithFallback(domain, instanceHost, env),
     ]);
     dnsRecords = dnsResult.status === "fulfilled" ? dnsResult.value : [];
     httpAnalysis = httpResult.status === "fulfilled" ? httpResult.value : null;

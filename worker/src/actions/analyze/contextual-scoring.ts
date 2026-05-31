@@ -539,7 +539,7 @@ export function calculateDomainScore(opts: {
   const sslError = opts.ssl?.error;
   if (sslGrade) {
     if (sslGrade === "Valid") {
-      // Fallback confirmed HTTPS works but SSL Labs didn't provide a letter grade
+      // Fallback confirmed HTTPS works but Fly probe didn't provide a letter grade
       findings.push({
         signal: "ssl_grade",
         axis: "security",
@@ -586,7 +586,7 @@ export function calculateDomainScore(opts: {
       });
     }
   } else if (sslError && !opts.httpBlocked) {
-    // SSL Labs couldn't assess but the site was successfully fetched over HTTPS — don't penalize
+    // Fly probe couldn't assess but the site was successfully fetched over HTTPS — don't penalize
     findings.push({
       signal: "ssl_grade",
       axis: "security",
@@ -603,6 +603,58 @@ export function calculateDomainScore(opts: {
       label: "No SSL certificate detected",
       tradeoff: null,
       weight: 3,
+    });
+  }
+
+  // SSL expansion signals: cipher suites, OCSP, forward secrecy, SCTs
+  if (opts.ssl?.ciphers && opts.ssl.ciphers.length > 0) {
+    const weakCiphers = opts.ssl.ciphers.filter((c) => c.strength === "weak" || c.strength === "insecure");
+    if (weakCiphers.length > 0) {
+      findings.push({
+        signal: "ssl_weak_ciphers",
+        axis: "security",
+        severity: contextualSeverity("medium", arch, { commerce: "high", institutional: "high" }),
+        label: `${weakCiphers.length} weak/insecure cipher suite${weakCiphers.length > 1 ? "s" : ""} offered`,
+        tradeoff: "Disabling weak ciphers may drop support for very old clients (IE 10, Android 4.x).",
+        weight: 2,
+      });
+    }
+  }
+
+  if (opts.ssl?.ocsp_stapling != null) {
+    findings.push({
+      signal: "ssl_ocsp_stapling",
+      axis: "security",
+      severity: opts.ssl.ocsp_stapling ? "good" : "low",
+      label: opts.ssl.ocsp_stapling ? "OCSP stapling enabled" : "OCSP stapling not detected",
+      tradeoff: null,
+      weight: 1,
+    });
+  }
+
+  if (opts.ssl?.forward_secrecy != null) {
+    findings.push({
+      signal: "ssl_forward_secrecy",
+      axis: "security",
+      severity: opts.ssl.forward_secrecy ? "good" : contextualSeverity("medium", arch, { commerce: "high" }),
+      label: opts.ssl.forward_secrecy
+        ? "Forward secrecy enabled"
+        : "No forward secrecy — past sessions vulnerable if key compromised",
+      tradeoff: null,
+      weight: 2,
+    });
+  }
+
+  if (opts.ssl?.has_scts != null) {
+    findings.push({
+      signal: "ssl_certificate_transparency",
+      axis: "security",
+      severity: opts.ssl.has_scts ? "good" : "info",
+      label: opts.ssl.has_scts
+        ? `Certificate Transparency: ${opts.ssl.sct_count} SCT${(opts.ssl.sct_count ?? 0) > 1 ? "s" : ""} present`
+        : "No Certificate Transparency SCTs found",
+      tradeoff: null,
+      weight: 1,
     });
   }
 
@@ -2170,13 +2222,13 @@ export function calculateDomainScore(opts: {
     let blendedScore: number;
     let sourceLabel: string;
     if (hasMobile && hasDesktop) {
-      blendedScore = Math.round(perf?.score! * 0.6 + perfDesktop?.score! * 0.4);
+      blendedScore = Math.round((perf?.score ?? 0) * 0.6 + (perfDesktop?.score ?? 0) * 0.4);
       sourceLabel = "Lighthouse lab (mobile 60% + desktop 40%)";
     } else if (hasMobile) {
-      blendedScore = perf?.score!;
+      blendedScore = perf?.score ?? null;
       sourceLabel = "Lighthouse lab (mobile)";
     } else {
-      blendedScore = perfDesktop?.score!;
+      blendedScore = perfDesktop?.score ?? null;
       sourceLabel = "Lighthouse lab (desktop)";
     }
 

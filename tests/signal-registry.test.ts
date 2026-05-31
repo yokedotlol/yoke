@@ -237,6 +237,6 @@ describe("Signal Registry", () => {
   });
 
   it("registry contains exactly 151 signals", () => {
-    expect(SIGNAL_IDS.length).toBe(151);
+    expect(SIGNAL_IDS.length).toBe(155);
   });
 });

@@ -146,6 +146,92 @@ export function SslPanel({ data }: { data: AnalysisResult }) {
             Certificate details unavailable — only the grade could be determined
           </div>
         )}
+      {ssl.forward_secrecy != null && (
+        <DataRow
+          label="Forward Secrecy"
+          value={
+            <Tooltip
+              text={
+                ssl.forward_secrecy
+                  ? "Past sessions stay safe even if the private key is compromised"
+                  : "Without forward secrecy, compromised keys decrypt past sessions"
+              }
+            >
+              <span
+                className={`badge ${ssl.forward_secrecy ? "badge-good" : "badge-warn"}`}
+                style={{ fontSize: "10px", cursor: "help" }}
+              >
+                {ssl.forward_secrecy ? "✓ Enabled" : "✗ Not enabled"}
+              </span>
+            </Tooltip>
+          }
+        />
+      )}
+      {ssl.ocsp_stapling != null && (
+        <DataRow
+          label="OCSP Stapling"
+          value={
+            <Tooltip
+              text={
+                ssl.ocsp_stapling
+                  ? "Certificate revocation status included in TLS handshake"
+                  : "Client must check revocation status separately"
+              }
+            >
+              <span
+                className={`badge ${ssl.ocsp_stapling ? "badge-good" : "badge-dim"}`}
+                style={{ fontSize: "10px", cursor: "help" }}
+              >
+                {ssl.ocsp_stapling ? "✓ Enabled" : "Not detected"}
+              </span>
+            </Tooltip>
+          }
+        />
+      )}
+      {ssl.has_scts != null && (
+        <DataRow
+          label="Certificate Transparency"
+          value={
+            <Tooltip
+              text={
+                ssl.has_scts
+                  ? `${ssl.sct_count} Signed Certificate Timestamp(s) — certificate is publicly logged`
+                  : "No SCTs found — certificate may not be publicly logged"
+              }
+            >
+              <span
+                className={`badge ${ssl.has_scts ? "badge-good" : "badge-dim"}`}
+                style={{ fontSize: "10px", cursor: "help" }}
+              >
+                {ssl.has_scts ? `✓ ${ssl.sct_count} SCT${(ssl.sct_count ?? 0) > 1 ? "s" : ""}` : "No SCTs"}
+              </span>
+            </Tooltip>
+          }
+        />
+      )}
+      {ssl.ciphers && ssl.ciphers.length > 0 && (
+        <DataRow
+          label="Cipher Suites"
+          value={
+            <div className="flex flex-wrap gap-1.5 justify-end">
+              {ssl.ciphers.map((c) => (
+                <Tooltip key={c.name} text={`${c.name} — ${c.strength}`}>
+                  <span
+                    className={`badge ${c.strength === "strong" ? "badge-good" : c.strength === "acceptable" ? "badge-info" : "badge-warn"}`}
+                    style={{ fontSize: "9px", cursor: "help" }}
+                  >
+                    {c.name
+                      .replace(/^TLS_/, "")
+                      .replace(/^ECDHE_/, "")
+                      .substring(0, 30)}
+                  </span>
+                </Tooltip>
+              ))}
+            </div>
+          }
+          copyValue={ssl.ciphers.map((c) => `${c.name} (${c.strength})`).join("\n")}
+        />
+      )}
       <div className="px-4 py-2" style={{ borderTop: "1px solid var(--border-muted)" }}>
         <a
           href={`https://www.ssllabs.com/ssltest/analyze.html?d=${encodeURIComponent(data.domain)}`}
@@ -153,7 +239,7 @@ export function SslPanel({ data }: { data: AnalysisResult }) {
           rel="noopener noreferrer"
           style={{ fontFamily: "var(--font-ui)", fontSize: "11px", color: "var(--accent)", textDecoration: "none" }}
         >
-          Full analysis on SSL Labs →
+          Deep dive on SSL Labs →
         </a>
       </div>
     </Panel>

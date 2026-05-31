@@ -85,6 +85,11 @@ export interface BlocklistResult {
   listed: boolean;
   detail: string | null;
 }
+export interface SslCipher {
+  name: string;
+  id: number;
+  strength: string; // "strong" | "acceptable" | "weak" | "insecure"
+}
 export interface SslResult {
   grade: string | null;
   issuer: string | null;
@@ -94,6 +99,12 @@ export interface SslResult {
   protocols: string[];
   key_exchange: string | null;
   error: string | null;
+  // SSL expansion fields
+  ciphers: SslCipher[] | null;
+  ocsp_stapling: boolean | null;
+  has_scts: boolean | null;
+  sct_count: number | null;
+  forward_secrecy: boolean | null;
 }
 export interface PerformanceResult {
   score: number | null;

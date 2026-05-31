@@ -203,25 +203,20 @@ export async function checkBlocklists(dnsRecords: DnsRecord[]): Promise<Blocklis
   return results;
 }
 
-// ─── SSL Labs + Direct TLS ───────────────────────────────────────────
+// ─── SSL/TLS + Direct TLS ───────────────────────────────────────────
 
 export async function checkSsl(domain: string, env: Env): Promise<SslResult | null> {
   // Priority 1: Fly probe — direct TLS handshake, most reliable, works for any domain
   const probeResult = await tryFlyProbe(domain, env);
   if (probeResult?.grade) return probeResult;
 
-  // Priority 2: SSL Labs — enrichment with grade/protocols when cached results exist
-  const labsResult = await trySslLabs(domain);
-  if (labsResult?.grade) return labsResult;
-
-  // Priority 3: HTTPS connectivity + crt.sh cert lookup
+  // Priority 2: HTTPS connectivity + crt.sh cert lookup
   const httpsResult = await tryHttpsCrtsh(domain, env.STATS_DB);
   if (httpsResult?.grade) return httpsResult;
 
-  // If all 3 fail, return what we got (prefer probe error > labs error > generic)
+  // If both fail, return what we got
   return (
     probeResult ??
-    labsResult ??
     httpsResult ?? {
       grade: null,
       issuer: null,
@@ -230,6 +225,11 @@ export async function checkSsl(domain: string, env: Env): Promise<SslResult | nu
       valid_to: null,
       protocols: [],
       key_exchange: null,
+      ciphers: null,
+      ocsp_stapling: null,
+      has_scts: null,
+      sct_count: null,
+      forward_secrecy: null,
       error: "SSL check unavailable — all providers failed",
     }
   );
@@ -240,7 +240,7 @@ export async function checkSsl(domain: string, env: Env): Promise<SslResult | nu
 async function tryFlyProbe(domain: string, env: Env): Promise<SslResult | null> {
   try {
     const probeRes = await fetchWithTimeout(`${getFlyProbeUrl(env)}/probe-ssl?domain=${encodeURIComponent(domain)}`, {
-      timeout: 12000,
+      timeout: 20000,
       headers: getFlyAuthHeaders(env),
     });
     if (!probeRes.ok) {
@@ -262,6 +262,13 @@ async function tryFlyProbe(domain: string, env: Env): Promise<SslResult | null> 
       sans: string[];
       serial: string;
       error: string | null;
+      // SSL expansion fields
+      ciphers: Array<{ name: string; id: number; strength: string }> | null;
+      ocsp_stapling: boolean;
+      sct_count: number;
+      has_scts: boolean;
+      forward_secrecy: boolean;
+      key_exchange: string;
     };
 
     if (!data.grade) return null;
@@ -275,6 +282,12 @@ async function tryFlyProbe(domain: string, env: Env): Promise<SslResult | null> 
       protocols: data.protocols || [],
       key_exchange: data.key_alg ? `${data.key_alg} ${data.key_size || ""}`.trim() : null,
       error: data.grade === "T" ? data.error || "Certificate trust issue" : null,
+      // SSL expansion
+      ciphers: data.ciphers ?? null,
+      ocsp_stapling: data.ocsp_stapling ?? null,
+      has_scts: data.has_scts ?? null,
+      sct_count: data.sct_count ?? null,
+      forward_secrecy: data.forward_secrecy ?? null,
     };
   } catch (e) {
     logApiError(env.STATS_DB, {
@@ -283,74 +296,6 @@ async function tryFlyProbe(domain: string, env: Env): Promise<SslResult | null> 
       message: `SSL probe: ${String(e).slice(0, 150)}`,
       domain,
     });
-    return null;
-  }
-}
-
-// ─── SSL: SSL Labs (cached grade + protocol details) ────────────────
-
-async function trySslLabs(domain: string): Promise<SslResult | null> {
-  try {
-    const url = `https://api.ssllabs.com/api/v3/analyze?host=${encodeURIComponent(domain)}&fromCache=on&maxAge=72&all=done`;
-    const res = await fetchWithTimeout(url, { timeout: 10000 });
-    if (!res.ok) return null;
-
-    const data = JSON.parse(await res.text()) as {
-      status: string;
-      endpoints?: Array<{
-        grade?: string;
-        details?: {
-          protocols?: Array<{ name: string; version: string }>;
-          certChains?: Array<{ certIds?: string[] }>;
-        };
-      }>;
-      certs?: Array<{
-        id: string;
-        subject?: string;
-        issuerSubject?: string;
-        notBefore?: number;
-        notAfter?: number;
-        keyAlg?: string;
-        keySize?: number;
-        commonNames?: string[];
-      }>;
-    };
-
-    // SSL Labs only useful when it has cached READY results
-    if (data.status !== "READY" || !data.endpoints?.length) return null;
-
-    const ep = data.endpoints[0];
-    if (!ep) return null;
-
-    const protocols = (ep.details?.protocols ?? []).map((p) => `${p.name} ${p.version}`);
-
-    let issuer: string | null = null;
-    let validFrom: string | null = null;
-    let validTo: string | null = null;
-    let keyExchange: string | null = null;
-
-    const leafCertId = ep.details?.certChains?.[0]?.certIds?.[0];
-    const certs = data.certs ?? [];
-    const leafCert = (leafCertId ? certs.find((c) => c.id === leafCertId) : null) ?? certs[0];
-
-    if (leafCert) {
-      issuer = leafCert.issuerSubject ?? null;
-      validFrom = leafCert.notBefore ? new Date(leafCert.notBefore).toISOString() : null;
-      validTo = leafCert.notAfter ? new Date(leafCert.notAfter).toISOString() : null;
-      keyExchange = leafCert.keyAlg ? `${leafCert.keyAlg} ${leafCert.keySize ?? ""}`.trim() : null;
-    }
-
-    return {
-      grade: ep.grade ?? null,
-      issuer,
-      subject: null,
-      valid_from: validFrom,
-      valid_to: validTo,
-      protocols,
-      key_exchange: keyExchange,
-      error: null,
-    };
-  } catch {
     return null;
   }
 }
@@ -411,6 +356,11 @@ async function tryHttpsCrtsh(domain: string, statsDb?: D1Database): Promise<SslR
       protocols: [],
       key_exchange: null,
       error: null,
+      ciphers: null,
+      ocsp_stapling: null,
+      has_scts: null,
+      sct_count: null,
+      forward_secrecy: null,
     };
   } catch {
     return null;

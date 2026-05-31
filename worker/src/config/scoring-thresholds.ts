@@ -96,7 +96,7 @@ export const SSL_GRADE: ThresholdConfig = {
   axis: "security",
   weight: 3,
   description: "SSL Labs server test grade",
-  source: "Qualys SSL Labs grading: A+/A are best practice, B has minor issues, C+ has configuration problems",
+  source: "TLS grading: A+/A are best practice, B has minor issues, C+ has configuration problems",
   bands: [
     { min: 0, severity: "good", label: "SSL grade {value}" }, // A+, A
     // B, C etc handled by string matching in scoring engine

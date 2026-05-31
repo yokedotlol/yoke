@@ -100,6 +100,48 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       commerce: "No SSL on e-commerce means payment data transmitted in plaintext — PCI-DSS violation.",
     },
   },
+  ssl_weak_ciphers: {
+    axis: "security",
+    label: "Weak Cipher Suites Offered",
+    actionable: true,
+    canBeNonGood: true,
+    effort: "~15 min — server cipher configuration",
+    fixDescription: "Disable weak/insecure cipher suites",
+    weightRange: [2, 2],
+    promptGuidance:
+      "Weak or insecure cipher suites (3DES, RC4, CBC without ECDHE) allow potential downgrade attacks. Disable them in server TLS config.",
+  },
+  ssl_ocsp_stapling: {
+    axis: "security",
+    label: "OCSP Stapling",
+    actionable: true,
+    canBeNonGood: true,
+    effort: "~10 min — server configuration",
+    fixDescription: "Enable OCSP stapling",
+    weightRange: [1, 1],
+    promptGuidance:
+      "OCSP stapling improves TLS handshake speed and privacy by including certificate revocation status in the handshake. Most modern servers support it.",
+  },
+  ssl_forward_secrecy: {
+    axis: "security",
+    label: "Forward Secrecy",
+    actionable: true,
+    canBeNonGood: true,
+    effort: "~15 min — cipher suite configuration",
+    fixDescription: "Enable forward secrecy (ECDHE key exchange)",
+    weightRange: [2, 2],
+    promptGuidance:
+      "Forward secrecy (via ECDHE) ensures that compromising a server's private key doesn't decrypt past sessions. TLS 1.3 provides this by default.",
+  },
+  ssl_certificate_transparency: {
+    axis: "security",
+    label: "Certificate Transparency SCTs",
+    actionable: false,
+    canBeNonGood: true,
+    weightRange: [1, 1],
+    promptGuidance:
+      "Certificate Transparency (CT) logs provide public auditability of issued certificates. SCTs prove the certificate was logged. Most modern CAs include them automatically.",
+  },
   hsts: {
     axis: "security",
     label: "HSTS Enabled",

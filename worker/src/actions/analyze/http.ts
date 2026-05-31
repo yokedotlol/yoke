@@ -1,6 +1,6 @@
 import { fingerprints } from "../../fingerprints";
 import type { Env } from "../../helpers";
-import { boundedText, fetchWithTimeout, isBlockedUrl } from "../../helpers";
+import { boundedText, fetchWithTimeout, getFlyAuthHeaders, getFlyProbeUrl, isBlockedUrl } from "../../helpers";
 import { getHtmlSecurityHeaders } from "../../spa";
 import type { HttpAnalysis, MetaResult, RedirectHop, SecurityHeaderCheck, TechItem } from "./types";
 
@@ -414,4 +414,138 @@ export async function checkRobotsSitemap(
     /* ignore */
   }
   return result;
+}
+
+// ─── HTTP Fallback via Fly Proxy ─────────────────────────────────────
+// When the Worker's direct fetch fails (CF IP blocks, WAF blocks), retry
+// through Fly's infrastructure which has different IPs.
+
+const WAF_BLOCK_SIGNATURES = [
+  "attention required",
+  "access denied",
+  "cloudflare",
+  "please wait",
+  "checking your browser",
+  "blocked by",
+  "security check",
+];
+
+function isLikelyBlocked(status: number, html: string): boolean {
+  if (status === 403 || status === 503) {
+    const lower = html.toLowerCase().slice(0, 2000);
+    return WAF_BLOCK_SIGNATURES.some((sig) => lower.includes(sig));
+  }
+  return false;
+}
+
+export async function analyzeHttpWithFallback(
+  domain: string,
+  instanceHost: string | undefined,
+  env: Env,
+): Promise<HttpAnalysis | null> {
+  // Try Worker's direct fetch first
+  const directResult = await analyzeHttp(domain, instanceHost, env);
+
+  // If direct fetch succeeded with real content, use it
+  if (directResult) {
+    const status = directResult.status_code ?? 0;
+    const html = directResult.html ?? "";
+    if (status >= 200 && status < 400) return directResult;
+    // Check for WAF/block page — if so, try Fly fallback
+    if (!isLikelyBlocked(status, html)) return directResult;
+  }
+
+  // Direct fetch failed or was blocked — try Fly proxy fallback
+  try {
+    const probeUrl = getFlyProbeUrl(env);
+    if (!probeUrl) return directResult;
+
+    const probeRes = await fetchWithTimeout(`${probeUrl}/probe-http?domain=${encodeURIComponent(domain)}`, {
+      timeout: 20000,
+      headers: getFlyAuthHeaders(env),
+    });
+    if (!probeRes.ok) return directResult;
+
+    const data = (await probeRes.json()) as {
+      status_code: number;
+      headers: Record<string, string>;
+      body_preview: string;
+      response_time_ms: number;
+      redirect_chain: string[];
+      final_url: string;
+      error: string | null;
+    };
+
+    if (data.error || !data.status_code) return directResult;
+    if (data.status_code < 200 || data.status_code >= 400) return directResult;
+
+    // Build HttpAnalysis from Fly probe response
+    const headers: Record<string, string> = {};
+    for (const [k, v] of Object.entries(data.headers ?? {})) {
+      headers[k.toLowerCase()] = v;
+    }
+
+    const { audit, grade } = auditSecurityHeaders(headers);
+    const techStack = detectTechStack(headers, data.body_preview);
+
+    const redirects: RedirectHop[] = (data.redirect_chain ?? []).map((url, i) => ({
+      url,
+      status_code: i < (data.redirect_chain?.length ?? 0) - 1 ? 301 : data.status_code,
+      server: null,
+      response_time_ms: 0,
+    }));
+    if (redirects.length === 0) {
+      redirects.push({
+        url: `https://${domain}`,
+        status_code: data.status_code,
+        server: headers.server ?? null,
+        response_time_ms: data.response_time_ms,
+      });
+    }
+
+    const ogTitle =
+      data.body_preview.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+      data.body_preview.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i)?.[1] ??
+      null;
+    const ogDesc =
+      data.body_preview.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+      data.body_preview.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:description["']/i)?.[1] ??
+      null;
+    const ogImage =
+      data.body_preview.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1] ??
+      data.body_preview.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1] ??
+      null;
+    let faviconUrl =
+      data.body_preview.match(/<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)["']/i)?.[1] ?? null;
+    if (faviconUrl && !faviconUrl.startsWith("http")) {
+      try {
+        faviconUrl = new URL(faviconUrl, `https://${domain}`).href;
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return {
+      redirects,
+      headers: { raw: headers, security_audit: audit, security_grade: grade },
+      tech_stack: techStack,
+      meta: {
+        robots_txt: null,
+        robots_txt_exists: false,
+        sitemap_detected: false,
+        sitemap_url: null,
+        sitemap_page_count: null,
+        og_title: ogTitle,
+        og_description: ogDesc,
+        og_image: ogImage,
+        favicon_url: faviconUrl,
+      },
+      final_url: data.final_url || `https://${domain}`,
+      html: data.body_preview,
+      status_code: data.status_code,
+      response_time_ms: data.response_time_ms,
+    };
+  } catch {
+    return directResult;
+  }
 }
