@@ -11,16 +11,24 @@ interface ExploreTabProps {
   onNavigate: (domain: string) => void;
 }
 
-function DomainChip({ domain, onNavigate }: { domain: string; onNavigate: (d: string) => void }) {
+function DomainChip({ domain }: { domain: string }) {
   return (
-    <button type="button" className="domain-pill" onClick={() => onNavigate(domain)} title={`Analyze ${domain}`}>
+    <a
+      href={`/${domain}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="domain-pill"
+      title={`Analyze ${domain} in new tab`}
+      style={{ textDecoration: "none", color: "inherit" }}
+    >
       <Globe size={10} />
       {domain}
-    </button>
+      <ExternalLink size={8} style={{ opacity: 0.5, marginLeft: "2px" }} />
+    </a>
   );
 }
 
-function SubdomainsPanel({ domain, onNavigate }: { domain: string; onNavigate: (d: string) => void }) {
+function SubdomainsPanel({ domain }: { domain: string }) {
   const { data, isPending, error } = useQuery({
     queryKey: ["subdomains", domain],
     queryFn: () => api.getSubdomains({ domain }),
@@ -51,7 +59,7 @@ function SubdomainsPanel({ domain, onNavigate }: { domain: string; onNavigate: (
       ) : (
         <div className="p-3 flex flex-wrap gap-1.5" style={{ maxHeight: "400px", overflowY: "auto" }}>
           {subs.map((sub, _i) => (
-            <DomainChip key={sub} domain={sub} onNavigate={onNavigate} />
+            <DomainChip key={sub} domain={sub} />
           ))}
         </div>
       )}
@@ -59,7 +67,7 @@ function SubdomainsPanel({ domain, onNavigate }: { domain: string; onNavigate: (
   );
 }
 
-function ReverseIPPanel({ ip, onNavigate }: { ip: string; onNavigate: (d: string) => void }) {
+function ReverseIPPanel({ ip }: { ip: string }) {
   const { data, isPending, error } = useQuery({
     queryKey: ["reverseIP", ip],
     queryFn: () => api.getReverseIP({ ip }),
@@ -90,7 +98,7 @@ function ReverseIPPanel({ ip, onNavigate }: { ip: string; onNavigate: (d: string
       ) : (
         <div className="p-3 flex flex-wrap gap-1.5" style={{ maxHeight: "400px", overflowY: "auto" }}>
           {domains.map((d, _i) => (
-            <DomainChip key={d} domain={d} onNavigate={onNavigate} />
+            <DomainChip key={d} domain={d} />
           ))}
         </div>
       )}
@@ -164,7 +172,7 @@ const isInfraDomain = (d: string): boolean => {
   return infraPatterns.some((p) => p.test(d));
 };
 
-function RelatedDomainsPanel({ data, onNavigate }: { data: AnalysisResult; onNavigate: (d: string) => void }) {
+function RelatedDomainsPanel({ data }: { data: AnalysisResult }) {
   // Extract related domains from DNS records
   const related = new Set<string>();
   if (data.dns?.records) {
@@ -207,7 +215,7 @@ function RelatedDomainsPanel({ data, onNavigate }: { data: AnalysisResult; onNav
     >
       <div className="p-3 flex flex-wrap gap-1.5">
         {domains.map((d, _i) => (
-          <DomainChip key={d} domain={d} onNavigate={onNavigate} />
+          <DomainChip key={d} domain={d} />
         ))}
       </div>
     </Panel>
@@ -265,13 +273,13 @@ function RegisterLinks({ domain }: { domain: string }) {
   );
 }
 
-function SuggestionRow({ suggestion, onNavigate }: { suggestion: DomainSuggestion; onNavigate: (d: string) => void }) {
+function SuggestionRow({ suggestion }: { suggestion: DomainSuggestion }) {
   const { domain, available, pricing } = suggestion;
   const tld = domain.split(".").slice(1).join(".");
   const name = domain.split(".")[0];
 
   // Available domains: show domain name as text (not clickable into Yoke) + register links
-  // Taken domains: clickable to analyze in Yoke
+  // Taken domains: clickable to analyze in Yoke (opens in new tab)
   return (
     <div className="suggestion-row">
       <div className="flex items-center gap-2 min-w-0" style={{ flexShrink: 0 }}>
@@ -283,17 +291,18 @@ function SuggestionRow({ suggestion, onNavigate }: { suggestion: DomainSuggestio
             <span style={{ color: "var(--dim)", fontWeight: 400 }}>.{tld}</span>
           </span>
         ) : (
-          <button
-            type="button"
+          <a
+            href={`/${domain}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="domain-pill"
-            onClick={() => onNavigate(domain)}
-            title={`Analyze ${domain}`}
-            style={{ flexShrink: 0 }}
+            title={`Analyze ${domain} in new tab`}
+            style={{ flexShrink: 0, textDecoration: "none", color: "inherit" }}
           >
             <Globe size={10} />
             <span style={{ fontWeight: 600 }}>{name}</span>
             <span style={{ color: "var(--dim)", fontWeight: 400 }}>.{tld}</span>
-          </button>
+          </a>
         )}
         <AvailabilityLabel available={available} />
         {pricing && (
@@ -306,22 +315,23 @@ function SuggestionRow({ suggestion, onNavigate }: { suggestion: DomainSuggestio
         {available === true ? (
           <RegisterLinks domain={domain} />
         ) : available === false ? (
-          <button
-            type="button"
+          <a
+            href={`/${domain}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="domain-pill"
-            onClick={() => onNavigate(domain)}
-            title={`Analyze ${domain}`}
-            style={{ fontSize: "11px" }}
+            title={`Analyze ${domain} in new tab`}
+            style={{ fontSize: "11px", textDecoration: "none", color: "inherit" }}
           >
-            Analyze →
-          </button>
+            Analyze → <ExternalLink size={8} style={{ display: "inline", verticalAlign: "-1px", opacity: 0.5 }} />
+          </a>
         ) : null}
       </div>
     </div>
   );
 }
 
-function SuggestionsPanel({ domain, onNavigate }: { domain: string; onNavigate: (d: string) => void }) {
+function SuggestionsPanel({ domain }: { domain: string }) {
   const { data, isPending, error } = useQuery({
     queryKey: ["suggestions", domain],
     queryFn: () => api.getDomainSuggestions({ domain }),
@@ -378,7 +388,7 @@ function SuggestionsPanel({ domain, onNavigate }: { domain: string; onNavigate: 
           {suggestions
             .filter((s) => s.available === true)
             .map((s, i) => (
-              <SuggestionRow key={`a-${i}`} suggestion={s} onNavigate={onNavigate} />
+              <SuggestionRow key={`a-${i}`} suggestion={s} />
             ))}
 
           {takenCount > 0 && (
@@ -389,7 +399,7 @@ function SuggestionsPanel({ domain, onNavigate }: { domain: string; onNavigate: 
           {suggestions
             .filter((s) => s.available === false)
             .map((s, i) => (
-              <SuggestionRow key={`t-${i}`} suggestion={s} onNavigate={onNavigate} />
+              <SuggestionRow key={`t-${i}`} suggestion={s} />
             ))}
 
           {suggestions.filter((s) => s.available === null).length > 0 && (
@@ -400,7 +410,7 @@ function SuggestionsPanel({ domain, onNavigate }: { domain: string; onNavigate: 
               {suggestions
                 .filter((s) => s.available === null)
                 .map((s, i) => (
-                  <SuggestionRow key={`u-${i}`} suggestion={s} onNavigate={onNavigate} />
+                  <SuggestionRow key={`u-${i}`} suggestion={s} />
                 ))}
             </>
           )}
@@ -410,7 +420,7 @@ function SuggestionsPanel({ domain, onNavigate }: { domain: string; onNavigate: 
   );
 }
 
-export function ExploreTab({ domain, data, onNavigate }: ExploreTabProps) {
+export function ExploreTab({ domain, data }: ExploreTabProps) {
   const ip = data.ip_info?.ip;
 
   return (
@@ -423,14 +433,14 @@ export function ExploreTab({ domain, data, onNavigate }: ExploreTabProps) {
             size={14}
             style={{ display: "inline", marginRight: "6px", verticalAlign: "-2px", color: "var(--accent)" }}
           />
-          Click any domain below to analyze it in Yoke. Discover subdomains, find domains sharing the same IP, and
-          explore related infrastructure.
+          Discover subdomains, find domains sharing the same IP, and explore related infrastructure. Domains open in a
+          new tab so you keep your current analysis.
         </p>
       </div>
-      <SuggestionsPanel domain={domain} onNavigate={onNavigate} />
-      <SubdomainsPanel domain={domain} onNavigate={onNavigate} />
-      {ip && <ReverseIPPanel ip={ip} onNavigate={onNavigate} />}
-      <RelatedDomainsPanel data={data} onNavigate={onNavigate} />
+      <SuggestionsPanel domain={domain} />
+      <SubdomainsPanel domain={domain} />
+      {ip && <ReverseIPPanel ip={ip} />}
+      <RelatedDomainsPanel data={data} />
     </div>
   );
 }
