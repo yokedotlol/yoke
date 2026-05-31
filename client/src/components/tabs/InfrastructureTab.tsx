@@ -29,7 +29,7 @@ export default function InfrastructureTab({ data }: { data: AnalysisResult }) {
     { id: "availability", node: <AvailabilityPanel domain={domain} /> },
     { id: "shodan", node: <ShodanPanel data={data} /> },
     { id: "subdomain-scan", node: <SubdomainScanPanel domain={domain} /> },
-    { id: "recursive-dns", node: <RecursiveDnsPanel domain={domain} /> },
+    { id: "recursive-dns", node: <RecursiveDnsPanel domain={domain} data={data.recursive_dns} /> },
     { id: "redirects", node: <RedirectPanel data={data} /> },
   ];
 

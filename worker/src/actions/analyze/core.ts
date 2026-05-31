@@ -159,6 +159,20 @@ export interface AnalysisResult {
   social_accounts: {
     accounts: Array<{ platform: string; url: string; username: string | null; found_via: string }>;
   } | null;
+  recursive_dns: {
+    domain: string;
+    resolvers: Array<{
+      name: string;
+      provider: string;
+      a_records: string[];
+      aaaa_records: string[];
+      ttl: number | null;
+      status: "ok" | "nxdomain" | "servfail" | "timeout" | "error";
+      response_time_ms: number;
+    }>;
+    consensus: boolean;
+    timestamp: string;
+  } | null;
   [key: string]: unknown;
 }
 
@@ -254,6 +268,7 @@ function makeNxdomainResult(domain: string): AnalysisResult {
     third_party_scripts: null,
     cookie_consent: null,
     social_accounts: null,
+    recursive_dns: null,
   };
 }
 
@@ -649,6 +664,7 @@ export async function runAnalysis(
   const socialAccountsResult = (results.social_accounts ?? { accounts: [] }) as {
     accounts: Array<{ platform: string; url: string; username: string | null; found_via: string }>;
   };
+  const recursiveDnsResult = results.recursive_dns ?? null;
 
   // Build merged meta
   const meta: MetaResult = {
@@ -949,6 +965,7 @@ export async function runAnalysis(
     cookie_consent: cookieConsentResult,
     network_health: networkHealth,
     social_accounts: socialAccountsResult,
+    recursive_dns: recursiveDnsResult,
   };
 
   // ── Post-analysis: score logging, caching, cleanup ───────────────

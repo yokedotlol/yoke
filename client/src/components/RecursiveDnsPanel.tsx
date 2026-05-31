@@ -1,7 +1,7 @@
-import { useMutation } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Globe, Loader2, Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, CheckCircle2, Globe, Loader2 } from "lucide-react";
+import type { RecursiveDnsResult, ResolverResult } from "../api";
 import { api } from "../api";
-import type { RecursiveDnsResult, ResolverResult } from "../utils/types";
 import { Panel } from "./Panel";
 
 function StatusBadge({ status }: { status: ResolverResult["status"] }) {
@@ -51,12 +51,24 @@ function RecordCell({ records, highlight }: { records: string[]; highlight?: boo
   );
 }
 
-export function RecursiveDnsPanel({ domain }: { domain: string }) {
-  const scan = useMutation({
-    mutationFn: () => api.recursiveDns({ domain }),
+interface RecursiveDnsPanelProps {
+  domain: string;
+  /** Pre-loaded data from the main analysis pipeline */
+  data?: RecursiveDnsResult | null;
+}
+
+export function RecursiveDnsPanel({ domain, data: preloaded }: RecursiveDnsPanelProps) {
+  // Only fetch on-demand if no pre-loaded data from the analysis pipeline
+  const query = useQuery({
+    queryKey: ["recursive-dns", domain],
+    queryFn: () => api.recursiveDns({ domain }),
+    enabled: !preloaded,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const data = scan.data as RecursiveDnsResult | undefined;
+  const data: RecursiveDnsResult | undefined = preloaded ?? (query.data as RecursiveDnsResult | undefined);
+  const isPending = !preloaded && query.isPending;
+  const error = !preloaded ? query.error : null;
 
   // Determine if there are discrepancies between resolvers
   function hasDiscrepancy(): boolean {
@@ -76,7 +88,6 @@ export function RecursiveDnsPanel({ domain }: { domain: string }) {
     if (okResolvers.length <= 1) return false;
     const keys = okResolvers.map(getResolverAKey);
     const firstKey = keys[0];
-    // Highlight if this resolver's key differs from the first
     return r.status === "ok" && getResolverAKey(r) !== firstKey;
   }
 
@@ -112,45 +123,21 @@ export function RecursiveDnsPanel({ domain }: { domain: string }) {
         ) : null
       }
     >
-      {!data && !scan.isPending && (
-        <div className="p-4 flex flex-col items-center gap-3">
-          <p style={{ fontFamily: "var(--font-ui)", fontSize: "12px", color: "var(--dim)", textAlign: "center" }}>
-            Queries Google, Cloudflare &amp; Quad9 DNS resolvers to check for consistency.
-          </p>
-          <button
-            onClick={() => scan.mutate()}
-            disabled={scan.isPending}
-            className="flex items-center gap-2 px-4 py-2 rounded-md"
-            style={{
-              background: "var(--accent)",
-              color: "var(--accent-fg)",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: "var(--font-ui)",
-              fontSize: "12px",
-              fontWeight: 600,
-            }}
-          >
-            <Search size={13} />
-            Check DNS Resolution
-          </button>
-        </div>
-      )}
-
-      {scan.isPending && (
+      {isPending && (
         <div className="p-4 flex flex-col items-center gap-2">
           <Loader2 size={18} className="animate-spin" style={{ color: "var(--accent)" }} />
           <p style={{ fontFamily: "var(--font-ui)", fontSize: "12px", color: "var(--dim)" }}>Querying resolvers…</p>
         </div>
       )}
 
-      {scan.error && (
+      {error && (
         <div className="p-4">
           <p style={{ fontFamily: "var(--font-ui)", fontSize: "12px", color: "var(--danger)" }}>
-            Check failed: {String(scan.error)}
+            Check failed: {String(error)}
           </p>
           <button
-            onClick={() => scan.mutate()}
+            type="button"
+            onClick={() => query.refetch()}
             className="mt-2 px-3 py-1 rounded-md"
             style={{
               background: "var(--danger-subtle)",

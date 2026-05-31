@@ -376,6 +376,9 @@ export interface AnalysisResult {
 
   // Network health
   network_health: NetworkHealthData | null;
+
+  // Recursive DNS resolution
+  recursive_dns: RecursiveDnsResult | null;
 }
 
 export interface DnsRecord {
