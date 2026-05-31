@@ -805,7 +805,7 @@ export async function runAnalysis(
   const caaRecordsForTrust =
     (caaAnalysis as { records?: Array<{ tag: string; value: string }> } | null)?.records ?? null;
   const trustSignals = httpProbeSucceeded
-    ? checkTrustSignals({
+    ? await checkTrustSignals({
         headers: effectiveHeaders,
         securityTxt: securityTxt,
         emailAuth,
@@ -816,6 +816,7 @@ export async function runAnalysis(
         waf: wafDetection,
         html,
         hosting,
+        domain,
       })
     : null;
 

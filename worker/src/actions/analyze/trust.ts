@@ -1,6 +1,8 @@
 // ─── Trust Signal Detection ─────────────────────────────────────────
 // Evaluates trust hallmarks from already-captured analysis data.
-// Pure aggregation — no HTTP requests.
+// Probes common operational-transparency paths via HEAD when HTML scanning misses them.
+
+import { fetchWithTimeout } from "../../helpers";
 
 export interface TrustSignal {
   name: string;
@@ -37,9 +39,10 @@ interface TrustInput {
   waf: { detected: boolean; provider: string | null; confidence: string } | null;
   html: string;
   hosting: { provider: string | null; cdn: string | null } | null;
+  domain: string;
 }
 
-export function checkTrustSignals(input: TrustInput): TrustSignals {
+export async function checkTrustSignals(input: TrustInput): Promise<TrustSignals> {
   const signals: TrustSignal[] = [];
   const positive: string[] = [];
   const negative: string[] = [];
@@ -443,7 +446,7 @@ export function checkTrustSignals(input: TrustInput): TrustSignals {
     neutral.push("Links to source code repository");
   }
 
-  // ── Operational transparency (scripts, widgets, badges in HTML) ──
+  // ── Operational transparency (scripts, widgets, badges in HTML + HEAD probes) ──
 
   // Scan first 50KB for embedded third-party operational tool references
   const opsHtml = input.html.slice(0, 50000);
@@ -455,26 +458,41 @@ export function checkTrustSignals(input: TrustInput): TrustSignals {
     { name: "Instatus", group: "Status Page", pattern: /instatus\.com/i },
     { name: "Cachet", group: "Status Page", pattern: /cachethq\.io/i },
     { name: "Hund", group: "Status Page", pattern: /hund\.io/i },
+    { name: "Sorry", group: "Status Page", pattern: /sorryapp\.com/i },
+    { name: "Freshstatus", group: "Status Page", pattern: /freshstatus\.io/i },
     // Status pages (self-hosted — links to /status, /health, /uptime in the HTML)
     { name: "Status Page", group: "Status Page", pattern: /href=["'][^"']*\/status\b/i },
     { name: "Health Endpoint", group: "Status Page", pattern: /href=["'][^"']*\/health\b/i },
     { name: "Uptime Page", group: "Status Page", pattern: /href=["'][^"']*\/uptime\b/i },
-    // Uptime monitoring badges
+    // Uptime monitoring badges (img src patterns)
     { name: "UptimeRobot", group: "Uptime Monitoring", pattern: /uptimerobot\.com/i },
     { name: "Pingdom", group: "Uptime Monitoring", pattern: /pingdom\.com/i },
     { name: "StatusCake", group: "Uptime Monitoring", pattern: /statuscake\.com/i },
+    { name: "Updown", group: "Uptime Monitoring", pattern: /updown\.io/i },
+    { name: "Oh Dear", group: "Uptime Monitoring", pattern: /ohdear\.app/i },
     // Feedback & roadmap widgets
     { name: "Canny", group: "Feedback & Roadmap", pattern: /canny\.io/i },
     { name: "UserVoice", group: "Feedback & Roadmap", pattern: /uservoice\.com/i },
     { name: "Productboard", group: "Feedback & Roadmap", pattern: /productboard\.com/i },
+    { name: "Nolt", group: "Feedback & Roadmap", pattern: /nolt\.io/i },
+    // Changelog widgets
     { name: "Beamer", group: "Changelog Widget", pattern: /getbeamer\.com/i },
     { name: "Headway", group: "Changelog Widget", pattern: /headwayapp\.co/i },
+    { name: "AnnounceKit", group: "Changelog Widget", pattern: /announcekit\.app/i },
+    { name: "Released", group: "Changelog Widget", pattern: /released\.so/i },
+    // Changelog / release notes / roadmap links in HTML
+    { name: "Changelog Page", group: "Changelog", pattern: /href=["'][^"']*\/changelog\b/i },
+    { name: "Release Notes", group: "Changelog", pattern: /href=["'][^"']*\/releases?\b/i },
+    { name: "What's New", group: "Changelog", pattern: /href=["'][^"']*\/whats-new\b/i },
+    { name: "Roadmap Page", group: "Roadmap", pattern: /href=["'][^"']*\/roadmap\b/i },
     // Trust badges
     { name: "Trustpilot", group: "Trust Badge", pattern: /trustpilot\.com/i },
     { name: "BBB", group: "Trust Badge", pattern: /bbb\.org/i },
+    { name: "G2", group: "Trust Badge", pattern: /g2\.com\/products/i },
   ];
 
   let opsCount = 0;
+  const opsGroupsSeen = new Set<string>();
   for (const sig of OPS_SIGNATURES) {
     if (sig.pattern.test(opsHtml)) {
       signals.push({
@@ -487,6 +505,58 @@ export function checkTrustSignals(input: TrustInput): TrustSignals {
       });
       neutral.push(`${sig.name} (${sig.group}) detected`);
       opsCount++;
+      opsGroupsSeen.add(sig.group);
+    }
+  }
+
+  // HEAD-probe fallback: for SPAs and server-rendered pages that don't expose
+  // ops links in the raw HTML, probe common operational-transparency paths.
+  const OPS_PROBE_PATHS: Array<{ name: string; group: string; paths: string[] }> = [
+    { name: "Status Page", group: "Status Page", paths: ["/status", "/system-status"] },
+    { name: "Health Endpoint", group: "Status Page", paths: ["/health", "/healthz", "/healthcheck"] },
+    { name: "Changelog", group: "Changelog", paths: ["/changelog", "/releases", "/whats-new"] },
+    { name: "Roadmap", group: "Roadmap", paths: ["/roadmap"] },
+  ];
+
+  // Only probe groups we haven't already detected via HTML scanning
+  const probesToRun = OPS_PROBE_PATHS.filter((p) => !opsGroupsSeen.has(p.group));
+
+  if (probesToRun.length > 0) {
+    const probeResults = await Promise.allSettled(
+      probesToRun.map(async (probe) => {
+        for (const path of probe.paths) {
+          try {
+            const url = `https://${input.domain}${path}`;
+            const resp = await fetchWithTimeout(url, { method: "HEAD", redirect: "follow", timeout: 5_000 });
+            if (resp.ok && resp.status === 200) {
+              const ct = resp.headers.get("content-type") ?? "";
+              if (ct.includes("text/html") || ct.includes("application/json")) {
+                return probe; // Found
+              }
+            }
+          } catch {
+            /* timeout or network error — skip */
+          }
+        }
+        return null; // Not found
+      }),
+    );
+
+    for (const result of probeResults) {
+      if (result.status === "fulfilled" && result.value) {
+        const probe = result.value;
+        signals.push({
+          name: probe.name,
+          category: "operational",
+          present: true,
+          value: probe.group,
+          severity: "info",
+          importance: "extra",
+        });
+        neutral.push(`${probe.name} (${probe.group}) detected via probe`);
+        opsCount++;
+        opsGroupsSeen.add(probe.group);
+      }
     }
   }
 

@@ -82,6 +82,49 @@ function detectCdn(headers: Record<string, string>): { status: string | null; pr
     return { status: xCache?.toUpperCase() ?? null, provider: "Akamai" };
   }
 
+  // BunnyCDN — server header starts with "BunnyCDN" or cdn-pullzone header present
+  if (headers["server"]?.toLowerCase().startsWith("bunnycdn") || headers["cdn-pullzone"]) {
+    const xCache = headers["x-cache"];
+    return { status: xCache?.toUpperCase() ?? null, provider: "BunnyCDN" };
+  }
+
+  // KeyCDN — server: keycdn or x-edge-location header
+  if (headers["server"]?.toLowerCase() === "keycdn" || headers["x-edge-location"]) {
+    const xCache = headers["x-cache"];
+    return { status: xCache?.toUpperCase() ?? null, provider: "KeyCDN" };
+  }
+
+  // Azure Front Door / Azure CDN — x-azure-ref header
+  if (headers["x-azure-ref"] || headers["x-msedge-ref"]) {
+    const xCache = headers["x-cache"];
+    return { status: xCache?.toUpperCase() ?? null, provider: "Azure CDN" };
+  }
+
+  // Google Cloud CDN — via header containing "google"
+  const via = headers["via"];
+  if (via && /\bgoogle\b/i.test(via)) {
+    const xCache = headers["x-cache"];
+    return { status: xCache?.toUpperCase() ?? null, provider: "Google Cloud CDN" };
+  }
+
+  // StackPath / MaxCDN — x-hw header
+  if (headers["x-hw"]) {
+    const xCache = headers["x-cache"];
+    return { status: xCache?.toUpperCase() ?? null, provider: "StackPath" };
+  }
+
+  // Netlify — x-nf-request-id or server: Netlify
+  if (headers["x-nf-request-id"] || headers["server"]?.toLowerCase() === "netlify") {
+    const xCache = headers["x-cache"];
+    return { status: xCache?.toUpperCase() ?? null, provider: "Netlify" };
+  }
+
+  // Fly.io — fly-request-id header
+  if (headers["fly-request-id"]) {
+    const xCache = headers["x-cache"];
+    return { status: xCache?.toUpperCase() ?? null, provider: "Fly.io" };
+  }
+
   // Generic x-cache (many CDNs)
   const xCache = headers["x-cache"];
   if (xCache) return { status: xCache.toUpperCase(), provider: null };

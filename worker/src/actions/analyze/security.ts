@@ -67,6 +67,31 @@ export const HOSTING_PATTERNS: Array<{
     type: "cdn",
     patterns: { headers: { "x-served-by": /cache/, via: /varnish/i }, rdns: [/fastly/i] },
   },
+  {
+    name: "BunnyCDN",
+    type: "cdn",
+    patterns: { headers: { server: /^bunnycdn/i, "cdn-pullzone": /./ } },
+  },
+  {
+    name: "KeyCDN",
+    type: "cdn",
+    patterns: { headers: { server: /^keycdn$/i, "x-edge-location": /./ } },
+  },
+  {
+    name: "Azure CDN",
+    type: "cdn",
+    patterns: { headers: { "x-azure-ref": /./, "x-msedge-ref": /./ } },
+  },
+  {
+    name: "Google Cloud CDN",
+    type: "cdn",
+    patterns: { headers: { via: /\bgoogle\b/i } },
+  },
+  {
+    name: "StackPath",
+    type: "cdn",
+    patterns: { headers: { "x-hw": /./ }, rdns: [/stackpath/i, /highwinds/i] },
+  },
   { name: "Sucuri WAF", type: "waf", patterns: { headers: { "x-sucuri-id": /./, server: /sucuri/i } } },
   { name: "Imperva/Incapsula", type: "waf", patterns: { headers: { "x-iinfo": /./, "x-cdn": /incapsula/i } } },
   // Hosting providers
