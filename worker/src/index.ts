@@ -17,7 +17,7 @@ import { getSubdomains } from "./actions/subdomains";
 import { getDomainSuggestions } from "./actions/suggestions";
 import { getApiHealth } from "./api-errors";
 import { ALL_THRESHOLDS, SEVERITY_SCORES } from "./config/scoring-thresholds";
-import { EFFORT_MAP, FIX_DESC_MAP, GRADE_THRESHOLDS, NON_ACTIONABLE_SIGNALS } from "./config/signal-registry";
+import { EFFORT_MAP, FIX_DESC_MAP, NON_ACTIONABLE_SIGNALS, TIER_THRESHOLDS } from "./config/signal-registry";
 import { loadData } from "./data/kv-loader";
 import type { VulnerableLibrary } from "./data/vulnerable-libraries";
 import { scanForVulnerableLibraries, VULNERABLE_LIBRARIES } from "./data/vulnerable-libraries";
@@ -877,13 +877,13 @@ export default {
                 "Yoke domain scoring methodology. All thresholds, weights, and severity mappings used to calculate the 6-category composite score.",
               axis_weights: AXIS_WEIGHTS,
               severity_scores: SEVERITY_SCORES,
-              grade_thresholds: GRADE_THRESHOLDS,
+              tier_thresholds: TIER_THRESHOLDS,
               non_actionable_signals: NON_ACTIONABLE_SIGNALS,
               effort_map: EFFORT_MAP,
               fix_desc_map: FIX_DESC_MAP,
               thresholds: ALL_THRESHOLDS,
               archetype_note:
-                "Anchor-and-adjust scoring: baseline 55, penalties scale by severity×weight (critical -4, high -2.5, medium -1.25, low -0.5), good bonus = 2×weight. Composite uses weighted geometric mean over assessed axes (penalizes weak categories). No per-category hard caps; breach grade cap retained (recent breaches >100M pwned cap at B). Categories with <3 scoreable findings are 'Not Assessed' and excluded from composite with weight re-normalization. Grade thresholds: A+≥92, A≥82, B+≥76, B≥70, C+≥64, C≥58, D+≥50, D≥40, F<40. Categories: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12).",
+                "Anchor-and-adjust scoring: baseline 55, penalties scale by severity×weight (critical -4, high -2.5, medium -1.25, low -0.5), good bonus = 2×weight. Composite uses weighted geometric mean over assessed axes (penalizes weak categories). No per-category hard caps; breach tier cap retained (recent breaches >100M pwned cap at Strong). Categories with <3 scoreable findings are 'Not Assessed' and excluded from composite with weight re-normalization. Tier thresholds: Excellent≥90, Strong≥75, Moderate≥60, Weak≥40, Critical<40. Categories: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12).",
             },
             200,
           );

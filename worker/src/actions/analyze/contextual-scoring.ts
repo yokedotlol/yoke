@@ -15,7 +15,7 @@ import {
 } from "../../config/scoring-thresholds";
 import {
   AXIS_WEIGHTS as REGISTRY_AXIS_WEIGHTS,
-  gradeFromComposite as registryGradeFromComposite,
+  tierFromComposite as registryTierFromComposite,
 } from "../../config/signal-registry";
 import { analyzeNsDiversity } from "../../data/ns-providers";
 import { scanForVulnerableLibraries } from "../../data/vulnerable-libraries";
@@ -88,7 +88,7 @@ export interface AxisScore {
 
 export interface DomainScoreResult {
   composite: number;
-  grade: string;
+  tier: string;
   axes: Record<Axis, AxisScore>;
   archetype: ArchetypeResult;
 }
@@ -247,8 +247,8 @@ export function computeComposite(axisScores: Record<Axis, number>, _archetype: A
   return Math.max(0, Math.min(100, Math.round(Math.exp(logSum))));
 }
 
-export function gradeFromComposite(score: number): string {
-  return registryGradeFromComposite(score);
+export function tierFromComposite(score: number): string {
+  return registryTierFromComposite(score);
 }
 
 // ─── Per-Category Hard Caps ──────────────────────────────────────────
@@ -3896,26 +3896,24 @@ export function calculateDomainScore(opts: {
   }
 
   // ─── Hard Caps ───────────────────────────────────────────────────
-  // Apply hard caps to the composite SCORE, then derive grade from capped score.
-  // This eliminates score/grade paradoxes (e.g. 75 composite mapping to B vs C+).
+  // Apply hard caps to the composite SCORE, then derive tier from capped score.
+  // This eliminates score/tier paradoxes.
   const composite = applyHardCaps(rawComposite, findings, rawAxisScores);
 
-  let grade = gradeFromComposite(composite);
+  let tier = tierFromComposite(composite);
 
-  // ─── Breach grade cap ────────────────────────────────────────────
-  // Domains with catastrophic RECENT data breaches should not earn top grades.
+  // ─── Breach tier cap ─────────────────────────────────────────────
+  // Domains with catastrophic RECENT data breaches should not earn top tiers.
   // Breaches > 3 years old no longer trigger the cap (time decay).
   if (opts.breaches?.found && !opts.breaches.check_failed) {
     const recentBreachCount = (opts as any)._recentBreachCount ?? 0;
     const weightedPwned = (opts as any)._weightedPwned ?? 0;
     if (recentBreachCount > 0) {
-      if (weightedPwned > 500_000_000 && (grade === "A" || grade === "B+" || grade === "B")) {
-        grade = "B";
-      } else if (weightedPwned > 100_000_000 && (grade === "A" || grade === "B+")) {
-        grade = "B";
+      if (weightedPwned > 100_000_000 && tier === "Excellent") {
+        tier = "Strong";
       }
     }
   }
 
-  return { composite, grade, axes: axisScores, archetype };
+  return { composite, tier, axes: axisScores, archetype };
 }

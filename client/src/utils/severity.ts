@@ -59,25 +59,17 @@ export function severityIcon(severity: string): string {
   }
 }
 
-export function gradeColor(grade: string): string {
-  switch (grade) {
-    case "A+":
+export function tierColor(tier: string): string {
+  switch (tier) {
+    case "Excellent":
       return "var(--success)";
-    case "A":
-      return "var(--success)";
-    case "B+":
-      return "#56d364";
-    case "B":
-      return "#7ee787";
-    case "C+":
+    case "Strong":
+      return "#58a6ff";
+    case "Moderate":
       return "var(--warning)";
-    case "C":
-      return "var(--warning)";
-    case "D+":
+    case "Weak":
       return "#ffa198";
-    case "D":
-      return "#ffa198";
-    case "F":
+    case "Critical":
       return "var(--danger)";
     default:
       return "var(--danger)";

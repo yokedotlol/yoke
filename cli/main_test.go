@@ -216,14 +216,14 @@ func TestSortedAxesPartial(t *testing.T) {
 	}
 }
 
-// ─── gradeStyle ─────────────────────────────────────────────────────
+// ─── tierStyle ──────────────────────────────────────────────────────
 
-func TestGradeStyle(t *testing.T) {
-	// gradeStyle never panics and returns a usable style for every grade.
-	for _, g := range []string{"A+", "A", "A-", "B", "B-", "C", "D", "F", "", "Z"} {
-		style := gradeStyle(g)
+func TestTierStyle(t *testing.T) {
+	// tierStyle never panics and returns a usable style for every tier.
+	for _, tier := range []string{"Excellent", "Strong", "Moderate", "Weak", "Critical", "", "Unknown"} {
+		style := tierStyle(tier)
 		if got := style.Render("x"); got == "" {
-			t.Errorf("gradeStyle(%q) rendered empty string", g)
+			t.Errorf("tierStyle(%q) rendered empty string", tier)
 		}
 	}
 }

@@ -15,7 +15,7 @@ const OX_LOGO_DATA_URI =
 interface SharePayload {
   d: string; // domain
   s: number; // composite score
-  g: string; // grade
+  g: string; // tier (was grade)
   a: number[]; // axis scores [security, foundations, reputation, speed, discoverability, email]
   t: number; // unix timestamp (seconds)
 }
@@ -25,8 +25,8 @@ interface CompareSharePayload {
   d2: string; // domain 2
   s1: number; // composite score 1
   s2: number; // composite score 2
-  g1: string; // grade 1
-  g2: string; // grade 2
+  g1: string; // tier 1 (was grade 1)
+  g2: string; // tier 2 (was grade 2)
   a1: number[]; // axis scores 1 [security, foundations, reputation, speed, discoverability, email]
   a2: number[]; // axis scores 2
   t: number; // unix timestamp (seconds)
@@ -193,11 +193,12 @@ function esc(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function gradeColor(grade: string): string {
-  if (grade === "A") return "#3fb950";
-  if (grade === "B+" || grade === "B") return "#3fb950";
-  if (grade === "C") return "#d29922";
-  return "#f85149"; // D and F
+function tierColor(tier: string): string {
+  if (tier === "Excellent") return "#3fb950";
+  if (tier === "Strong") return "#58a6ff";
+  if (tier === "Moderate") return "#d29922";
+  if (tier === "Weak") return "#ffa198";
+  return "#f85149"; // Critical
 }
 
 function scoreColor(score: number): string {
@@ -213,8 +214,8 @@ const AXIS_LABELS = ["Security", "Foundations", "Reputation", "Speed", "Discover
 function generateOgSvg(data: SharePayload): string {
   const domain = esc(data.d);
   const score = data.s;
-  const grade = data.g;
-  const gc = gradeColor(grade);
+  const tier = data.g;
+  const gc = tierColor(tier);
   const sc = scoreColor(score);
 
   // 1200×630 SVG — 6 axis bars
@@ -272,9 +273,9 @@ function generateOgSvg(data: SharePayload): string {
   <text x="200" y="370" fill="${sc}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="72" font-weight="700" text-anchor="middle" dominant-baseline="central">${score}</text>
   <text x="200" y="420" fill="#8b949e" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="16" text-anchor="middle"></text>
 
-  <!-- Grade badge -->
-  <rect x="400" y="332" width="${grade.length > 1 ? 100 : 80}" height="80" rx="16" fill="${gc}" opacity="0.15" stroke="${gc}" stroke-width="2"/>
-  <text x="${grade.length > 1 ? 450 : 440}" y="372" fill="${gc}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="${grade.length > 1 ? 40 : 48}" font-weight="700" text-anchor="middle" dominant-baseline="central">${esc(grade)}</text>
+  <!-- Tier badge -->
+  <rect x="400" y="340" width="180" height="64" rx="16" fill="${gc}" opacity="0.15" stroke="${gc}" stroke-width="2"/>
+  <text x="490" y="372" fill="${gc}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="26" font-weight="700" text-anchor="middle" dominant-baseline="central">${esc(tier)}</text>
 
   <!-- Axis scores -->
   ${bars}
@@ -290,8 +291,8 @@ function generateOgSvg(data: SharePayload): string {
 function generateReportPage(data: SharePayload, baseUrl: string, token: string): string {
   const domain = esc(data.d);
   const score = data.s;
-  const grade = data.g;
-  const gc = gradeColor(grade);
+  const tier = data.g;
+  const gc = tierColor(tier);
   const sc = scoreColor(score);
   const analyzedDate = new Date(data.t * 1000).toLocaleDateString("en-US", {
     weekday: "long",
@@ -323,10 +324,10 @@ function generateReportPage(data: SharePayload, baseUrl: string, token: string):
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>${domain} scored ${score} (${esc(grade)}) — Yoke</title>
+  <title>${domain} scored ${score} (${esc(tier)}) — Yoke</title>
   <meta name="description" content="Security ${data.a[0]} · Foundations ${data.a[1]} · Reputation ${data.a[2]} · Speed ${data.a[3]} · Discoverability ${data.a[4]} · Email ${data.a[5] ?? "N/A"} — Free domain intelligence report"/>
   <meta property="og:type" content="website"/>
-  <meta property="og:title" content="${domain} scored ${score} (${esc(grade)}) — Yoke"/>
+  <meta property="og:title" content="${domain} scored ${score} (${esc(tier)}) — Yoke"/>
   <meta property="og:description" content="Security ${data.a[0]} · Foundations ${data.a[1]} · Reputation ${data.a[2]} · Speed ${data.a[3]} · Discoverability ${data.a[4]} · Email ${data.a[5] ?? "N/A"} — Free domain intelligence report"/>
   <meta property="og:image" content="${ogImageUrl}"/>
   <meta property="og:image:type" content="image/png"/>
@@ -334,7 +335,7 @@ function generateReportPage(data: SharePayload, baseUrl: string, token: string):
   <meta property="og:image:height" content="630"/>
   <meta property="og:url" content="${shareUrl}"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="${domain} scored ${score} (${esc(grade)}) — Yoke"/>
+  <meta name="twitter:title" content="${domain} scored ${score} (${esc(tier)}) — Yoke"/>
   <meta name="twitter:description" content="Security ${data.a[0]} · Foundations ${data.a[1]} · Reputation ${data.a[2]} · Speed ${data.a[3]} · Discoverability ${data.a[4]} · Email ${data.a[5] ?? "N/A"}"/>
   <meta name="twitter:image" content="${ogImageUrl}"/>
   <link rel="canonical" href="${shareUrl}"/>
@@ -355,7 +356,7 @@ function generateReportPage(data: SharePayload, baseUrl: string, token: string):
     .score-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
     .score-num .val{font-size:48px;font-weight:700;color:${sc};line-height:1}
     .score-num .unit{font-size:14px;color:#8b949e;margin-top:2px}
-    .grade-badge{min-width:72px;height:72px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;color:${gc};background:${gc}1a;border:2px solid ${gc}33;flex-shrink:0;padding:0 8px}
+    .tier-badge{min-width:auto;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:${gc};background:${gc}1a;border:2px solid ${gc}33;flex-shrink:0;padding:0 16px}
     .axes{display:flex;flex-direction:column;gap:12px;margin-bottom:36px;position:relative}
     .axis-row{display:flex;align-items:center;gap:12px}
     .axis-label{width:100px;font-size:13px;color:#8b949e;text-align:right;flex-shrink:0}
@@ -374,7 +375,7 @@ function generateReportPage(data: SharePayload, baseUrl: string, token: string):
       .score-ring{width:110px;height:110px}
       .score-ring svg{width:110px;height:110px}
       .score-num .val{font-size:36px}
-      .grade-badge{min-width:56px;width:auto;height:56px;font-size:32px}
+      .tier-badge{min-width:auto;height:44px;font-size:18px;padding:0 12px}
     }
   </style>
 </head>
@@ -398,7 +399,7 @@ function generateReportPage(data: SharePayload, baseUrl: string, token: string):
           <div class="unit"></div>
         </div>
       </div>
-      <div class="grade-badge">${esc(grade)}</div>
+      <div class="tier-badge">${esc(tier)}</div>
     </div>
     <div class="axes">${axisBarsHtml}</div>
     <a class="cta" href="${baseUrl}/${esc(data.d)}">🔍 Analyze ${domain} now</a>
@@ -568,12 +569,12 @@ export function matchCompareOgImagePath(path: string): string | null {
 function generateCompareOgSvg(data: CompareSharePayload): string {
   const d1 = esc(data.d1.length > 24 ? `${data.d1.substring(0, 24)}…` : data.d1);
   const d2 = esc(data.d2.length > 24 ? `${data.d2.substring(0, 24)}…` : data.d2);
-  const gc1 = gradeColor(data.g1);
-  const gc2 = gradeColor(data.g2);
+  const gc1 = tierColor(data.g1);
+  const gc2 = tierColor(data.g2);
   const sc1 = scoreColor(data.s1);
   const sc2 = scoreColor(data.s2);
 
-  // Use higher-scoring domain's grade color for the ambient glow
+  // Use higher-scoring domain's tier color for the ambient glow
   const glowColor = data.s1 >= data.s2 ? gc1 : gc2;
 
   // Axis comparison bars — two bars per axis, matching single-domain bar style
@@ -598,16 +599,16 @@ function generateCompareOgSvg(data: CompareSharePayload): string {
   }).join("");
 
   // Score circle helper — same style as single-domain (stroke-width, inner fill, score text)
-  const scoreCircle = (cx: number, cy: number, score: number, sc: string, grade: string, gc: string, r: number) => {
+  const scoreCircle = (cx: number, cy: number, score: number, sc: string, tierName: string, gc: string, r: number) => {
     const circum = 2 * Math.PI * r;
-    const gradeBadgeW = grade.length > 1 ? 80 : 64;
+    const tierBadgeW = Math.max(80, tierName.length * 14 + 20);
     return `
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#21262d" stroke-width="8"/>
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${sc}" stroke-width="8" stroke-dasharray="${(score / 100) * circum} ${circum}" stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})" opacity="0.7"/>
       <circle cx="${cx}" cy="${cy}" r="${r - 16}" fill="#0d1117" opacity="0.5"/>
       <text x="${cx}" y="${cy}" fill="${sc}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="52" font-weight="700" text-anchor="middle" dominant-baseline="central">${score}</text>
-      <rect x="${cx - gradeBadgeW / 2}" y="${cy + r + 14}" width="${gradeBadgeW}" height="38" rx="10" fill="${gc}" opacity="0.15" stroke="${gc}" stroke-width="2"/>
-      <text x="${cx}" y="${cy + r + 33}" fill="${gc}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="${grade.length > 1 ? 22 : 26}" font-weight="700" text-anchor="middle" dominant-baseline="central">${esc(grade)}</text>
+      <rect x="${cx - tierBadgeW / 2}" y="${cy + r + 14}" width="${tierBadgeW}" height="38" rx="10" fill="${gc}" opacity="0.15" stroke="${gc}" stroke-width="2"/>
+      <text x="${cx}" y="${cy + r + 33}" fill="${gc}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="18" font-weight="700" text-anchor="middle" dominant-baseline="central">${esc(tierName)}</text>
     `;
   };
 
@@ -684,8 +685,8 @@ function generateCompareOgSvg(data: CompareSharePayload): string {
 function generateCompareReportPage(data: CompareSharePayload, baseUrl: string, token: string): string {
   const d1 = esc(data.d1);
   const d2 = esc(data.d2);
-  const gc1 = gradeColor(data.g1);
-  const gc2 = gradeColor(data.g2);
+  const gc1 = tierColor(data.g1);
+  const gc2 = tierColor(data.g2);
   const sc1 = scoreColor(data.s1);
   const sc2 = scoreColor(data.s2);
   const delta = data.s1 - data.s2;
@@ -757,7 +758,7 @@ function generateCompareReportPage(data: CompareSharePayload, baseUrl: string, t
     .score-ring{position:relative;width:100px;height:100px}
     .score-ring svg{width:100px;height:100px}
     .score-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:32px;font-weight:700;line-height:1}
-    .grade-badge{min-width:48px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;padding:0 6px}
+    .tier-badge{min-width:auto;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;padding:0 8px}
     .score-domain{font-size:11px;color:#8b949e;max-width:120px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .delta-badge{text-align:center;margin-bottom:28px;position:relative}
     .delta-badge span{font-size:13px;font-weight:600;padding:4px 12px;border-radius:8px;background:#21262d}
@@ -797,7 +798,7 @@ function generateCompareReportPage(data: CompareSharePayload, baseUrl: string, t
           </svg>
           <div class="score-num" style="color:${sc1}">${data.s1}</div>
         </div>
-        <div class="grade-badge" style="color:${gc1};background:${gc1}1a;border:1.5px solid ${gc1}33">${esc(data.g1)}</div>
+        <div class="tier-badge" style="color:${gc1};background:${gc1}1a;border:1.5px solid ${gc1}33">${esc(data.g1)}</div>
         <div class="score-domain">${d1}</div>
       </div>
       <div class="score-col">
@@ -808,7 +809,7 @@ function generateCompareReportPage(data: CompareSharePayload, baseUrl: string, t
           </svg>
           <div class="score-num" style="color:${sc2}">${data.s2}</div>
         </div>
-        <div class="grade-badge" style="color:${gc2};background:${gc2}1a;border:1.5px solid ${gc2}33">${esc(data.g2)}</div>
+        <div class="tier-badge" style="color:${gc2};background:${gc2}1a;border:1.5px solid ${gc2}33">${esc(data.g2)}</div>
         <div class="score-domain">${d2}</div>
       </div>
     </div>

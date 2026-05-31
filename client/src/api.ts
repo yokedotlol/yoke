@@ -468,7 +468,7 @@ export interface RecentLookupsResult {
     is_up: boolean | null;
     ssl_grade: string | null;
     score: number | null;
-    grade: string | null;
+    tier: string | null;
   }>;
 }
 export interface SubdomainsResult {
@@ -791,7 +791,7 @@ export interface ArchetypeData {
 
 export interface DomainScoreData {
   composite: number;
-  grade: string;
+  tier: string;
   axes: Record<Axis, AxisScoreData>;
   archetype: ArchetypeData;
 }
@@ -856,8 +856,8 @@ export interface CompareResult {
     composite: {
       score1: number | null;
       score2: number | null;
-      grade1: string | null;
-      grade2: string | null;
+      tier1: string | null;
+      tier2: string | null;
       delta: number;
     };
     archetype1: ArchetypeName | null;

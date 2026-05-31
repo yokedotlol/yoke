@@ -7,7 +7,7 @@ import {
   computeComposite,
   contextualSeverity,
   type Finding,
-  gradeFromComposite,
+  tierFromComposite,
 } from "@worker/actions/analyze/contextual-scoring";
 
 // ─── Import production code (single source of truth) ─────────────────
@@ -211,28 +211,21 @@ describe("Composite Score Computation", () => {
   });
 });
 
-// ─── Grade Assignment ────────────────────────────────────────────────
+// ─── Tier Assignment ─────────────────────────────────────────────────
 
-describe("Grade Assignment", () => {
-  it("should assign correct grades (production thresholds)", () => {
-    expect(gradeFromComposite(100)).toBe("A+");
-    expect(gradeFromComposite(92)).toBe("A+");
-    expect(gradeFromComposite(87)).toBe("A");
-    expect(gradeFromComposite(82)).toBe("A");
-    expect(gradeFromComposite(81)).toBe("B+");
-    expect(gradeFromComposite(76)).toBe("B+");
-    expect(gradeFromComposite(75)).toBe("B");
-    expect(gradeFromComposite(70)).toBe("B");
-    expect(gradeFromComposite(69)).toBe("C+");
-    expect(gradeFromComposite(64)).toBe("C+");
-    expect(gradeFromComposite(63)).toBe("C");
-    expect(gradeFromComposite(58)).toBe("C");
-    expect(gradeFromComposite(57)).toBe("D+");
-    expect(gradeFromComposite(50)).toBe("D+");
-    expect(gradeFromComposite(49)).toBe("D");
-    expect(gradeFromComposite(40)).toBe("D");
-    expect(gradeFromComposite(39)).toBe("F");
-    expect(gradeFromComposite(0)).toBe("F");
+describe("Tier Assignment", () => {
+  it("should assign correct tiers (production thresholds)", () => {
+    expect(tierFromComposite(100)).toBe("Excellent");
+    expect(tierFromComposite(95)).toBe("Excellent");
+    expect(tierFromComposite(90)).toBe("Excellent");
+    expect(tierFromComposite(89)).toBe("Strong");
+    expect(tierFromComposite(75)).toBe("Strong");
+    expect(tierFromComposite(74)).toBe("Moderate");
+    expect(tierFromComposite(60)).toBe("Moderate");
+    expect(tierFromComposite(59)).toBe("Weak");
+    expect(tierFromComposite(40)).toBe("Weak");
+    expect(tierFromComposite(39)).toBe("Critical");
+    expect(tierFromComposite(0)).toBe("Critical");
   });
 });
 

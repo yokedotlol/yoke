@@ -57,7 +57,7 @@ describe("calculateDomainScore integration", () => {
     const result = calculateDomainScore(baseOpts());
     expect(result).toBeDefined();
     expect(typeof result.composite).toBe("number");
-    expect(typeof result.grade).toBe("string");
+    expect(typeof result.tier).toBe("string");
     expect(result.axes).toBeDefined();
     expect(result.archetype).toBeDefined();
     // All 6 categories should be present
@@ -73,7 +73,7 @@ describe("calculateDomainScore integration", () => {
     }
   });
 
-  it("produces a high grade when all signals are positive", () => {
+  it("produces a high tier when all signals are positive", () => {
     const opts = baseOpts();
     opts.ssl = {
       grade: "A+",
@@ -154,10 +154,10 @@ describe("calculateDomainScore integration", () => {
     // With anchor-and-adjust, a well-configured site should score above 60 composite.
     // Geometric mean naturally pulls lower than arithmetic mean for mixed-value categories.
     expect(result.composite).toBeGreaterThanOrEqual(60);
-    expect(["A+", "A", "B+", "B", "C+"]).toContain(result.grade);
+    expect(["Excellent", "Strong", "Moderate"]).toContain(result.tier);
   });
 
-  it("produces a mid-range grade with mixed signals", () => {
+  it("produces a mid-range tier with mixed signals", () => {
     const opts = baseOpts();
     opts.ssl = {
       grade: "B",
@@ -190,13 +190,13 @@ describe("calculateDomainScore integration", () => {
     const result = calculateDomainScore(opts);
     expect(result).toBeDefined();
     expect(typeof result.composite).toBe("number");
-    expect(typeof result.grade).toBe("string");
+    expect(typeof result.tier).toBe("string");
     // Should still generate findings even when HTTP is blocked
     const allFindings = Object.values(result.axes).flatMap((a) => a.findings);
     expect(allFindings.length).toBeGreaterThan(0);
   });
 
-  it("caps grade for domains with large breach exposure", () => {
+  it("caps tier for domains with large breach exposure", () => {
     const opts = baseOpts();
     opts.ssl = {
       grade: "A+",
@@ -215,8 +215,8 @@ describe("calculateDomainScore integration", () => {
     } as any;
 
     const result = calculateDomainScore(opts);
-    // Grade should be capped — not A+ despite good other signals
-    expect(["A+", "A"]).not.toContain(result.grade);
+    // Tier should be capped — not Excellent despite good other signals
+    expect(["Excellent"]).not.toContain(result.tier);
   });
 
   it("does not double-count CSP findings", () => {
@@ -237,14 +237,14 @@ describe("calculateDomainScore integration", () => {
     expect(cspFindings.length).toBeLessThanOrEqual(4);
   });
 
-  it("grade boundaries are consistent", () => {
-    // Test that grading is monotonic — higher composite = same or better grade
+  it("tier boundaries are consistent", () => {
+    // Test that tiering is monotonic — higher composite = same or better tier
     const opts = baseOpts();
     opts.statusResult = { is_up: true, status_code: 200 };
 
     const result = calculateDomainScore(opts);
-    // Grade should be a recognized letter grade
-    expect(result.grade).toMatch(/^[A-F][+-]?$/);
+    // Tier should be a recognized tier name
+    expect(["Excellent", "Strong", "Moderate", "Weak", "Critical"]).toContain(result.tier);
     // Composite should be between 0 and 100
     expect(result.composite).toBeGreaterThanOrEqual(0);
     expect(result.composite).toBeLessThanOrEqual(100);

@@ -28,13 +28,13 @@ const AXIS_ORDER: Axis[] = ["security", "foundations", "reputation", "speed", "d
 function buildPayload(
   domain: string,
   composite: number,
-  grade: string,
+  tier: string,
   axes: Record<Axis, AxisScoreData>,
   analyzedAt: string,
 ): string {
   const axisScores = AXIS_ORDER.map((a) => axes[a]?.score ?? 0);
   const ts = Math.floor(new Date(analyzedAt).getTime() / 1000);
-  const obj = { d: domain, s: composite, g: grade, a: axisScores, t: ts };
+  const obj = { d: domain, s: composite, g: tier, a: axisScores, t: ts };
   const json = JSON.stringify(obj);
   return base64urlEncode(new TextEncoder().encode(json));
 }
@@ -55,18 +55,18 @@ async function getSignedUrl(payload: string, origin: string): Promise<string> {
 interface ShareBarProps {
   domain: string;
   composite?: number;
-  grade?: string;
+  tier?: string;
   axes?: Record<Axis, AxisScoreData>;
   analyzedAt?: string;
 }
 
-export function ShareBar({ domain, composite, grade, axes, analyzedAt }: ShareBarProps) {
+export function ShareBar({ domain, composite, tier, axes, analyzedAt }: ShareBarProps) {
   const [copied, setCopied] = useState(false);
   const signedUrlRef = useRef<string | null>(null);
   const signingRef = useRef<Promise<string> | null>(null);
 
   // Check if we have score data for rich share URLs
-  const hasScoreData = composite != null && grade && axes && analyzedAt;
+  const hasScoreData = composite != null && tier && axes && analyzedAt;
 
   const getShareUrl = useCallback(async (): Promise<string> => {
     if (signedUrlRef.current) return signedUrlRef.current;
@@ -78,7 +78,7 @@ export function ShareBar({ domain, composite, grade, axes, analyzedAt }: ShareBa
     // Deduplicate concurrent sign requests
     if (!signingRef.current) {
       // biome-ignore lint/style/noNonNullAssertion: hasScoreData guard ensures these are defined
-      const payload = buildPayload(domain, composite!, grade!, axes!, analyzedAt!);
+      const payload = buildPayload(domain, composite!, tier!, axes!, analyzedAt!);
       signingRef.current = getSignedUrl(payload, window.location.origin)
         .then((url) => {
           signedUrlRef.current = url;
@@ -90,7 +90,7 @@ export function ShareBar({ domain, composite, grade, axes, analyzedAt }: ShareBa
         });
     }
     return signingRef.current;
-  }, [domain, composite, grade, axes, analyzedAt, hasScoreData]);
+  }, [domain, composite, tier, axes, analyzedAt, hasScoreData]);
 
   const copyLink = useCallback(async () => {
     const url = await getShareUrl();

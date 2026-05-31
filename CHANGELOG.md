@@ -2,6 +2,18 @@
 
 All notable changes to Yoke are documented here.
 
+## [1.6.0] — 2026-05-31
+
+### Breaking Changes
+- **Letter grades replaced with descriptive tiers** — composite score display now uses Excellent (≥90), Strong (≥75), Moderate (≥60), Weak (≥40), Critical (<40) instead of A+/A/B+/B/C+/C/D+/D/F. API field `grade` → `tier`, CLI JSON output field `grade` → `tier`. SSL grades, security header grades, and AI readiness grades remain as letter grades.
+- **API response field changes** — `domain_score.grade` → `domain_score.tier`, `comparison.composite.grade1/grade2` → `tier1/tier2`, `recent.lookups[].grade` → `tier`, `/api/scoring` returns `tier_thresholds` instead of `grade_thresholds`
+- **CLI v1.6.0 required** — reads `tier` field from API, old CLI versions will show empty grades
+
+### UI Changes
+- **Pill-shaped tier badges** — composite score badges now use pill-shaped badges with dynamic width to accommodate tier names
+- **"Grade-Up Simulator" → "Level-Up Plan"** — renamed with updated tier-based UI
+- **Tier Distribution chart** — usage page shows tier distribution instead of grade distribution
+
 ## [1.5.0] — 2026-05-29
 
 ### Removed

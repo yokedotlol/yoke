@@ -7,12 +7,12 @@ import {
   AXIS_WEIGHTS,
   EFFORT_MAP,
   FIX_DESC_MAP,
-  GRADE_THRESHOLDS,
-  gradeFromComposite,
   NON_ACTIONABLE_SIGNALS,
   SEVERITY_SCORES,
   SIGNAL_IDS,
   SIGNAL_REGISTRY,
+  TIER_THRESHOLDS,
+  tierFromComposite,
 } from "@worker/config/signal-registry";
 import { describe, expect, it } from "vitest";
 
@@ -165,9 +165,9 @@ describe("Signal Registry", () => {
     expect([...NON_ACTIONABLE_SIGNALS].sort()).toEqual(expected);
   });
 
-  it("GRADE_THRESHOLDS are sorted descending by min", () => {
-    for (let i = 0; i < GRADE_THRESHOLDS.length - 1; i++) {
-      expect(GRADE_THRESHOLDS[i].min).toBeGreaterThan(GRADE_THRESHOLDS[i + 1].min);
+  it("TIER_THRESHOLDS are sorted descending by min", () => {
+    for (let i = 0; i < TIER_THRESHOLDS.length - 1; i++) {
+      expect(TIER_THRESHOLDS[i].min).toBeGreaterThan(TIER_THRESHOLDS[i + 1].min);
     }
   });
 
@@ -199,26 +199,18 @@ describe("Signal Registry", () => {
     }
   });
 
-  it("gradeFromComposite matches GRADE_THRESHOLDS", () => {
+  it("tierFromComposite matches TIER_THRESHOLDS", () => {
     // Test boundary values
-    expect(gradeFromComposite(100)).toBe("A+");
-    expect(gradeFromComposite(92)).toBe("A+");
-    expect(gradeFromComposite(87)).toBe("A");
-    expect(gradeFromComposite(82)).toBe("A");
-    expect(gradeFromComposite(81)).toBe("B+");
-    expect(gradeFromComposite(76)).toBe("B+");
-    expect(gradeFromComposite(75)).toBe("B");
-    expect(gradeFromComposite(70)).toBe("B");
-    expect(gradeFromComposite(69)).toBe("C+");
-    expect(gradeFromComposite(64)).toBe("C+");
-    expect(gradeFromComposite(63)).toBe("C");
-    expect(gradeFromComposite(58)).toBe("C");
-    expect(gradeFromComposite(57)).toBe("D+");
-    expect(gradeFromComposite(50)).toBe("D+");
-    expect(gradeFromComposite(49)).toBe("D");
-    expect(gradeFromComposite(40)).toBe("D");
-    expect(gradeFromComposite(39)).toBe("F");
-    expect(gradeFromComposite(0)).toBe("F");
+    expect(tierFromComposite(100)).toBe("Excellent");
+    expect(tierFromComposite(90)).toBe("Excellent");
+    expect(tierFromComposite(89)).toBe("Strong");
+    expect(tierFromComposite(75)).toBe("Strong");
+    expect(tierFromComposite(74)).toBe("Moderate");
+    expect(tierFromComposite(60)).toBe("Moderate");
+    expect(tierFromComposite(59)).toBe("Weak");
+    expect(tierFromComposite(40)).toBe("Weak");
+    expect(tierFromComposite(39)).toBe("Critical");
+    expect(tierFromComposite(0)).toBe("Critical");
   });
 
   it("SEVERITY_SCORES has all severity levels", () => {

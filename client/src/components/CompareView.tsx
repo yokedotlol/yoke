@@ -74,8 +74,8 @@ function buildCompareResult(d1: AnalysisResult, d2: AnalysisResult): CompareResu
       composite: {
         score1: score1?.composite ?? null,
         score2: score2?.composite ?? null,
-        grade1: score1?.grade ?? null,
-        grade2: score2?.grade ?? null,
+        tier1: score1?.tier ?? null,
+        tier2: score2?.tier ?? null,
         delta: (score1?.composite ?? 0) - (score2?.composite ?? 0),
       },
       archetype1: (score1?.archetype?.detected as ArchetypeName) ?? null,
@@ -800,8 +800,8 @@ function buildComparePayload(data: CompareResult): string {
     d2: data.domain2.domain,
     s1: data.comparison.composite.score1 ?? 0,
     s2: data.comparison.composite.score2 ?? 0,
-    g1: data.comparison.composite.grade1 ?? "?",
-    g2: data.comparison.composite.grade2 ?? "?",
+    g1: data.comparison.composite.tier1 ?? "?",
+    g2: data.comparison.composite.tier2 ?? "?",
     a1,
     a2,
     t: Math.floor(Date.now() / 1000),
@@ -827,8 +827,8 @@ function CompareShareBar({ data }: { data: CompareResult }) {
 
   // Build signed URL on mount / data change
   useEffect(() => {
-    const { score1, score2, grade1, grade2 } = data.comparison.composite;
-    if (score1 == null || score2 == null || !grade1 || !grade2) return;
+    const { score1, score2, tier1, tier2 } = data.comparison.composite;
+    if (score1 == null || score2 == null || !tier1 || !tier2) return;
     const payload = buildComparePayload(data);
     const promise = getCompareSignedUrl(payload, window.location.origin);
     signingRef.current = promise;
@@ -954,11 +954,11 @@ function CmpRedditIcon() {
 
 // ─── Score helpers ───────────────────────────────────────────────────
 
-function gradeColor(grade: string): string {
-  if (grade === "A+" || grade === "A") return "var(--success)";
-  if (grade === "B+" || grade === "B") return "#7ee787";
-  if (grade === "C+" || grade === "C") return "var(--warning)";
-  if (grade === "D") return "#ffa198";
+function tierColor(tier: string): string {
+  if (tier === "Excellent") return "var(--success)";
+  if (tier === "Strong") return "#58a6ff";
+  if (tier === "Moderate") return "var(--warning)";
+  if (tier === "Weak") return "#ffa198";
   return "var(--danger)";
 }
 
@@ -981,13 +981,13 @@ function deltaDisplay(delta: number): { text: string; color: string } {
 function ScoreCard({
   domain,
   score,
-  grade,
+  tier,
   archetype,
   color,
 }: {
   domain: string;
   score: number;
-  grade: string;
+  tier: string;
   archetype: string | null;
   color: string;
 }) {
@@ -1009,22 +1009,23 @@ function ScoreCard({
       </div>
       <div
         style={{
-          width: 36,
+          minWidth: 36,
           height: 36,
+          padding: "0 8px",
           borderRadius: "var(--radius)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "var(--font-mono)",
-          fontSize: "18px",
+          fontSize: "11px",
           fontWeight: 700,
-          color: gradeColor(grade),
+          color: tierColor(tier),
           flexShrink: 0,
-          background: `color-mix(in srgb, ${gradeColor(grade)} 10%, transparent)`,
-          border: `1px solid color-mix(in srgb, ${gradeColor(grade)} 20%, transparent)`,
+          background: `color-mix(in srgb, ${tierColor(tier)} 10%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${tierColor(tier)} 20%, transparent)`,
         }}
       >
-        {grade}
+        {tier}
       </div>
       <div className="min-w-0">
         <div
@@ -1228,7 +1229,7 @@ export function CompareView({ initialDomain }: { initialDomain?: string }) {
               <ScoreCard
                 domain={data.domain1.domain}
                 score={ds1.composite}
-                grade={ds1.grade}
+                tier={ds1.tier}
                 archetype={data.comparison.archetype1}
                 color="var(--accent)"
               />
@@ -1263,7 +1264,7 @@ export function CompareView({ initialDomain }: { initialDomain?: string }) {
               <ScoreCard
                 domain={data.domain2.domain}
                 score={ds2.composite}
-                grade={ds2.grade}
+                tier={ds2.tier}
                 archetype={data.comparison.archetype2}
                 color="#f97316"
               />

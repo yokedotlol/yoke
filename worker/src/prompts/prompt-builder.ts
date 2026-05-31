@@ -4,7 +4,7 @@
 
 import type { ArchetypeResult } from "../actions/analyze/contextual-scoring";
 import type { ArchetypeName } from "../config/contextual-scoring-types";
-import { AXIS_WEIGHTS, GRADE_THRESHOLDS, SIGNAL_REGISTRY } from "../config/signal-registry";
+import { AXIS_WEIGHTS, SIGNAL_REGISTRY, TIER_THRESHOLDS } from "../config/signal-registry";
 
 // ─── Prompt Fragments (build-time inlined) ──────────────────────────
 
@@ -57,13 +57,13 @@ export function buildSystemPrompt(archetype: ArchetypeResult, signalIds: string[
   sections.push(CORE_RULES.trim());
 
   // (b) Scoring context — auto-generated from registry constants
-  const gradeStr = GRADE_THRESHOLDS.map((t) => `${t.grade} ≥${t.min}`).join(", ");
+  const tierStr = TIER_THRESHOLDS.map((t) => `${t.tier} ≥${t.min}`).join(", ");
   const axisStr = (Object.keys(AXIS_WEIGHTS) as Array<keyof typeof AXIS_WEIGHTS>)
     .map((a) => `${a.charAt(0).toUpperCase() + a.slice(1)} (${Math.round(AXIS_WEIGHTS[a] * 100)}%)`)
     .join(", ");
 
   sections.push(
-    `SCORING CONTEXT:\nComposite scoring: Yoke scores 0-100 using anchor-and-adjust across 6 categories: ${axisStr}.\nScoring model: baseline 55, good findings earn bonuses (+2×weight), negatives penalize by severity×weight (critical -4, high -2.5, medium -1.25, low -0.5). Composite uses weighted geometric mean. Categories with <3 scoreable findings are marked "Not Assessed" and excluded from the composite.\nGrades: ${gradeStr}, F <${GRADE_THRESHOLDS[GRADE_THRESHOLDS.length - 1]?.min ?? 0}.`,
+    `SCORING CONTEXT:\nComposite scoring: Yoke scores 0-100 using anchor-and-adjust across 6 categories: ${axisStr}.\nScoring model: baseline 55, good findings earn bonuses (+2×weight), negatives penalize by severity×weight (critical -4, high -2.5, medium -1.25, low -0.5). Composite uses weighted geometric mean. Categories with <3 scoreable findings are marked "Not Assessed" and excluded from the composite.\nTiers: ${tierStr}.`,
   );
 
   // Axis descriptions

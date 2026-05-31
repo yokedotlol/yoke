@@ -5,7 +5,7 @@
 
 ## Summary
 
-Replaced the 5-axis weighted-average model with a 6-category anchor-and-adjust model using weighted geometric mean for the composite grade.
+Replaced the 5-axis weighted-average model with a 6-category anchor-and-adjust model using weighted geometric mean for the composite tier.
 
 ## Categories
 
@@ -158,11 +158,11 @@ The original proposal included per-category hard caps (critical→D max, high→
 
 The `applyHardCaps` function is kept as a pass-through for API compatibility.
 
-### Breach Grade Cap — Retained
+### Breach Tier Cap — Retained
 
 A separate, specific mechanism for catastrophic data breaches:
 
-| Condition | Max Grade |
+| Condition | Max Tier |
 |-----------|-----------|
 | Recent breach with >500M weighted pwned records | B |
 | Recent breach with >100M weighted pwned records | B |
@@ -184,21 +184,19 @@ Updated from original proposal:
 
 Key change from original: NRD ≤30d is **high** (not critical), and 31-90d is **medium** (not high). Prevents newly registered domains from being unfairly crushed.
 
-## Grade Thresholds
+## Tier Thresholds
 
-| Grade | Threshold |
-|-------|-----------|
-| A+ | ≥ 88 |
-| A | ≥ 82 |
-| B+ | ≥ 76 |
-| B | ≥ 70 |
-| C+ | ≥ 64 |
-| C | ≥ 58 |
-| D+ | ≥ 50 |
-| D | ≥ 40 |
-| F | < 40 |
+> **Updated 2026-05-31:** Letter grades replaced with descriptive tiers to avoid school-grade anchoring.
 
-## Grade-Up Recommendations
+| Tier | Threshold |
+|------|-----------|
+| Excellent | ≥ 90 |
+| Strong | ≥ 75 |
+| Moderate | ≥ 60 |
+| Weak | ≥ 40 |
+| Critical | < 40 |
+
+## Level-Up Recommendations
 
 - **Priority sort:** Items sorted by `pointGain` (impact) within each category group
 - **Category clustering:** Items grouped by category with color-coded headers showing point totals

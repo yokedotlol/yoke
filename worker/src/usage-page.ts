@@ -9,8 +9,11 @@ function n(v: number | undefined | null): string {
   return (v ?? 0).toLocaleString();
 }
 
-function gradeColor(g: string): string {
-  return { A: "#22c55e", B: "#84cc16", C: "#f59e0b", D: "#f97316", F: "#ef4444" }[g] || "#737373";
+function tierColor(t: string): string {
+  return (
+    { Excellent: "#22c55e", Strong: "#3b82f6", Moderate: "#f59e0b", Weak: "#f97316", Critical: "#ef4444" }[t] ||
+    "#737373"
+  );
 }
 
 // Country code → flag emoji
@@ -91,8 +94,8 @@ export async function renderUsagePage(db: D1Database, days = 30): Promise<Respon
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
   .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
   @media (max-width: 900px) { .row2, .row3 { grid-template-columns: 1fr; } }
-  .grade-bar { display: flex; height: 22px; border-radius: 4px; overflow: hidden; gap: 1px; margin-top: 0.4rem; }
-  .grade-seg { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #111; }
+  .tier-bar { display: flex; height: 22px; border-radius: 4px; overflow: hidden; gap: 1px; margin-top: 0.4rem; }
+  .tier-seg { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #111; }
   .heatmap { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
   .hm-cell { aspect-ratio: 1; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 8px; color: var(--muted); position: relative; }
   .hm-cell .tip { position: absolute; bottom: calc(100% + 2px); font-size: 9px; white-space: nowrap; display: none; background: var(--surface); padding: 1px 4px; border-radius: 3px; border: 1px solid var(--border); z-index: 5; }
@@ -381,18 +384,18 @@ ${
 </div>
 
 ${
-  Object.keys(ss.grade_breakdown).length > 0
+  Object.keys(ss.tier_breakdown).length > 0
     ? `
 <div class="row2">
   <div>
-    <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.2rem">Grade Distribution</div>
-    <div class="grade-bar">
-      ${["A", "B", "C", "D", "F"]
-        .map((g) => {
-          const cnt = ss.grade_breakdown[g] || 0;
+    <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.2rem">Tier Distribution</div>
+    <div class="tier-bar">
+      ${["Excellent", "Strong", "Moderate", "Weak", "Critical"]
+        .map((t) => {
+          const cnt = ss.tier_breakdown[t] || 0;
           const pct = ss.total_scores ? (cnt / ss.total_scores) * 100 : 0;
           if (pct < 1) return "";
-          return `<div class="grade-seg" style="flex:${pct};background:${gradeColor(g)}">${g} ${Math.round(pct)}%</div>`;
+          return `<div class="tier-seg" style="flex:${pct};background:${tierColor(t)}">${t} ${Math.round(pct)}%</div>`;
         })
         .join("")}
     </div>

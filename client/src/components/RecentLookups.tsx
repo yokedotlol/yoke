@@ -8,21 +8,18 @@ interface RecentLookupsProps {
   onSelect: (domain: string) => void;
 }
 
-function gradeColor(grade: string | null | undefined): string {
-  if (!grade) return "var(--dim)";
-  switch (grade) {
-    case "A+":
-    case "A":
+function tierColor(tier: string | null | undefined): string {
+  if (!tier) return "var(--dim)";
+  switch (tier) {
+    case "Excellent":
       return "var(--success)";
-    case "B+":
-    case "B":
-      return "var(--accent)";
-    case "C+":
-    case "C":
+    case "Strong":
+      return "#58a6ff";
+    case "Moderate":
       return "var(--warning, #eab308)";
-    case "D+":
-    case "D":
-    case "F":
+    case "Weak":
+      return "#ffa198";
+    case "Critical":
       return "var(--danger)";
     default:
       return "var(--dim)";
@@ -66,7 +63,7 @@ export function RecentLookups({ lookups, onSelect }: RecentLookupsProps) {
             e.currentTarget.style.color = "var(--text-secondary)";
           }}
         >
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: gradeColor(l.grade) }} />
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: tierColor(l.tier) }} />
           <span>{l.domain}</span>
         </button>
       ))}

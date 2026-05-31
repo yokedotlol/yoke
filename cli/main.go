@@ -188,13 +188,13 @@ var (
 		Padding(0, 1)
 )
 
-func gradeStyle(grade string) lipgloss.Style {
-	switch {
-	case strings.HasPrefix(grade, "A"):
+func tierStyle(tier string) lipgloss.Style {
+	switch tier {
+	case "Excellent":
 		return good
-	case strings.HasPrefix(grade, "B"):
+	case "Strong":
 		return info
-	case strings.HasPrefix(grade, "C"):
+	case "Moderate":
 		return warn
 	default:
 		return bad
@@ -218,7 +218,7 @@ type AnalysisResult struct {
 
 type ScoreBlock struct {
 	Composite int                `json:"composite"`
-	Grade     string             `json:"grade"`
+	Tier      string             `json:"tier"`
 	Axes      map[string]AxisVal `json:"axes"`
 	Archetype *Archetype         `json:"archetype"`
 }
@@ -783,13 +783,13 @@ func printAnalysis(r *AnalysisResult) {
 		lines = append(lines, "")
 	}
 
-	// Header: domain + score + grade
-	grade := gradeStyle(r.Score.Grade).Bold(true).Render(r.Score.Grade)
+	// Header: domain + score + tier
+	tier := tierStyle(r.Score.Tier).Bold(true).Render(r.Score.Tier)
 	lines = append(lines, fmt.Sprintf(
 		"%s  %s %s",
 		title.Render(r.Domain),
 		title.Render(fmt.Sprintf("%d/100", r.Score.Composite)),
-		grade,
+		tier,
 	))
 
 	if r.Score.Archetype != nil && r.Score.Archetype.Detected != "" {
@@ -999,7 +999,7 @@ func main() {
 
 	score := &cobra.Command{
 		Use:   "score <domain>",
-		Short: "Quick score and grade",
+		Short: "Quick score and rating",
 		Args:  cobra.ExactArgs(1),
 		RunE:  runScore,
 	}
@@ -1081,11 +1081,11 @@ func runScore(cmd *cobra.Command, args []string) error {
 		minimal := struct {
 			Domain    string `json:"domain"`
 			Score     int    `json:"score"`
-			Grade     string `json:"grade"`
+			Tier      string `json:"tier"`
 		}{
 			Domain:    result.Domain,
 			Score:     result.Score.Composite,
-			Grade:     result.Score.Grade,
+			Tier:      result.Score.Tier,
 		}
 		out, _ := json.MarshalIndent(minimal, "", "  ")
 		fmt.Println(string(out))
@@ -1099,8 +1099,8 @@ func runScore(cmd *cobra.Command, args []string) error {
 	if result.Score == nil {
 		return fmt.Errorf("no score data for %s", domain)
 	}
-	grade := gradeStyle(result.Score.Grade).Bold(true).Render(result.Score.Grade)
-	fmt.Printf("%s  %d/100  %s\n", title.Render(domain), result.Score.Composite, grade)
+	tier := tierStyle(result.Score.Tier).Bold(true).Render(result.Score.Tier)
+	fmt.Printf("%s  %d/100  %s\n", title.Render(domain), result.Score.Composite, tier)
 	return nil
 }
 
@@ -1261,7 +1261,7 @@ func runCompare(cmd *cobra.Command, args []string) error {
 
 	fmt.Println()
 	if data.Domain1.Score != nil {
-		g1 := gradeStyle(data.Domain1.Score.Grade).Bold(true).Render(data.Domain1.Score.Grade)
+		g1 := tierStyle(data.Domain1.Score.Tier).Bold(true).Render(data.Domain1.Score.Tier)
 		fmt.Printf("  %s  %d/100 %s\n", title.Render(fmt.Sprintf("%-30s", data.Domain1.Domain)),
 			data.Domain1.Score.Composite, g1)
 	} else {
@@ -1269,7 +1269,7 @@ func runCompare(cmd *cobra.Command, args []string) error {
 			bad.Render("Error — analysis failed"))
 	}
 	if data.Domain2.Score != nil {
-		g2 := gradeStyle(data.Domain2.Score.Grade).Bold(true).Render(data.Domain2.Score.Grade)
+		g2 := tierStyle(data.Domain2.Score.Tier).Bold(true).Render(data.Domain2.Score.Tier)
 		fmt.Printf("  %s  %d/100 %s\n", title.Render(fmt.Sprintf("%-30s", data.Domain2.Domain)),
 			data.Domain2.Score.Composite, g2)
 	} else {

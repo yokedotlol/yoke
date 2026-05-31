@@ -21,9 +21,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AXIS_WEIGHTS,
   FIX_DESC_MAP,
-  GRADE_THRESHOLDS,
   NON_ACTIONABLE_SIGNALS,
   SCORE_DRAG_SIGNALS,
+  TIER_THRESHOLDS,
 } from "../../../worker/src/config/signal-registry";
 import type { Axis, ScoreFinding, Severity } from "../api";
 import { severityBg, severityColor, severityIcon } from "../utils/severity";
@@ -659,8 +659,8 @@ function generateActionItems(data: AnalysisResult): ActionItem[] {
   return items;
 }
 
-// ─── Grade-Up Simulator Engine ──────────────────────────────────────
-// GRADE_THRESHOLDS, SEVERITY_SCORES, AXIS_WEIGHTS imported from signal-registry (single source of truth)
+// ─── Level-Up Plan Engine ────────────────────────────────────────────
+// TIER_THRESHOLDS, SEVERITY_SCORES, AXIS_WEIGHTS imported from signal-registry (single source of truth)
 
 interface GradeUpItem {
   signal: string;
@@ -682,10 +682,10 @@ interface ScoreDragItem {
   pointCost: number; // how much this drags composite score down
 }
 
-function getNextGrade(currentGrade: string): { grade: string; min: number } | null {
-  const idx = GRADE_THRESHOLDS.findIndex((g) => g.grade === currentGrade);
-  if (idx <= 0) return null; // already A+ or unknown
-  return GRADE_THRESHOLDS[idx - 1];
+function getNextTier(currentTier: string): { tier: string; min: number } | null {
+  const idx = TIER_THRESHOLDS.findIndex((t) => t.tier === currentTier);
+  if (idx <= 0) return null; // already Excellent or unknown
+  return TIER_THRESHOLDS[idx - 1];
 }
 
 // Anchor-and-adjust scoring — mirrors worker/src/actions/analyze/contextual-scoring.ts
@@ -715,12 +715,12 @@ function computeAxisScore(findings: ScoreFinding[]): number {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-function generateGradeUpPlan(data: AnalysisResult): {
+function generateLevelUpPlan(data: AnalysisResult): {
   items: GradeUpItem[];
   drags: ScoreDragItem[];
   currentScore: number;
-  currentGrade: string;
-  targetGrade: string;
+  currentTier: string;
+  targetTier: string;
   targetThreshold: number;
   pointsNeeded: number;
 } | null {
@@ -728,9 +728,9 @@ function generateGradeUpPlan(data: AnalysisResult): {
   if (!score) return null;
 
   const currentScore = score.composite;
-  const currentGrade = score.grade;
-  const next = getNextGrade(currentGrade);
-  if (!next) return null; // already A+
+  const currentTier = score.tier;
+  const next = getNextTier(currentTier);
+  if (!next) return null; // already Excellent
 
   const pointsNeeded = next.min - currentScore;
   if (pointsNeeded <= 0) return null;
@@ -825,7 +825,15 @@ function generateGradeUpPlan(data: AnalysisResult): {
 
   drags.sort((a, b) => b.pointCost - a.pointCost);
 
-  return { items, drags, currentScore, currentGrade, targetGrade: next.grade, targetThreshold: next.min, pointsNeeded };
+  return {
+    items,
+    drags,
+    currentScore,
+    currentTier,
+    targetTier: next.tier,
+    targetThreshold: next.min,
+    pointsNeeded,
+  };
 }
 
 // ─── Resources / How-to-Fix Links ───────────────────────────────────
@@ -1777,14 +1785,14 @@ function AILoadingIndicator() {
   );
 }
 
-// ─── Grade-Up Simulator UI ──────────────────────────────────────────
+// ─── Level-Up Plan UI ────────────────────────────────────────────────
 
-function GradeUpSimulator({ data }: { data: AnalysisResult }) {
+function LevelUpPlan({ data }: { data: AnalysisResult }) {
   const [expanded, setExpanded] = useState(false);
-  const plan = generateGradeUpPlan(data);
+  const plan = generateLevelUpPlan(data);
 
   if (!plan || plan.items.length === 0) {
-    if (data.domain_score?.grade === "A+") {
+    if (data.domain_score?.tier === "Excellent") {
       return (
         <div
           style={{
@@ -1796,7 +1804,7 @@ function GradeUpSimulator({ data }: { data: AnalysisResult }) {
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
             <ArrowUp size={14} style={{ color: "var(--success)" }} />
-            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>Grade-Up Simulator</span>
+            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>Level-Up Plan</span>
           </div>
           <div
             style={{
@@ -1821,14 +1829,14 @@ function GradeUpSimulator({ data }: { data: AnalysisResult }) {
 
   const totalGain = plan.items.reduce((sum, i) => sum + i.pointGain, 0);
   const projectedScore = Math.min(100, Math.round(plan.currentScore + totalGain));
-  // Grade thresholds from signal-registry (single source of truth)
-  const projectedGrade = (
-    GRADE_THRESHOLDS.find((g) => projectedScore >= g.min) ?? GRADE_THRESHOLDS[GRADE_THRESHOLDS.length - 1]
-  ).grade;
+  // Tier thresholds from signal-registry (single source of truth)
+  const projectedTier = (
+    TIER_THRESHOLDS.find((t) => projectedScore >= t.min) ?? TIER_THRESHOLDS[TIER_THRESHOLDS.length - 1]
+  ).tier;
 
   const progressPct = Math.min(
-    ((plan.currentScore - (GRADE_THRESHOLDS.find((g) => g.grade === plan.currentGrade)?.min ?? 0)) /
-      (plan.targetThreshold - (GRADE_THRESHOLDS.find((g) => g.grade === plan.currentGrade)?.min ?? 0))) *
+    ((plan.currentScore - (TIER_THRESHOLDS.find((t) => t.tier === plan.currentTier)?.min ?? 0)) /
+      (plan.targetThreshold - (TIER_THRESHOLDS.find((t) => t.tier === plan.currentTier)?.min ?? 0))) *
       100,
     100,
   );
@@ -1874,9 +1882,9 @@ function GradeUpSimulator({ data }: { data: AnalysisResult }) {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
         <ArrowUp size={14} style={{ color: "var(--accent)" }} />
-        <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>Grade-Up Simulator</span>
+        <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>Level-Up Plan</span>
         <span style={{ fontSize: "11px", color: "var(--muted)", marginLeft: "auto" }}>
-          {plan.currentGrade} → {plan.targetGrade}
+          {plan.currentTier} → {plan.targetTier}
         </span>
       </div>
 
@@ -1884,10 +1892,10 @@ function GradeUpSimulator({ data }: { data: AnalysisResult }) {
       <div style={{ marginBottom: "14px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "4px" }}>
           <span style={{ color: "var(--text)", fontWeight: 600 }}>
-            {plan.currentScore} pts ({plan.currentGrade})
+            {plan.currentScore} pts ({plan.currentTier})
           </span>
           <span style={{ color: "var(--muted)" }}>
-            {plan.targetThreshold} pts ({plan.targetGrade})
+            {plan.targetThreshold} pts ({plan.targetTier})
           </span>
         </div>
         <div style={{ height: "6px", borderRadius: "3px", background: "var(--border)", overflow: "hidden" }}>
@@ -1902,7 +1910,7 @@ function GradeUpSimulator({ data }: { data: AnalysisResult }) {
           />
         </div>
         <div style={{ fontSize: "10px", color: "var(--muted)", marginTop: "3px" }}>
-          Need +{plan.pointsNeeded} points · fixing all items below → {projectedScore} pts ({projectedGrade})
+          Need +{plan.pointsNeeded} points · fixing all items below → {projectedScore} pts ({projectedTier})
         </div>
       </div>
 
@@ -2141,8 +2149,8 @@ function _QuickWinsPanel({ actionItems, data }: { actionItems: ActionItem[]; dat
   const quickWins = getQuickWins(actionItems);
   if (quickWins.length === 0) return null;
 
-  // Estimate total point gain from quick wins using the grade-up plan
-  const plan = generateGradeUpPlan(data);
+  // Estimate total point gain from quick wins using the level-up plan
+  const plan = generateLevelUpPlan(data);
   const _quickWinSignals = new Set(quickWins.map((q) => q.title.toLowerCase()));
 
   return (
@@ -2163,7 +2171,7 @@ function _QuickWinsPanel({ actionItems, data }: { actionItems: ActionItem[]; dat
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {quickWins.map((item, i) => {
           const ref = findReferenceLink(item.title);
-          // Try to find matching fix link from the grade-up plan
+          // Try to find matching fix link from the level-up plan
           const gradeUpMatch = plan?.items.find(
             (g) =>
               g.fixDescription.toLowerCase().includes(item.title.toLowerCase().slice(0, 20)) ||
@@ -2700,8 +2708,8 @@ export function AIAnalysisPanel({
         <AdvancedSettings domain={domain} onKeyChange={handleKeyChange} onModelChange={handleModelChange} />
       </div>
 
-      {/* 1. Grade-Up Simulator (deterministic) */}
-      {analysisData && <GradeUpSimulator data={analysisData} />}
+      {/* 1. Level-Up Plan (deterministic) */}
+      {analysisData && <LevelUpPlan data={analysisData} />}
 
       {/* 2. Cross-Signal Insights (LLM) */}
       <div>

@@ -1128,7 +1128,7 @@ export async function runAnalysis(
           is_up: result.status?.is_up ?? null,
           ssl_grade: result.ssl?.grade ?? null,
           score: domainScore?.composite ?? null,
-          grade: domainScore?.grade ?? null,
+          tier: domainScore?.tier ?? null,
           archetype: domainScore?.archetype?.detected ?? null,
         };
         const existingRaw = await env.REFERENCE_DATA.get("recent:index", "text");

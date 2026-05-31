@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { gradeColor, severityColor, severityIcon } from "../utils/severity";
+import { severityColor, severityIcon, tierColor } from "../utils/severity";
 import type { AnalysisResult, ArchetypeName, Axis, AxisScoreData } from "../utils/types";
 import { Tooltip } from "./Tooltip";
 
@@ -424,7 +424,7 @@ export function RadarPlot({ axes, archetype, weightsTable }: RadarPlotProps) {
 }
 
 // ─── Composite Score Display ─────────────────────────────────────────
-// gradeColor, severityColor, severityIcon imported from ../utils/severity
+// tierColor, severityColor, severityIcon imported from ../utils/severity
 
 function scoreColor(score: number): string {
   if (score >= 90) return "var(--success)";
@@ -445,7 +445,7 @@ export function DomainScore({ data }: { data: AnalysisResult }) {
 
   // Resolve weights: prefer API response, fall back to hardcoded
   const weightsTable = ds.archetype.weights ?? FIXED_WEIGHTS;
-  const { composite, grade } = { composite: ds.composite, grade: ds.grade };
+  const { composite, tier } = { composite: ds.composite, tier: ds.tier };
 
   return (
     <div className="panel">
@@ -523,21 +523,22 @@ export function DomainScore({ data }: { data: AnalysisResult }) {
               </div>
               <div
                 style={{
-                  width: 48,
+                  minWidth: 48,
                   height: 48,
+                  padding: "0 12px",
                   borderRadius: "var(--radius)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontFamily: "var(--font-mono)",
-                  fontSize: "24px",
+                  fontSize: tier.length > 6 ? "14px" : "18px",
                   fontWeight: 700,
-                  color: gradeColor(grade),
-                  background: `color-mix(in srgb, ${gradeColor(grade)} 10%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${gradeColor(grade)} 20%, transparent)`,
+                  color: tierColor(tier),
+                  background: `color-mix(in srgb, ${tierColor(tier)} 10%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${tierColor(tier)} 20%, transparent)`,
                 }}
               >
-                {grade}
+                {tier}
               </div>
             </div>
 

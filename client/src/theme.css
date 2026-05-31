@@ -643,38 +643,39 @@ main {
 }
 
 /* Grade badge */
-.grade-badge {
+.tier-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
+  min-width: 38px;
   height: 38px;
+  padding: 0 8px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 13px;
 }
-.grade-a {
+.tier-excellent {
   background: var(--success-subtle);
   color: var(--success);
   border: 1px solid rgba(63, 185, 80, 0.25);
 }
-.grade-b {
-  background: rgba(63, 185, 80, 0.06);
-  color: #7ee787;
-  border: 1px solid rgba(63, 185, 80, 0.15);
+.tier-strong {
+  background: rgba(88, 166, 255, 0.1);
+  color: #58a6ff;
+  border: 1px solid rgba(88, 166, 255, 0.2);
 }
-.grade-c {
+.tier-moderate {
   background: var(--warning-subtle);
   color: var(--warning);
   border: 1px solid rgba(210, 153, 34, 0.2);
 }
-.grade-d {
+.tier-weak {
   background: var(--danger-subtle);
   color: #ffa198;
   border: 1px solid rgba(248, 81, 73, 0.15);
 }
-.grade-f {
+.tier-critical {
   background: rgba(248, 81, 73, 0.15);
   color: var(--danger);
   border: 1px solid rgba(248, 81, 73, 0.25);

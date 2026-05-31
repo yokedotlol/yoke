@@ -1,5 +1,5 @@
 // ─── Signal Registry ─────────────────────────────────────────────────
-// Single source of truth for all 136 scoring signals.
+// Single source of truth for all scoring signals.
 // Every signal declares its axis, actionability, effort, fix description,
 // and weight range. Derived constants (NON_ACTIONABLE, EFFORT_MAP, etc.)
 // are exported for use across server and client layers.
@@ -11,18 +11,14 @@
 
 import type { ArchetypeName, Axis, Severity } from "./contextual-scoring-types";
 
-// ─── Grade Thresholds (single source of truth) ──────────────────────
+// ─── Tier Thresholds (single source of truth) ───────────────────────
 
-export const GRADE_THRESHOLDS = [
-  { grade: "A+", min: 92 },
-  { grade: "A", min: 82 },
-  { grade: "B+", min: 76 },
-  { grade: "B", min: 70 },
-  { grade: "C+", min: 64 },
-  { grade: "C", min: 58 },
-  { grade: "D+", min: 50 },
-  { grade: "D", min: 40 },
-  { grade: "F", min: 0 },
+export const TIER_THRESHOLDS = [
+  { tier: "Excellent", min: 90 },
+  { tier: "Strong", min: 75 },
+  { tier: "Moderate", min: 60 },
+  { tier: "Weak", min: 40 },
+  { tier: "Critical", min: 0 },
 ] as const;
 
 // ─── Severity → Score mapping ───────────────────────────────────────
@@ -1611,10 +1607,10 @@ export const FIX_DESC_MAP: Record<string, string> = Object.fromEntries(
     .map(([id, def]) => [id, def.fixDescription!]),
 );
 
-/** Compute grade from composite score */
-export function gradeFromComposite(score: number): string {
-  for (const t of GRADE_THRESHOLDS) {
-    if (score >= t.min) return t.grade;
+/** Compute tier from composite score */
+export function tierFromComposite(score: number): string {
+  for (const t of TIER_THRESHOLDS) {
+    if (score >= t.min) return t.tier;
   }
-  return "F";
+  return "Critical";
 }

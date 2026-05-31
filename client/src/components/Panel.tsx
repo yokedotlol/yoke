@@ -249,9 +249,43 @@ export function StatusBadge({
   return <span className={`badge badge-${status}`}>{label}</span>;
 }
 
+/** Badge for external letter grades (SSL Labs, security headers) */
 export function GradeBadge({ grade }: { grade: string }) {
-  const letter = grade.replace("+", "").replace("-", "").toLowerCase();
-  return <span className={`grade-badge grade-${letter.charAt(0)}`}>{grade}</span>;
+  const letter = grade.replace("+", "").replace("-", "").toLowerCase().charAt(0);
+  const colors: Record<string, { bg: string; color: string; border: string }> = {
+    a: { bg: "var(--success-subtle)", color: "var(--success)", border: "rgba(63,185,80,0.25)" },
+    b: { bg: "rgba(63,185,80,0.06)", color: "#7ee787", border: "rgba(63,185,80,0.15)" },
+    c: { bg: "var(--warning-subtle)", color: "var(--warning)", border: "rgba(210,153,34,0.2)" },
+    d: { bg: "var(--danger-subtle)", color: "#ffa198", border: "rgba(248,81,73,0.15)" },
+    f: { bg: "rgba(248,81,73,0.15)", color: "var(--danger)", border: "rgba(248,81,73,0.25)" },
+  };
+  const c = colors[letter] || colors.f;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 38,
+        height: 38,
+        borderRadius: "var(--radius)",
+        fontFamily: "var(--font-mono)",
+        fontWeight: 700,
+        fontSize: 18,
+        background: c.bg,
+        color: c.color,
+        border: `1px solid ${c.border}`,
+      }}
+    >
+      {grade}
+    </span>
+  );
+}
+
+/** Badge for composite score tiers (Excellent/Strong/Moderate/Weak/Critical) */
+export function TierBadge({ tier }: { tier: string }) {
+  const cls = tier.toLowerCase();
+  return <span className={`tier-badge tier-${cls}`}>{tier}</span>;
 }
 
 export function SkeletonPanel({ title, icon, rows = 4 }: { title: string; icon: ReactNode; rows?: number }) {

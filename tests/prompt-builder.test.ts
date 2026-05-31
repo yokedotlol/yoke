@@ -1,6 +1,6 @@
 // ─── Prompt Builder Tests ─────────────────────────────────────────────
 // Verifies the dynamic prompt builder composes prompts correctly with
-// grade thresholds, axis weights, signal calibration, and archetype context.
+// grade thresholds → tier thresholds, axis weights, signal calibration, and archetype context.
 
 import type { ArchetypeResult } from "@worker/actions/analyze/contextual-scoring";
 import { SIGNAL_REGISTRY } from "@worker/config/signal-registry";
@@ -26,14 +26,13 @@ describe("Prompt Builder", () => {
     expect(prompt.length).toBeGreaterThan(500);
   });
 
-  it("includes grade thresholds from signal registry", () => {
+  it("includes tier thresholds from signal registry", () => {
     const prompt = buildSystemPrompt(makeArchetype(), Object.keys(SIGNAL_REGISTRY));
-    expect(prompt).toContain("A+ ≥92");
-    expect(prompt).toContain("A ≥82");
-    expect(prompt).toContain("B+ ≥76");
-    expect(prompt).toContain("C ≥58");
-    expect(prompt).toContain("D+ ≥50");
-    expect(prompt).toContain("D ≥40");
+    expect(prompt).toContain("Excellent ≥90");
+    expect(prompt).toContain("Strong ≥75");
+    expect(prompt).toContain("Moderate ≥60");
+    expect(prompt).toContain("Weak ≥40");
+    expect(prompt).toContain("Critical ≥0");
   });
 
   it("includes axis weights", () => {

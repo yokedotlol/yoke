@@ -49,7 +49,7 @@ export async function getUsageStats(
     unique_domains: number;
     avg_composite: number;
     archetype_breakdown: Record<string, number>;
-    grade_breakdown: Record<string, number>;
+    tier_breakdown: Record<string, number>;
     daily_scores: { date: string; count: number; avg: number }[];
   };
   daily_snapshot_count?: number;
@@ -107,7 +107,7 @@ export async function getUsageStats(
         unique_domains: number;
         avg_composite: number;
         archetype_breakdown: Record<string, number>;
-        grade_breakdown: Record<string, number>;
+        tier_breakdown: Record<string, number>;
         daily_scores: { date: string; count: number; avg: number }[];
       }
     | undefined;
@@ -130,26 +130,25 @@ export async function getUsageStats(
       archetype_breakdown[r.archetype] = r.cnt;
     }
 
-    // Grade distribution from composite scores
-    const gradeRows = await db
+    // Tier distribution from composite scores
+    const tierRows = await db
       .prepare(
         `SELECT
         CASE
-          WHEN composite_score >= 90 THEN 'A'
-          WHEN composite_score >= 85 THEN 'B+'
-          WHEN composite_score >= 80 THEN 'B'
-          WHEN composite_score >= 65 THEN 'C'
-          WHEN composite_score >= 50 THEN 'D'
-          ELSE 'F'
-        END as grade,
+          WHEN composite_score >= 90 THEN 'Excellent'
+          WHEN composite_score >= 75 THEN 'Strong'
+          WHEN composite_score >= 60 THEN 'Moderate'
+          WHEN composite_score >= 40 THEN 'Weak'
+          ELSE 'Critical'
+        END as tier,
         COUNT(*) as cnt
-       FROM domain_scores WHERE scored_at >= ? GROUP BY grade ORDER BY grade`,
+       FROM domain_scores WHERE scored_at >= ? GROUP BY tier ORDER BY tier`,
       )
       .bind(`${cutoff}T00:00:00`)
       .all();
-    const grade_breakdown: Record<string, number> = {};
-    for (const r of (gradeRows.results || []) as { grade: string; cnt: number }[]) {
-      grade_breakdown[r.grade] = r.cnt;
+    const tier_breakdown: Record<string, number> = {};
+    for (const r of (tierRows.results || []) as { tier: string; cnt: number }[]) {
+      tier_breakdown[r.tier] = r.cnt;
     }
 
     // Daily score volume + average
@@ -171,7 +170,7 @@ export async function getUsageStats(
         unique_domains: scoreAgg.uniq,
         avg_composite: Math.round(scoreAgg.avg_comp || 0),
         archetype_breakdown,
-        grade_breakdown,
+        tier_breakdown,
         daily_scores,
       };
     }

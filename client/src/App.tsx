@@ -1095,7 +1095,7 @@ export function App() {
                 <ShareBar
                   domain={analyze.data.domain}
                   composite={analyze.data.domain_score?.composite}
-                  grade={analyze.data.domain_score?.grade}
+                  tier={analyze.data.domain_score?.tier}
                   axes={analyze.data.domain_score?.axes}
                   analyzedAt={analyze.data.analyzed_at}
                 />

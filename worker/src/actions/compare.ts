@@ -55,13 +55,13 @@ export async function compareDomains(body: CompareRequest, env: Env): Promise<Re
   // Build comparison summary
   const score1 = data1.domain_score as {
     composite: number;
-    grade: string;
+    tier: string;
     axes: Record<string, { score: number; weight: number }>;
     archetype: { detected: string; confidence: number };
   } | null;
   const score2 = data2.domain_score as {
     composite: number;
-    grade: string;
+    tier: string;
     axes: Record<string, { score: number; weight: number }>;
     archetype: { detected: string; confidence: number };
   } | null;
@@ -89,8 +89,8 @@ export async function compareDomains(body: CompareRequest, env: Env): Promise<Re
       composite: {
         score1: score1?.composite ?? null,
         score2: score2?.composite ?? null,
-        grade1: score1?.grade ?? null,
-        grade2: score2?.grade ?? null,
+        tier1: score1?.tier ?? null,
+        tier2: score2?.tier ?? null,
         delta: (score1?.composite ?? 0) - (score2?.composite ?? 0),
       },
       archetype1: score1?.archetype?.detected ?? null,
