@@ -3,7 +3,7 @@
 // Table auto-creates on first write. Pruned probabilistically.
 
 export interface ApiError {
-  api: string; // e.g. "hibp", "ssllabs", "hackertarget", "pagespeed"
+  api: string; // e.g. "hibp", "fly-probe", "hackertarget", "pagespeed"
   status: number; // HTTP status or 0 for network/timeout errors
   message: string; // Brief error description
   domain?: string; // Domain being analyzed when error occurred

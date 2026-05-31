@@ -249,7 +249,7 @@ export function StatusBadge({
   return <span className={`badge badge-${status}`}>{label}</span>;
 }
 
-/** Badge for external letter grades (SSL Labs, security headers) */
+/** Badge for external letter grades (SSL/TLS, security headers) */
 export function GradeBadge({ grade }: { grade: string }) {
   const letter = grade.replace("+", "").replace("-", "").toLowerCase().charAt(0);
   const colors: Record<string, { bg: string; color: string; border: string }> = {

@@ -96,8 +96,8 @@ export function VitalsStrip({ data }: { data: AnalysisResult }) {
         <Tooltip
           text={
             sslGrade === "Valid"
-              ? "SSL certificate detected via HTTPS connectivity. Full grade pending from SSL Labs."
-              : `SSL/TLS certificate grade from Qualys SSL Labs. A+ is the highest rating (strong config + HSTS). B or below indicates legacy cipher suites or configuration weaknesses.`
+              ? "SSL certificate detected via HTTPS connectivity. Grade determined by direct TLS probe."
+              : `SSL/TLS configuration grade from Yoke's direct TLS probe. A+ is the highest rating (strong config + HSTS). B or below indicates legacy cipher suites or configuration weaknesses.`
           }
         >
           {/* biome-ignore lint/a11y/useSemanticElements: visual pill group, fieldset inappropriate */}

@@ -38,7 +38,7 @@ const REFERENCE_LINKS: Record<string, { url: string; label: string }> = {
   },
   "http/2": { url: "https://developer.mozilla.org/en-US/docs/Glossary/HTTP_2", label: "MDN: HTTP/2" },
   "http/3": { url: "https://developer.mozilla.org/en-US/docs/Glossary/HTTP_3", label: "MDN: HTTP/3" },
-  ssl: { url: "https://www.ssllabs.com/projects/documentation/", label: "SSL Labs Docs" },
+  ssl: { url: "https://datatracker.ietf.org/doc/html/rfc8446", label: "RFC 8446 (TLS 1.3)" },
   tls: { url: "https://datatracker.ietf.org/doc/html/rfc8446", label: "RFC 8446 (TLS 1.3)" },
   ocsp: { url: "https://datatracker.ietf.org/doc/html/rfc6960", label: "RFC 6960 (OCSP)" },
   "ocsp-stapling": { url: "https://datatracker.ietf.org/doc/html/rfc6066#section-8", label: "RFC 6066 §8" },
