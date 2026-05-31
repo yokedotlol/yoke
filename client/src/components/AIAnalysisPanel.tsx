@@ -10,6 +10,7 @@ import {
   EyeOff,
   Key,
   Loader2,
+  Lock,
   RotateCcw,
   Settings,
   Sparkles,
@@ -22,6 +23,7 @@ import {
   FIX_DESC_MAP,
   GRADE_THRESHOLDS,
   NON_ACTIONABLE_SIGNALS,
+  SCORE_DRAG_SIGNALS,
 } from "../../../worker/src/config/signal-registry";
 import type { Axis, ScoreFinding, Severity } from "../api";
 import { severityBg, severityColor, severityIcon } from "../utils/severity";
@@ -671,6 +673,15 @@ interface GradeUpItem {
   fixLink: { url: string; label: string } | null;
 }
 
+interface ScoreDragItem {
+  signal: string;
+  label: string;
+  axis: Axis;
+  currentSeverity: Severity;
+  weight: number;
+  pointCost: number; // how much this drags composite score down
+}
+
 function getNextGrade(currentGrade: string): { grade: string; min: number } | null {
   const idx = GRADE_THRESHOLDS.findIndex((g) => g.grade === currentGrade);
   if (idx <= 0) return null; // already A+ or unknown
@@ -706,6 +717,7 @@ function computeAxisScore(findings: ScoreFinding[]): number {
 
 function generateGradeUpPlan(data: AnalysisResult): {
   items: GradeUpItem[];
+  drags: ScoreDragItem[];
   currentScore: number;
   currentGrade: string;
   targetGrade: string;
@@ -782,7 +794,38 @@ function generateGradeUpPlan(data: AnalysisResult): {
   // Sort by biggest impact first
   items.sort((a, b) => b.pointGain - a.pointGain);
 
-  return { items, currentScore, currentGrade, targetGrade: next.grade, targetThreshold: next.min, pointsNeeded };
+  // Collect non-actionable score drags — things hurting the score that can't be fixed
+  const drags: ScoreDragItem[] = [];
+  for (const [axisName, axisData] of Object.entries(score.axes) as [Axis, (typeof score.axes)[Axis]][]) {
+    if (axisData.not_measured || !axisData.findings) continue;
+
+    for (const finding of axisData.findings) {
+      if (finding.severity === "good" || finding.severity === "info") continue;
+      if (!SCORE_DRAG_SIGNALS.includes(finding.signal)) continue;
+
+      // Simulate removing this drag
+      const withoutDrag = axisData.findings.map((f) => (f === finding ? { ...f, severity: "good" as Severity } : f));
+      const newAxisScore = computeAxisScore(withoutDrag);
+      const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
+      const newComposite = geoComposite(simScores);
+      const costDelta = Math.round((newComposite - currentScore) * 10) / 10;
+
+      if (costDelta < 0.1) continue;
+
+      drags.push({
+        signal: finding.signal,
+        label: finding.label,
+        axis: axisName,
+        currentSeverity: finding.severity,
+        weight: finding.weight,
+        pointCost: costDelta,
+      });
+    }
+  }
+
+  drags.sort((a, b) => b.pointCost - a.pointCost);
+
+  return { items, drags, currentScore, currentGrade, targetGrade: next.grade, targetThreshold: next.min, pointsNeeded };
 }
 
 // ─── Resources / How-to-Fix Links ───────────────────────────────────
@@ -2013,6 +2056,80 @@ function GradeUpSimulator({ data }: { data: AnalysisResult }) {
             </>
           )}
         </button>
+      )}
+
+      {/* Non-actionable score drags */}
+      {plan.drags.length > 0 && (
+        <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginBottom: "8px",
+            }}
+          >
+            <Lock size={11} style={{ color: "var(--muted)" }} />
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--muted)" }}>Beyond your control</span>
+            <span style={{ fontSize: "10px", color: "var(--dim)" }}>
+              −{plan.drags.reduce((s, d) => s + d.pointCost, 0).toFixed(1)} pts
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            {plan.drags.map((drag, i) => (
+              <div
+                key={`${drag.signal}-${i}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "8px",
+                  padding: "5px 8px",
+                  borderRadius: "4px",
+                  background: "rgba(255,255,255,0.02)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: axisColors[drag.axis] || "var(--muted)",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: "var(--muted)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {drag.label}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      padding: "1px 5px",
+                      borderRadius: "3px",
+                      background: severityBg(drag.currentSeverity),
+                      color: severityColor(drag.currentSeverity),
+                      fontWeight: 600,
+                    }}
+                  >
+                    {drag.currentSeverity}
+                  </span>
+                  <span style={{ fontSize: "10px", color: "var(--dim)" }}>−{drag.pointCost.toFixed(1)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

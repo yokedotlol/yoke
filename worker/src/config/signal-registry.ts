@@ -1589,6 +1589,11 @@ export const NON_ACTIONABLE_SIGNALS: string[] = Object.entries(SIGNAL_REGISTRY)
   .filter(([, def]) => !def.actionable)
   .map(([id]) => id);
 
+/** Non-actionable signals that can produce penalties (not just info/good) */
+export const SCORE_DRAG_SIGNALS: string[] = Object.entries(SIGNAL_REGISTRY)
+  .filter(([, def]) => !def.actionable && def.canBeNonGood)
+  .map(([id]) => id);
+
 /** All valid signal IDs */
 export const SIGNAL_IDS = Object.keys(SIGNAL_REGISTRY);
 
