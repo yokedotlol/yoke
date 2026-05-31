@@ -6,9 +6,9 @@ import { logApiError, pruneApiErrors } from "../../api-errors";
 import { registry } from "../../checks/registry";
 import type { CheckContext } from "../../checks/types";
 import { getAnalysisCacheTtlMs } from "../../config/cache";
-import { backgroundWork, type Env, normalizeDomain } from "../../helpers";
+import { backgroundWork, type Env, fetchWithTimeout, normalizeDomain } from "../../helpers";
 import { type BreachResult } from "../breaches";
-import { analyzeWordPress } from "../wordpress";
+import { analyzeWordPress, probeWordPressSecurity } from "../wordpress";
 import { analyzeAccessibility } from "./accessibility";
 import { checkCacheHeaders } from "./cache";
 import {
@@ -363,6 +363,14 @@ const DEFAULT_WELL_KNOWN: WellKnownResult = {
 
 // ─── Core Analysis Pipeline ─────────────────────────────────────────
 
+// ─── Request Coalescing (Singleflight) ──────────────────────────────
+// Deduplicates concurrent analysis requests for the same domain.
+// When multiple requests arrive for the same domain simultaneously,
+// only the first runs the full pipeline — the rest piggyback on its result.
+// SSE callers that piggyback will receive the final result without streaming
+// progress events (same UX as a cache hit).
+const inFlightAnalyses = new Map<string, Promise<CoreResult>>();
+
 /**
  * Run the full domain analysis pipeline.
  *
@@ -383,6 +391,37 @@ export async function runAnalysis(
     throw new Error("Invalid domain");
   }
 
+  // ── Request coalescing ────────────────────────────────────────────
+  // When not forcing fresh analysis, piggyback on any in-flight request for the
+  // same domain. SSE callers that piggyback will receive the final result without
+  // streaming progress events — same UX as a cache hit.
+  if (!skipCache) {
+    const existing = inFlightAnalyses.get(domain);
+    if (existing) {
+      return existing;
+    }
+  }
+
+  // Wrap the actual work in a promise for coalescing.
+  // Only store in the map for non-forced requests.
+  const promise = runAnalysisCore(domain, env, skipCache, callbacks);
+
+  if (!skipCache) {
+    inFlightAnalyses.set(domain, promise);
+    // Clean up when done (success or failure)
+    promise.finally(() => inFlightAnalyses.delete(domain));
+  }
+
+  return promise;
+}
+
+/** Internal: runs the full analysis pipeline. Callers go through runAnalysis(). */
+async function runAnalysisCore(
+  domain: string,
+  env: Env,
+  skipCache: boolean,
+  callbacks?: AnalysisCallbacks,
+): Promise<CoreResult> {
   // Derive instance hostname for self-analysis bypass (CF Workers can't fetch themselves)
   let instanceHost: string | undefined;
   try {
@@ -764,6 +803,19 @@ export async function runAnalysis(
   const hosting = detectHosting(ipInfo, effectiveHeaders);
   const wpDetails = httpProbeSucceeded ? analyzeWordPress(html, effectiveHeaders ?? {}, dnsRecords) : null;
 
+  // WordPress security probes — quick HEAD/GET checks for common WP security issues
+  if (wpDetails) {
+    try {
+      const wpProbes = await probeWordPressSecurity(domain, fetchWithTimeout);
+      wpDetails.xmlrpc_accessible = wpProbes.xmlrpc_accessible;
+      wpDetails.login_accessible = wpProbes.login_accessible;
+      wpDetails.user_enumeration = wpProbes.user_enumeration;
+      wpDetails.directory_listing = wpProbes.directory_listing;
+    } catch {
+      // Probes are best-effort — don't fail the analysis
+    }
+  }
+
   // ISP fallback for hosting provider
   if (!hosting.provider && ipInfo?.isp) {
     for (const { pattern, name } of HOSTING_ISPS) {
@@ -882,6 +934,7 @@ export async function runAnalysis(
     redirects: httpProbeSucceeded ? (httpAnalysis?.redirects ?? []) : [],
     statusResult: enhancedStatus,
     robotsParsed,
+    wordpress: wpDetails,
   });
 
   const result: AnalysisResult = {

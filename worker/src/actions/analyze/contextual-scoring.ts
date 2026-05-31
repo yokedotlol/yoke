@@ -1,5 +1,5 @@
 // ─── Contextual Domain Scoring System ─────────────────────────────────
-// Implements the 5-axis radar scoring with archetype-based contextual weighting.
+// Implements the 6-axis radar scoring with archetype-based contextual weighting.
 // See workspace/yoke-research/scoring-system-design.md for full design doc.
 
 import {
@@ -20,6 +20,7 @@ import {
 import { analyzeNsDiversity } from "../../data/ns-providers";
 import { scanForVulnerableLibraries } from "../../data/vulnerable-libraries";
 import type { BreachResult } from "../breaches";
+import type { WordPressDetails } from "../wordpress";
 import type { NetworkHealth } from "./network-health";
 import type {
   AccessibilityResult,
@@ -516,6 +517,7 @@ export function calculateDomainScore(opts: {
   redirects: RedirectHop[];
   statusResult: { is_up: boolean; status_code: number | null; http_blocked?: boolean; status_label?: string } | null;
   robotsParsed: RobotsParsed | null;
+  wordpress: WordPressDetails | null;
 }): DomainScoreResult {
   // Step 1: Detect archetype
   const archetype = detectArchetype({
@@ -3837,6 +3839,117 @@ export function calculateDomainScore(opts: {
       tradeoff: null,
       weight: 1,
     });
+  }
+
+  // ─── WordPress Security Signals (display-only, weight 0) ────────
+  // These appear in findings/domain_signals but do NOT affect scores.
+
+  if (opts.wordpress) {
+    const wp = opts.wordpress;
+
+    // REST API exposure
+    if (wp.api_exposed) {
+      findings.push({
+        signal: "wp_api_exposed",
+        axis: "security",
+        severity: "info",
+        label: "WordPress REST API publicly accessible",
+        tradeoff: "Many themes and plugins require the REST API — disable only if not needed",
+        weight: 0,
+      });
+    }
+
+    // User enumeration via REST API
+    if (wp.user_enumeration) {
+      findings.push({
+        signal: "wp_user_enumeration",
+        axis: "security",
+        severity: "info",
+        label: "WordPress user enumeration possible via REST API",
+        tradeoff: "Usernames discoverable at /wp-json/wp/v2/users — aids brute-force attacks",
+        weight: 0,
+      });
+    }
+
+    // XML-RPC accessible
+    if (wp.xmlrpc_accessible) {
+      findings.push({
+        signal: "wp_xmlrpc_exposed",
+        axis: "security",
+        severity: "info",
+        label: "WordPress XML-RPC endpoint accessible",
+        tradeoff:
+          "Enables brute-force login attempts and pingback DDoS amplification — disable unless needed for Jetpack or mobile publishing",
+        weight: 0,
+      });
+    }
+
+    // Login page exposed
+    if (wp.login_accessible) {
+      findings.push({
+        signal: "wp_login_exposed",
+        axis: "security",
+        severity: "info",
+        label: "WordPress login page publicly accessible",
+        tradeoff: "Consider hiding with WPS Hide Login or restricting by IP — mitigate with 2FA and rate limiting",
+        weight: 0,
+      });
+    }
+
+    // Directory listing
+    if (wp.directory_listing) {
+      findings.push({
+        signal: "wp_directory_listing",
+        axis: "security",
+        severity: "info",
+        label: "WordPress uploads directory listing enabled",
+        tradeoff: "Exposes uploaded files and server structure — add 'Options -Indexes' to .htaccess",
+        weight: 0,
+      });
+    }
+
+    // Security plugin status
+    if (wp.security_plugin) {
+      findings.push({
+        signal: "wp_security_plugin_detected",
+        axis: "security",
+        severity: "good",
+        label: `WordPress security plugin: ${wp.security_plugin}`,
+        tradeoff: null,
+        weight: 0,
+      });
+    } else {
+      findings.push({
+        signal: "wp_no_security_plugin",
+        axis: "security",
+        severity: "info",
+        label: "No WordPress security plugin detected",
+        tradeoff: "Consider Wordfence, Sucuri, or Solid Security for firewall and brute-force protection",
+        weight: 0,
+      });
+    }
+
+    // Caching plugin status
+    if (wp.caching_plugin) {
+      findings.push({
+        signal: "wp_caching_plugin_detected",
+        axis: "speed",
+        severity: "good",
+        label: `WordPress caching plugin: ${wp.caching_plugin}`,
+        tradeoff: null,
+        weight: 0,
+      });
+    } else if (!wp.managed_hosting) {
+      // Only flag missing caching if not on managed hosting (which typically has built-in caching)
+      findings.push({
+        signal: "wp_no_caching_plugin",
+        axis: "speed",
+        severity: "info",
+        label: "No WordPress caching plugin detected",
+        tradeoff: "Consider WP Rocket, LiteSpeed Cache, or WP Super Cache for improved page load times",
+        weight: 0,
+      });
+    }
   }
 
   // ─── Compute Axis Scores ─────────────────────────────────────────

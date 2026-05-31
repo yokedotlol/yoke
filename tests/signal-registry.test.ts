@@ -236,7 +236,7 @@ describe("Signal Registry", () => {
     expect(AXIS_WEIGHTS).toHaveProperty("email");
   });
 
-  it("registry contains exactly 142 signals", () => {
-    expect(SIGNAL_IDS.length).toBe(142);
+  it("registry contains exactly 151 signals", () => {
+    expect(SIGNAL_IDS.length).toBe(151);
   });
 });

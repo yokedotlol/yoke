@@ -659,6 +659,102 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       "CVE detection is version-based, doesn't confirm exploitability. Site may not use vulnerable function. Note this caveat. EOL libraries are additional concern.",
   },
 
+  // ── WordPress Security (display-only, zero score impact) ──────────
+
+  wp_api_exposed: {
+    axis: "security",
+    label: "WordPress REST API Exposed",
+    actionable: true,
+    canBeNonGood: true,
+    effort: "~15 min — disable REST API or restrict endpoints",
+    fixDescription: "Restrict or disable the WordPress REST API to prevent information disclosure",
+    weightRange: [0, 0],
+    promptGuidance:
+      "Display-only signal. REST API exposure enables user enumeration and data extraction. Many themes/plugins require it, so disabling isn't always viable.",
+  },
+  wp_user_enumeration: {
+    axis: "security",
+    label: "WordPress User Enumeration Possible",
+    actionable: true,
+    canBeNonGood: true,
+    effort: "~10 min — security plugin or REST API restriction",
+    fixDescription: "Block public access to /wp-json/wp/v2/users to prevent username discovery",
+    weightRange: [0, 0],
+    promptGuidance:
+      "Display-only signal. Usernames visible via REST API aid brute-force attacks. Fixable via security plugins (Wordfence, iThemes) or custom code.",
+  },
+  wp_xmlrpc_exposed: {
+    axis: "security",
+    label: "WordPress XML-RPC Accessible",
+    actionable: true,
+    canBeNonGood: true,
+    effort: "~10 min — block in .htaccess or plugin",
+    fixDescription: "Disable or block XML-RPC to prevent brute-force and DDoS amplification attacks",
+    weightRange: [0, 0],
+    promptGuidance:
+      "Display-only signal. xmlrpc.php enables brute-force login attempts and pingback DDoS amplification. Rarely needed in modern WP — disable unless using Jetpack or mobile app publishing.",
+  },
+  wp_login_exposed: {
+    axis: "security",
+    label: "WordPress Login Page Exposed",
+    actionable: true,
+    canBeNonGood: true,
+    effort: "~15 min — WPS Hide Login or similar plugin",
+    fixDescription: "Move or restrict access to the WordPress login page",
+    weightRange: [0, 0],
+    promptGuidance:
+      "Display-only signal. Publicly accessible login page enables brute-force attempts. Mitigated by rate limiting, 2FA, or hiding the login URL.",
+  },
+  wp_directory_listing: {
+    axis: "security",
+    label: "WordPress Directory Listing Enabled",
+    actionable: true,
+    canBeNonGood: true,
+    effort: "~5 min — add Options -Indexes to .htaccess",
+    fixDescription: "Disable directory listing to prevent file structure disclosure",
+    weightRange: [0, 0],
+    promptGuidance:
+      "Display-only signal. Open directory listing in /wp-content/uploads/ exposes uploaded files and server file structure. Easy fix via .htaccess.",
+  },
+  wp_no_security_plugin: {
+    axis: "security",
+    label: "No WordPress Security Plugin",
+    actionable: true,
+    canBeNonGood: true,
+    effort: "~15 min — install Wordfence, Sucuri, or similar",
+    fixDescription: "Install a WordPress security plugin for firewall, malware scanning, and login protection",
+    weightRange: [0, 0],
+    promptGuidance:
+      "Display-only signal. Security plugins provide firewall, brute-force protection, and malware scanning. Not strictly required if server-level security is strong, but recommended.",
+  },
+  wp_no_caching_plugin: {
+    axis: "speed",
+    label: "No WordPress Caching Plugin",
+    actionable: true,
+    canBeNonGood: true,
+    effort: "~15 min — install WP Rocket, LiteSpeed Cache, or WP Super Cache",
+    fixDescription: "Install a caching plugin to improve page load times",
+    weightRange: [0, 0],
+    promptGuidance:
+      "Display-only signal. Caching plugins dramatically reduce page load times for WordPress. Less critical if using managed hosting with built-in caching.",
+  },
+  wp_security_plugin_detected: {
+    axis: "security",
+    label: "WordPress Security Plugin Active",
+    actionable: false,
+    canBeNonGood: false,
+    weightRange: [0, 0],
+    promptGuidance: "Display-only positive signal. Site has a recognized security plugin installed.",
+  },
+  wp_caching_plugin_detected: {
+    axis: "speed",
+    label: "WordPress Caching Plugin Active",
+    actionable: false,
+    canBeNonGood: false,
+    weightRange: [0, 0],
+    promptGuidance: "Display-only positive signal. Site has a recognized caching/performance plugin installed.",
+  },
+
   // ── Performance ───────────────────────────────────────────────────
 
   perf_score: {

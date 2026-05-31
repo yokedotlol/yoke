@@ -83,6 +83,22 @@ const REFERENCE_LINKS: Record<string, { url: string; label: string }> = {
   "humans.txt": { url: "https://humanstxt.org/", label: "humanstxt.org" },
   "ads.txt": { url: "https://iabtechlab.com/ads-txt/", label: "IAB: ads.txt" },
   blocklist: { url: "https://www.dnsbl.info/", label: "DNSBL Info" },
+  xmlrpc: { url: "https://developer.wordpress.org/apis/xml-rpc/", label: "WordPress: XML-RPC" },
+  "xml-rpc": { url: "https://developer.wordpress.org/apis/xml-rpc/", label: "WordPress: XML-RPC" },
+  "wp-login": {
+    url: "https://developer.wordpress.org/advanced-administration/security/brute-force-attacks/",
+    label: "WordPress: Brute Force Protection",
+  },
+  "rest api": { url: "https://developer.wordpress.org/rest-api/", label: "WordPress: REST API" },
+  "user enumeration": {
+    url: "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/03-Identity_Management_Testing/04-Testing_for_Account_Enumeration_and_Guessable_User_Account",
+    label: "OWASP: User Enumeration",
+  },
+  wordfence: { url: "https://www.wordfence.com/", label: "Wordfence" },
+  "directory listing": {
+    url: "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/04-Review_Old_Backup_and_Unreferenced_Files_for_Sensitive_Information",
+    label: "OWASP: Directory Listing",
+  },
 };
 
 export function findReferenceLink(text: string): { url: string; label: string } | null {

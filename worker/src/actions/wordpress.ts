@@ -15,6 +15,11 @@ export interface WordPressDetails {
   api_exposed: boolean;
   block_editor: boolean;
   multisite: boolean;
+  // Security probes (populated by probeWordPressSecurity)
+  xmlrpc_accessible?: boolean;
+  login_accessible?: boolean;
+  user_enumeration?: boolean;
+  directory_listing?: boolean;
 }
 
 // ─── Known plugin database (slug → display name + category) ─────────
@@ -412,4 +417,67 @@ function prettifySlug(slug: string): string {
     .replace(/\bSsl\b/g, "SSL")
     .replace(/\bCdn\b/g, "CDN")
     .replace(/\bUi\b/g, "UI");
+}
+
+// ─── WordPress Security Probes ──────────────────────────────────────
+// Quick HEAD/GET checks for common WP security issues.
+// Called separately from analyzeWordPress since it needs async fetch.
+
+export async function probeWordPressSecurity(
+  domain: string,
+  fetchFn: (url: string, opts?: RequestInit & { timeout?: number }) => Promise<Response>,
+): Promise<{
+  xmlrpc_accessible: boolean;
+  login_accessible: boolean;
+  user_enumeration: boolean;
+  directory_listing: boolean;
+}> {
+  const results = {
+    xmlrpc_accessible: false,
+    login_accessible: false,
+    user_enumeration: false,
+    directory_listing: false,
+  };
+
+  const checks = await Promise.allSettled([
+    // xmlrpc.php — common brute-force and DDoS amplification vector
+    fetchFn(`https://${domain}/xmlrpc.php`, { method: "HEAD", timeout: 5000 }).then((r) => {
+      results.xmlrpc_accessible = r.status === 200 || r.status === 405;
+    }),
+
+    // wp-login.php — exposed login page
+    fetchFn(`https://${domain}/wp-login.php`, { method: "HEAD", timeout: 5000 }).then((r) => {
+      results.login_accessible = r.status === 200;
+    }),
+
+    // REST API user enumeration — /wp-json/wp/v2/users
+    fetchFn(`https://${domain}/wp-json/wp/v2/users`, { timeout: 5000 }).then(async (r) => {
+      if (r.status === 200) {
+        try {
+          const body = await r.text();
+          // Check if it actually returns user data (array of user objects)
+          results.user_enumeration = body.startsWith("[") && body.includes('"slug"');
+        } catch {
+          // ignore
+        }
+      }
+    }),
+
+    // Directory listing — /wp-content/uploads/
+    fetchFn(`https://${domain}/wp-content/uploads/`, { method: "GET", timeout: 5000 }).then(async (r) => {
+      if (r.status === 200) {
+        try {
+          const body = await r.text();
+          results.directory_listing = /Index of|<title>.*listing/i.test(body);
+        } catch {
+          // ignore
+        }
+      }
+    }),
+  ]);
+
+  // Silently ignore any failures — these are best-effort probes
+  void checks;
+
+  return results;
 }
