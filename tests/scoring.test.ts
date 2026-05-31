@@ -216,7 +216,7 @@ describe("Composite Score Computation", () => {
 describe("Grade Assignment", () => {
   it("should assign correct grades (production thresholds)", () => {
     expect(gradeFromComposite(100)).toBe("A+");
-    expect(gradeFromComposite(88)).toBe("A+");
+    expect(gradeFromComposite(92)).toBe("A+");
     expect(gradeFromComposite(87)).toBe("A");
     expect(gradeFromComposite(82)).toBe("A");
     expect(gradeFromComposite(81)).toBe("B+");

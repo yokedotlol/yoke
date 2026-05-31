@@ -28,7 +28,7 @@ describe("Prompt Builder", () => {
 
   it("includes grade thresholds from signal registry", () => {
     const prompt = buildSystemPrompt(makeArchetype(), Object.keys(SIGNAL_REGISTRY));
-    expect(prompt).toContain("A+ ≥88");
+    expect(prompt).toContain("A+ ≥92");
     expect(prompt).toContain("A ≥82");
     expect(prompt).toContain("B+ ≥76");
     expect(prompt).toContain("C ≥58");

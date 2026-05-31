@@ -202,7 +202,7 @@ describe("Signal Registry", () => {
   it("gradeFromComposite matches GRADE_THRESHOLDS", () => {
     // Test boundary values
     expect(gradeFromComposite(100)).toBe("A+");
-    expect(gradeFromComposite(88)).toBe("A+");
+    expect(gradeFromComposite(92)).toBe("A+");
     expect(gradeFromComposite(87)).toBe("A");
     expect(gradeFromComposite(82)).toBe("A");
     expect(gradeFromComposite(81)).toBe("B+");
