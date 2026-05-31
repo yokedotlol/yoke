@@ -8,7 +8,6 @@ import { ErrorState, Panel, StatusBadge } from "./Panel";
 interface ExploreTabProps {
   domain: string;
   data: AnalysisResult;
-  onNavigate: (domain: string) => void;
 }
 
 function DomainChip({ domain }: { domain: string }) {

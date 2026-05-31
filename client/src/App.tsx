@@ -194,6 +194,13 @@ function useStreamingAnalysis() {
   });
   const abortRef = useRef<AbortController | null>(null);
 
+  // Abort in-flight SSE stream on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const mutate = useCallback((domain: string, options?: { force?: boolean }) => {
     // Abort any in-flight analysis
     abortRef.current?.abort();
@@ -327,19 +334,6 @@ function hasEnoughForTabs(partial: Partial<AnalysisResult>): boolean {
   return !!partial.dns;
 }
 
-function _SkeletonResults() {
-  return (
-    <div className="space-y-3 mt-3">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <SkeletonPanel title="DNS Records" icon={sIcon} rows={6} />
-        <SkeletonPanel title="WHOIS / RDAP" icon={sIcon} rows={5} />
-        <SkeletonPanel title="SSL / TLS" icon={sIcon} rows={4} />
-        <SkeletonPanel title="Security Headers" icon={sIcon} rows={6} />
-      </div>
-    </div>
-  );
-}
-
 // ─── Tab Content Components ────────────────────────────────────
 
 function OverviewTab({ data, streaming }: { data: AnalysisResult; streaming?: boolean }) {
@@ -440,17 +434,7 @@ function TabLoadingFallback() {
   );
 }
 
-function TabContent({
-  tab,
-  data,
-  onNavigate,
-  streaming,
-}: {
-  tab: TabId;
-  data: AnalysisResult;
-  onNavigate: (d: string) => void;
-  streaming?: boolean;
-}) {
+function TabContent({ tab, data, streaming }: { tab: TabId; data: AnalysisResult; streaming?: boolean }) {
   // Overview is eagerly loaded — no Suspense needed
   if (tab === "overview") return <OverviewTab data={data} streaming={streaming} />;
 
@@ -472,7 +456,7 @@ function TabContent({
       case "news":
         return <NewsTab domain={data.domain} />;
       case "explore":
-        return <ExploreTab domain={data.domain} data={data} onNavigate={onNavigate} />;
+        return <ExploreTab domain={data.domain} data={data} />;
       case "ai":
         return <AIAnalysisPanel domain={data.domain} analysisData={data} streaming={streaming} />;
       default:
@@ -1020,7 +1004,6 @@ export function App() {
                       <TabContent
                         tab={activeTab}
                         data={cleanTechStack(analyze.partialData as AnalysisResult)}
-                        onNavigate={handleNavigate}
                         streaming
                       />
                     </ErrorBoundary>
@@ -1100,7 +1083,7 @@ export function App() {
                   analyzedAt={analyze.data.analyzed_at}
                 />
                 <ErrorBoundary fallbackLabel="This tab encountered an error" key={activeTab}>
-                  <TabContent tab={activeTab} data={cleanTechStack(analyze.data)} onNavigate={handleNavigate} />
+                  <TabContent tab={activeTab} data={cleanTechStack(analyze.data)} />
                 </ErrorBoundary>
               </div>
             )}
