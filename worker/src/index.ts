@@ -346,7 +346,7 @@ export default {
     }
 
     // Status page — server-rendered, public
-    if (method === "GET" && path === "/status") {
+    if ((method === "GET" || method === "HEAD") && path === "/status") {
       return renderStatusPage(env.STATS_DB, baseUrl);
     }
 

@@ -189,17 +189,17 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
       headers: { Location: "https://raw.githubusercontent.com/yokedotlol/yoke/main/cli/install.sh" },
     });
   }
-  if (method === "GET" && path === "/privacy") {
+  if ((method === "GET" || method === "HEAD") && path === "/privacy") {
     return htmlResponse(PRIVACY_HTML, { "Cache-Control": "public, max-age=86400" }, baseUrl);
   }
-  if (method === "GET" && path === "/terms") {
+  if ((method === "GET" || method === "HEAD") && path === "/terms") {
     return htmlResponse(TERMS_HTML, { "Cache-Control": "public, max-age=86400" }, baseUrl);
   }
-  if (method === "GET" && path === "/about") {
+  if ((method === "GET" || method === "HEAD") && path === "/about") {
     return htmlResponse(ABOUT_HTML, { "Cache-Control": "public, max-age=86400" }, baseUrl);
   }
-  // /cli is a client-side rendered page — serve the SPA shell
-  if (method === "GET" && path === "/cli") {
+  // Client-side rendered pages — serve the SPA shell
+  if ((method === "GET" || method === "HEAD") && (path === "/cli" || path === "/status" || path === "/usage")) {
     const indexHtml = await getIndexHtml(env, request.url);
     return htmlResponse(indexHtml, { "Cache-Control": "public, max-age=1800" }, baseUrl);
   }
