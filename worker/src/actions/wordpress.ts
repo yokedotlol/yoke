@@ -273,7 +273,7 @@ export function analyzeWordPress(
   const genMatch = html.match(/<meta[^>]+content=["']WordPress\s+([\d.]+(?:-[a-zA-Z0-9-]+)?)/i);
   if (genMatch) version = genMatch[1];
   if (!version) {
-    const verMatch = html.match(/wp-(?:includes|content)\/[^"'?]+\?ver=([\d.]+)/i);
+    const verMatch = html.match(/wp-(?:includes|content)\/[^"'?]+\?ver=(\d+\.\d[\d.]*)/i);
     if (verMatch) version = verMatch[1];
   }
 

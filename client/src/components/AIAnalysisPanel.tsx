@@ -739,16 +739,35 @@ function generateLevelUpPlan(data: AnalysisResult): {
 
   // Build current axis scores map for geometric mean simulation
   const currentAxisScores: Record<string, number> = {};
+  // Track which axes are assessed (not not_measured) for weight renormalization
+  const assessedAxes: string[] = [];
+  // Compute absence penalty adjustments per axis: the difference between server's
+  // actual score and client-side computeAxisScore (which lacks absence penalties).
+  // This delta captures the server's applyAbsencePenalties() effect without
+  // needing to replicate EXPECTED_BASELINES on the client.
+  const absenceAdjustment: Record<string, number> = {};
   for (const [axisName, axisData] of Object.entries(score.axes) as [Axis, (typeof score.axes)[Axis]][]) {
-    currentAxisScores[axisName] = axisData.score ?? 50;
+    if (axisData.not_measured || axisData.score == null) {
+      // Exclude not_measured axes from composite calculation (matches server)
+      continue;
+    }
+    assessedAxes.push(axisName);
+    currentAxisScores[axisName] = axisData.score;
+    // Compute what the client's computeAxisScore gives without absence penalties
+    const rawClientScore = axisData.findings ? computeAxisScore(axisData.findings) : SCORING_BASELINE;
+    absenceAdjustment[axisName] = axisData.score - rawClientScore;
   }
 
   // Helper: compute weighted geometric mean from axis scores
+  // Only includes assessed axes with renormalized weights (matches server behavior)
   function geoComposite(axisScoresMap: Record<string, number>): number {
+    if (assessedAxes.length === 0) return 0;
+    const totalWeight = assessedAxes.reduce((sum, a) => sum + (AXIS_WEIGHTS[a as Axis] ?? 0), 0);
     let logSum = 0;
-    for (const [axis, w] of Object.entries(AXIS_WEIGHTS)) {
-      const s = Math.max(axisScoresMap[axis] ?? 50, 1);
-      logSum += w * Math.log(s);
+    for (const axis of assessedAxes) {
+      const s = Math.max(axisScoresMap[axis] ?? 1, 1);
+      const normalizedWeight = (AXIS_WEIGHTS[axis as Axis] ?? 0) / totalWeight;
+      logSum += normalizedWeight * Math.log(s);
     }
     return Math.max(0, Math.min(100, Math.round(Math.exp(logSum))));
   }
@@ -765,7 +784,9 @@ function generateLevelUpPlan(data: AnalysisResult): {
 
       // Simulate fixing this finding: change its severity to "good" and recalculate
       const fixedFindings = axisData.findings.map((f) => (f === finding ? { ...f, severity: "good" as Severity } : f));
-      const newAxisScore = computeAxisScore(fixedFindings);
+      // Apply absence adjustment so simulated score accounts for server-side absence penalties
+      const rawNewAxisScore = computeAxisScore(fixedFindings);
+      const newAxisScore = Math.max(0, Math.min(100, Math.round(rawNewAxisScore + (absenceAdjustment[axisName] ?? 0))));
 
       // Compute composite delta using geometric mean
       const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
@@ -805,7 +826,11 @@ function generateLevelUpPlan(data: AnalysisResult): {
 
       // Simulate removing this drag
       const withoutDrag = axisData.findings.map((f) => (f === finding ? { ...f, severity: "good" as Severity } : f));
-      const newAxisScore = computeAxisScore(withoutDrag);
+      const rawDragAxisScore = computeAxisScore(withoutDrag);
+      const newAxisScore = Math.max(
+        0,
+        Math.min(100, Math.round(rawDragAxisScore + (absenceAdjustment[axisName] ?? 0))),
+      );
       const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
       const newComposite = geoComposite(simScores);
       const costDelta = Math.round((newComposite - currentScore) * 10) / 10;

@@ -58,6 +58,11 @@ function getRateLimits(env: Env): Record<string, { limit: number; windowSecs: nu
     "/api/analyze": { limit: parseInt(env.RATE_LIMIT_ANALYZE || "50", 10), windowSecs: 3600 },
     "/api/compare": { limit: parseInt(env.RATE_LIMIT_COMPARE || "50", 10), windowSecs: 3600 },
     "/api/subdomain-scan": { limit: parseInt(env.RATE_LIMIT_SUBDOMAIN || "30", 10), windowSecs: 3600 },
+    "/api/subdomains": { limit: 50, windowSecs: 3600 },
+    "/api/company": { limit: 50, windowSecs: 3600 },
+    "/api/news": { limit: 50, windowSecs: 3600 },
+    "/api/social": { limit: 50, windowSecs: 3600 },
+    "/api/reverse-ip": { limit: 50, windowSecs: 3600 },
     "/api/availability": { limit: parseInt(env.RATE_LIMIT_AVAILABILITY || "60", 10), windowSecs: 3600 },
     "/api/js-audit": { limit: 20, windowSecs: 3600 },
   };
@@ -249,12 +254,16 @@ function timingSafeEq(a: string, b: string): boolean {
 
 /** Verify admin Basic auth. Returns null if valid, or a Response to return if invalid. */
 function checkAdminAuth(request: Request, adminKey: string | undefined): Response | null {
-  if (!adminKey) return new Response("Admin key not configured", { status: 503 });
+  if (!adminKey)
+    return new Response(JSON.stringify({ error: "Admin key not configured" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
   const authHeader = request.headers.get("Authorization") || "";
   if (!authHeader.startsWith("Basic ")) {
-    return new Response("Unauthorized", {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { "WWW-Authenticate": 'Basic realm="Yoke Admin"' },
+      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"' },
     });
   }
   let pass: string;
@@ -262,15 +271,15 @@ function checkAdminAuth(request: Request, adminKey: string | undefined): Respons
     const decoded = atob(authHeader.slice(6));
     [, pass] = decoded.split(":");
   } catch {
-    return new Response("Malformed credentials", {
+    return new Response(JSON.stringify({ error: "Malformed credentials" }), {
       status: 401,
-      headers: { "WWW-Authenticate": 'Basic realm="Yoke Admin"' },
+      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"' },
     });
   }
   if (!pass || !timingSafeEq(pass, adminKey)) {
-    return new Response("Invalid credentials", {
+    return new Response(JSON.stringify({ error: "Invalid credentials" }), {
       status: 401,
-      headers: { "WWW-Authenticate": 'Basic realm="Yoke Admin"' },
+      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"' },
     });
   }
   return null; // auth passed
@@ -454,6 +463,11 @@ export default {
 
         // POST /api/subdomains
         if (method === "POST" && path === "/api/subdomains") {
+          const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/subdomains", env);
+          if (rl.blocked) {
+            _track("subdomains", 429);
+            return rl.blocked;
+          }
           const body = await parseBody<{ domain?: string }>(request);
           if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
           const domain = cleanDomain(body.domain);
@@ -461,11 +475,16 @@ export default {
           const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
           await trackUsage(env.STATS_DB, "subdomains");
           _track("subdomains", 200, domain);
-          return json(result);
+          return addHeaders(json(result), rl.headers);
         }
 
         // GET /api/subdomains?domain=X — subdomain enumeration (GET alias)
         if (method === "GET" && path === "/api/subdomains") {
+          const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/subdomains", env);
+          if (rl.blocked) {
+            _track("subdomains", 429);
+            return rl.blocked;
+          }
           const domain = cleanDomain(url.searchParams.get("domain") || "");
           if (!domain)
             return json(
@@ -478,7 +497,7 @@ export default {
           const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
           await trackUsage(env.STATS_DB, "subdomains");
           _track("subdomains", 200, domain);
-          return json(result);
+          return addHeaders(json(result), rl.headers);
         }
 
         // POST /api/subdomain-scan
@@ -500,6 +519,11 @@ export default {
 
         // POST /api/company
         if (method === "POST" && path === "/api/company") {
+          const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/company", env);
+          if (rl.blocked) {
+            _track("company", 429);
+            return rl.blocked;
+          }
           const body = await parseBody<{ domain?: string; force?: boolean }>(request);
           if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
           const domain = cleanDomain(body.domain);
@@ -507,11 +531,16 @@ export default {
           const result = await getCompanyInfo(env.REFERENCE_DATA!, domain, body.force, env.STATS_DB);
           await trackUsage(env.STATS_DB, "company");
           _track("company", 200, domain);
-          return json(result);
+          return addHeaders(json(result), rl.headers);
         }
 
         // POST /api/news
         if (method === "POST" && path === "/api/news") {
+          const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/news", env);
+          if (rl.blocked) {
+            _track("news", 429);
+            return rl.blocked;
+          }
           const body = await parseBody<{ domain?: string }>(request);
           if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
           const domain = cleanDomain(body.domain);
@@ -519,11 +548,16 @@ export default {
           const result = await getNews(env.REFERENCE_DATA!, domain, env.STATS_DB);
           await trackUsage(env.STATS_DB, "news");
           _track("news", 200, domain);
-          return json(result);
+          return addHeaders(json(result), rl.headers);
         }
 
         // POST /api/social
         if (method === "POST" && path === "/api/social") {
+          const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/social", env);
+          if (rl.blocked) {
+            _track("social", 429);
+            return rl.blocked;
+          }
           const body = await parseBody<{ domain?: string }>(request);
           if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
           const domain = cleanDomain(body.domain);
@@ -531,11 +565,16 @@ export default {
           const result = await getSocialAccounts(env.REFERENCE_DATA!, domain, env);
           await trackUsage(env.STATS_DB, "social");
           _track("social", 200, domain);
-          return json(result);
+          return addHeaders(json(result), rl.headers);
         }
 
         // POST /api/reverse-ip
         if (method === "POST" && path === "/api/reverse-ip") {
+          const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/reverse-ip", env);
+          if (rl.blocked) {
+            _track("reverse-ip", 429);
+            return rl.blocked;
+          }
           const body = await parseBody<{ ip?: string }>(request);
           if (!body.ip) return json({ error: "ip is required", code: "MISSING_IP" }, 400);
           const ip = body.ip.trim();
@@ -548,7 +587,7 @@ export default {
           const result = await getReverseIP(env.REFERENCE_DATA!, ip);
           await trackUsage(env.STATS_DB, "reverse-ip");
           _track("reverse-ip", 200);
-          return json(result);
+          return addHeaders(json(result), rl.headers);
         }
 
         // POST /api/availability
@@ -656,7 +695,7 @@ export default {
         // GET /api/js-audit?domain=x — deep JS vulnerability scan
         // POST /api/js-audit {domain} — deep JS vulnerability scan
         if ((method === "GET" || method === "POST") && path === "/api/js-audit") {
-          const adminBypass = env.ADMIN_KEY && request.headers.get("X-Admin-Key") === env.ADMIN_KEY;
+          const adminBypass = env.ADMIN_KEY && timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY);
           const rl = adminBypass
             ? { blocked: null, headers: {} }
             : await checkRateLimit(env.STATS_DB, clientIP, "/api/js-audit", env);
@@ -882,11 +921,11 @@ export default {
               "POST /api/subdomains": {
                 description: "Subdomain enumeration via certificate transparency logs",
                 body: '{"domain": "example.com"}',
-                rate_limit: "none",
+                rate_limit: "50 req/hr",
               },
               "GET /api/subdomains?domain=example.com": {
                 description: "Subdomain enumeration (GET variant)",
-                rate_limit: "none",
+                rate_limit: "50 req/hr",
               },
               "POST /api/subdomain-scan": {
                 description: "Active subdomain DNS scan — resolves discovered subdomains",

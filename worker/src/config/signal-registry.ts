@@ -46,7 +46,7 @@ export const AXIS_WEIGHTS: Record<Axis, number> = {
 // ─── Signal Definition ──────────────────────────────────────────────
 
 export interface SignalDef {
-  /** Which of the 5 axes this signal belongs to */
+  /** Which of the 6 axes this signal belongs to */
   axis: Axis;
   /** Human-readable label for the signal */
   label: string;
@@ -826,7 +826,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     axis: "speed",
     label: "Render-Blocking Scripts",
     actionable: false,
-    canBeNonGood: false,
+    canBeNonGood: true,
     weightRange: [3, 3],
     promptGuidance:
       "Render-blocking scripts delay rendering. 1-2=low, 3-5=medium, 6+=high. async/defer may cause timing issues.",

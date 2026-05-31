@@ -23,14 +23,8 @@ export interface ThresholdConfig {
 }
 
 // ─── Severity → Score mapping ────────────────────────────────────────
-export const SEVERITY_SCORES: Record<Severity, number> = {
-  critical: 0,
-  high: 15,
-  medium: 40,
-  low: 65,
-  info: 82,
-  good: 100,
-};
+// Re-exported from signal-registry.ts (single source of truth).
+export { SEVERITY_SCORES } from "./signal-registry";
 
 // ─── Speed ─────────────────────────────────────────────────────
 
