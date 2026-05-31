@@ -2,8 +2,8 @@
 // Replaces Hono with a tiny hand-rolled router for zero-dependency deployment
 
 import { buildAIPrompt, getAIAnalysis } from "./actions/ai-analysis";
-import { analyzeDomain } from "./actions/analyze";
 import { AXIS_WEIGHTS } from "./actions/analyze/contextual-scoring";
+import { runAnalysis } from "./actions/analyze/core";
 import { analyzeDomainStream } from "./actions/analyze-stream";
 import { checkGlobalAvailability } from "./actions/availability";
 import { getCompanyInfo } from "./actions/company";
@@ -89,12 +89,17 @@ const blockCache = new Map<string, number>();
 interface RateLimitResult {
   blocked: Response | null;
   headers: Record<string, string>;
+  /** Call after the endpoint finishes to record the rate-limit hit.
+   *  Skip this call for cached results so cache hits don't burn credits. */
+  record: () => Promise<void>;
 }
+
+const rateLimitNoop = async () => {};
 
 async function checkRateLimit(db: D1Database, ip: string, endpoint: string, env: Env): Promise<RateLimitResult> {
   const limits = getRateLimits(env);
   const config = limits[endpoint];
-  if (!config || config.limit === 0) return { blocked: null, headers: {} };
+  if (!config || config.limit === 0) return { blocked: null, headers: {}, record: rateLimitNoop };
 
   // Fast path: if this IP+endpoint is in the block cache, return 429 without touching D1
   const cacheKey = `${ip}:${endpoint}`;
@@ -131,6 +136,7 @@ async function checkRateLimit(db: D1Database, ip: string, endpoint: string, env:
         },
       ),
       headers: rlHeaders,
+      record: rateLimitNoop,
     };
   } else if (cachedResetAt) {
     blockCache.delete(cacheKey); // expired, clean up
@@ -185,23 +191,30 @@ async function checkRateLimit(db: D1Database, ip: string, endpoint: string, env:
           },
         ),
         headers: rlHeaders,
+        record: rateLimitNoop,
       };
     }
-    // Record this request
-    await db
-      .prepare("INSERT INTO endpoint_rate_limits (ip, endpoint, ts) VALUES (?, ?, ?)")
-      .bind(ip, endpoint, now)
-      .run();
-    // Probabilistic cleanup: 2% chance, delete entries older than 2 hours
-    if (Math.random() < 0.02) {
-      const old = now - 7200;
-      await db
-        .prepare("DELETE FROM endpoint_rate_limits WHERE ts < ?")
-        .bind(old)
-        .run()
-        .catch(() => {});
-    }
-    const remaining = config.limit - count - 1; // -1 for the request we just recorded
+    // Defer recording — callers invoke record() after determining the result isn't cached
+    const recordHit = async () => {
+      try {
+        await db
+          .prepare("INSERT INTO endpoint_rate_limits (ip, endpoint, ts) VALUES (?, ?, ?)")
+          .bind(ip, endpoint, now)
+          .run();
+        // Probabilistic cleanup: 2% chance, delete entries older than 2 hours
+        if (Math.random() < 0.02) {
+          const old = now - 7200;
+          await db
+            .prepare("DELETE FROM endpoint_rate_limits WHERE ts < ?")
+            .bind(old)
+            .run()
+            .catch(() => {});
+        }
+      } catch {
+        // Best-effort — don't fail the request if recording fails
+      }
+    };
+    const remaining = config.limit - count; // don't subtract 1 yet — record() hasn't been called
     return {
       blocked: null,
       headers: {
@@ -209,12 +222,13 @@ async function checkRateLimit(db: D1Database, ip: string, endpoint: string, env:
         "X-RateLimit-Remaining": String(Math.max(0, remaining)),
         "X-RateLimit-Reset": String(resetAt),
       },
+      record: recordHit,
     };
   } catch (err) {
     logError("rate limit DB error", { error: err instanceof Error ? err.message : String(err) });
     // Fail-open for general endpoints (they don't cost money)
   }
-  return { blocked: null, headers: {} };
+  return { blocked: null, headers: {}, record: rateLimitNoop };
 }
 
 function json(data: unknown, status = 200): Response {
@@ -412,7 +426,7 @@ export default {
           // Admin key bypasses rate limit (for batch calibration / internal tools)
           const adminBypass = env.ADMIN_KEY && timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY);
           const rl = adminBypass
-            ? { blocked: null, headers: {} }
+            ? { blocked: null, headers: {}, record: rateLimitNoop }
             : await checkRateLimit(env.STATS_DB, clientIP, "/api/analyze", env);
           if (rl.blocked) {
             _track("analyze", 429);
@@ -428,10 +442,17 @@ export default {
           // Support SSE streaming when client requests it
           const wantsStream = request.headers.get("Accept") === "text/event-stream";
           if (wantsStream) {
+            // Streaming always does real work — record the rate limit hit
+            await rl.record();
             _track("analyze", 200, domain);
             return analyzeDomainStream(domain, env, skipCache, rl.headers);
           }
-          const resp = await analyzeDomain(domain, env, skipCache);
+          const coreResult = await runAnalysis(domain, env, skipCache);
+          // Only consume rate-limit credit for non-cached results
+          if (coreResult.kind !== "cached") await rl.record();
+          const resp = new Response(JSON.stringify(coreResult.data), {
+            headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+          });
           _track("analyze", resp.status, domain);
           return addHeaders(resp, rl.headers);
         }
@@ -450,6 +471,7 @@ export default {
           const d2 = cleanDomain(body.domain2);
           if (!d1 || !d2) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           await trackUsage(env.STATS_DB, "compare");
+          await rl.record();
           const resp = await compareDomains({ domain1: d1, domain2: d2 }, env);
           _track("compare", resp.status, d1);
           return addHeaders(resp, rl.headers);
@@ -473,6 +495,7 @@ export default {
           const domain = cleanDomain(body.domain);
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
+          if (!result.cached) await rl.record();
           await trackUsage(env.STATS_DB, "subdomains");
           _track("subdomains", 200, domain);
           return addHeaders(json(result), rl.headers);
@@ -495,6 +518,7 @@ export default {
               400,
             );
           const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
+          if (!result.cached) await rl.record();
           await trackUsage(env.STATS_DB, "subdomains");
           _track("subdomains", 200, domain);
           return addHeaders(json(result), rl.headers);
@@ -512,6 +536,7 @@ export default {
           const domain = cleanDomain(body.domain);
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const result = await scanSubdomains(env.REFERENCE_DATA!, domain);
+          if (!result.cached) await rl.record();
           await trackUsage(env.STATS_DB, "subdomain-scan");
           _track("subdomain-scan", 200, domain);
           return addHeaders(json(result), rl.headers);
@@ -529,6 +554,7 @@ export default {
           const domain = cleanDomain(body.domain);
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const result = await getCompanyInfo(env.REFERENCE_DATA!, domain, body.force, env.STATS_DB);
+          if (!result.cached) await rl.record();
           await trackUsage(env.STATS_DB, "company");
           _track("company", 200, domain);
           return addHeaders(json(result), rl.headers);
@@ -546,6 +572,7 @@ export default {
           const domain = cleanDomain(body.domain);
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const result = await getNews(env.REFERENCE_DATA!, domain, env.STATS_DB);
+          if (!result.cached) await rl.record();
           await trackUsage(env.STATS_DB, "news");
           _track("news", 200, domain);
           return addHeaders(json(result), rl.headers);
@@ -563,6 +590,7 @@ export default {
           const domain = cleanDomain(body.domain);
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const result = await getSocialAccounts(env.REFERENCE_DATA!, domain, env);
+          if (!result.cached) await rl.record();
           await trackUsage(env.STATS_DB, "social");
           _track("social", 200, domain);
           return addHeaders(json(result), rl.headers);
@@ -585,6 +613,7 @@ export default {
             return json({ error: "Invalid IP address format" }, 400);
           }
           const result = await getReverseIP(env.REFERENCE_DATA!, ip);
+          if (!result.cached) await rl.record();
           await trackUsage(env.STATS_DB, "reverse-ip");
           _track("reverse-ip", 200);
           return addHeaders(json(result), rl.headers);
@@ -608,6 +637,7 @@ export default {
             { colo: cf?.colo, country: cf?.country, city: cf?.city },
             env,
           );
+          await rl.record();
           await trackUsage(env.STATS_DB, "availability");
           _track("availability", 200, domain);
           return addHeaders(json(result), rl.headers);
@@ -697,7 +727,7 @@ export default {
         if ((method === "GET" || method === "POST") && path === "/api/js-audit") {
           const adminBypass = env.ADMIN_KEY && timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY);
           const rl = adminBypass
-            ? { blocked: null, headers: {} }
+            ? { blocked: null, headers: {}, record: rateLimitNoop }
             : await checkRateLimit(env.STATS_DB, clientIP, "/api/js-audit", env);
           if (rl.blocked) {
             _track("js-audit", 429);
@@ -755,6 +785,7 @@ export default {
           // Scan using the inline curated library scanner
           const results = scanForVulnerableLibraries(html);
 
+          await rl.record();
           _track("js-audit", 200);
           return addHeaders(
             json({
@@ -941,17 +972,17 @@ export default {
               "POST /api/company": {
                 description: "Company/business info via Wikidata, Brandfetch, Crunchbase",
                 body: '{"domain": "example.com"}',
-                rate_limit: "none",
+                rate_limit: "50 req/hr",
               },
               "POST /api/news": {
                 description: "Recent news articles about the domain",
                 body: '{"domain": "example.com"}',
-                rate_limit: "none",
+                rate_limit: "50 req/hr",
               },
               "POST /api/social": {
                 description: "Social media account discovery",
                 body: '{"domain": "example.com"}',
-                rate_limit: "none",
+                rate_limit: "50 req/hr",
               },
               "POST /api/suggestions": {
                 description: "Domain suggestions based on analysis",
@@ -966,7 +997,7 @@ export default {
               "POST /api/reverse-ip": {
                 description: "Reverse IP lookup — other domains on the same IP",
                 body: '{"ip": "1.2.3.4"}',
-                rate_limit: "none",
+                rate_limit: "50 req/hr",
               },
               "GET /api/js-audit?domain=example.com": {
                 description: "Deep JS vulnerability scan — detects outdated/vulnerable client-side libraries",
