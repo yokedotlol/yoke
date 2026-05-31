@@ -4,6 +4,7 @@
 import type { Env } from "./helpers";
 import { getBaseUrl, YOKE_VERSION } from "./helpers";
 import { ABOUT_HTML, PRIVACY_HTML, TERMS_HTML } from "./pages";
+import { buildShareUrl } from "./share";
 
 // ─── Security Headers ────────────────────────────────────────────────
 // Applied to all HTML responses served by the worker.
@@ -286,11 +287,31 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
     const data = await analyzeResp.json();
 
     // Add _meta field
-    (data as Record<string, unknown>)._meta = {
+    const dataRecord = data as Record<string, unknown>;
+    const domainScore = dataRecord.domain_score as
+      | { composite?: number; tier?: string; axes?: Record<string, { score?: number }> }
+      | undefined;
+    const analyzedAt = (dataRecord.analyzed_at as string) || new Date().toISOString();
+
+    let shareUrl: string | null = null;
+    if (domainScore?.composite != null && domainScore.tier && domainScore.axes) {
+      shareUrl = await buildShareUrl(
+        clean,
+        domainScore.composite,
+        domainScore.tier,
+        domainScore.axes,
+        analyzedAt,
+        baseUrl,
+        env,
+      );
+    }
+
+    dataRecord._meta = {
       api_version: YOKE_VERSION,
       analyzed_at: new Date().toISOString(),
       docs: `${baseUrl}/api/docs`,
       source: new URL(baseUrl).hostname,
+      ...(shareUrl ? { share_url: shareUrl } : {}),
     };
 
     const body = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);

@@ -220,33 +220,39 @@ export function PanelGrid({ tabId, panels, grid = true }: { tabId: string; panel
 
   // Split into two independent columns for masonry-style layout.
   // Full-width items span both; others alternate left/right.
-  const left: React.ReactNode[] = [];
-  const right: React.ReactNode[] = [];
-  const full: { node: React.ReactNode; afterIndex: number }[] = [];
+  // We build "segments": a segment is either a full-width item or a two-column pair group.
+  const segments: React.ReactNode[] = [];
+  let leftBuf: React.ReactNode[] = [];
+  let rightBuf: React.ReactNode[] = [];
   let col = 0;
-  let halfIndex = 0;
-  for (let i = 0; i < items.length; i++) {
-    if (ordered[i]?.fullWidth) {
-      full.push({ node: items[i], afterIndex: halfIndex });
-    } else {
-      if (col === 0) left.push(items[i]);
-      else right.push(items[i]);
-      col = 1 - col;
-      halfIndex++;
+
+  function flushColumns() {
+    if (leftBuf.length > 0 || rightBuf.length > 0) {
+      segments.push(
+        <div className="yoke-grid-cols" key={`cols-${segments.length}`}>
+          <div className="yoke-grid-col">{leftBuf}</div>
+          <div className="yoke-grid-col">{rightBuf}</div>
+        </div>,
+      );
+      leftBuf = [];
+      rightBuf = [];
+      col = 0;
     }
   }
 
-  // If there are full-width items, fall back to a simple flex wrap approach
-  if (full.length > 0) {
-    return <div className="yoke-grid-masonry">{items}</div>;
+  for (let i = 0; i < items.length; i++) {
+    if (ordered[i]?.fullWidth) {
+      flushColumns();
+      segments.push(items[i]);
+    } else {
+      if (col === 0) leftBuf.push(items[i]);
+      else rightBuf.push(items[i]);
+      col = 1 - col;
+    }
   }
+  flushColumns();
 
-  return (
-    <div className="yoke-grid-masonry">
-      <div className="yoke-grid-col">{left}</div>
-      <div className="yoke-grid-col">{right}</div>
-    </div>
-  );
+  return <div className="yoke-grid-masonry">{segments}</div>;
 }
 
 // ─── ResetLayoutButton ───────────────────────────────────────────

@@ -399,7 +399,7 @@ function findFirstByCategory(
   plugins: Array<{ slug: string; name: string; category: string | null }>,
   category: string,
 ): string | null {
-  const match = plugins.find((p) => p.category === category);
+  const match = plugins.find((p) => p.category?.includes(category));
   return match?.name ?? null;
 }
 

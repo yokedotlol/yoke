@@ -149,6 +149,36 @@ function parseCompareShareToken(
   }
 }
 
+// ─── Server-side share URL builder ───────────────────────────────────
+
+const AXIS_ORDER = ["security", "foundations", "reputation", "speed", "discoverability", "email"] as const;
+
+/**
+ * Build a signed share URL from analysis result data.
+ * Returns null if SHARE_SECRET is not configured or data is incomplete.
+ */
+export async function buildShareUrl(
+  domain: string,
+  composite: number,
+  tier: string,
+  axes: Record<string, { score?: number }>,
+  analyzedAt: string,
+  baseUrl: string,
+  env: Env,
+): Promise<string | null> {
+  if (!env.SHARE_SECRET) return null;
+  try {
+    const axisScores = AXIS_ORDER.map((a) => axes[a]?.score ?? 0);
+    const ts = Math.floor(new Date(analyzedAt).getTime() / 1000);
+    const obj = { d: domain, s: composite, g: tier, a: axisScores, t: ts };
+    const payload = base64urlEncode(textToBytes(JSON.stringify(obj)));
+    const sig = await signPayload(payload, env);
+    return `${baseUrl}/r/${payload}.${sig}`;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Signing endpoint ────────────────────────────────────────────────
 
 export async function handleShareSign(request: Request, env: Env): Promise<Response> {

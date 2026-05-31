@@ -1141,22 +1141,24 @@ main {
   flex-direction: column;
   gap: 0.75rem;
 }
+.yoke-grid-cols {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
 .yoke-grid-col {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 @media (min-width: 768px) {
-  .yoke-grid-masonry {
+  .yoke-grid-cols {
     flex-direction: row;
     align-items: flex-start;
   }
   .yoke-grid-col {
     flex: 1;
     min-width: 0;
-  }
-  .yoke-grid-masonry > .full-width {
-    flex: 0 0 100%;
   }
 }
 

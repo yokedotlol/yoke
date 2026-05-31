@@ -36,6 +36,7 @@ import { logError } from "./logger";
 import { getApiDocsHtml } from "./pages";
 import { trackRequest } from "./request-tracking";
 import {
+  buildShareUrl,
   handleCompareOgImage,
   handleCompareSharePage,
   handleOgImage,
@@ -450,7 +451,32 @@ export default {
           const coreResult = await runAnalysis(domain, env, skipCache);
           // Only consume rate-limit credit for non-cached results
           if (coreResult.kind !== "cached") await rl.record();
-          const resp = new Response(JSON.stringify(coreResult.data), {
+
+          // Inject share_url into _meta if scoring data is available
+          const resultData = coreResult.data as Record<string, unknown>;
+          const ds = resultData.domain_score as
+            | { composite?: number; tier?: string; axes?: Record<string, { score?: number }> }
+            | undefined;
+          if (ds?.composite != null && ds.tier && ds.axes) {
+            const analyzedAt = (resultData.analyzed_at as string) || new Date().toISOString();
+            const shareUrl = await buildShareUrl(
+              domain,
+              ds.composite,
+              ds.tier,
+              ds.axes,
+              analyzedAt,
+              getBaseUrl(request, env),
+              env,
+            );
+            if (shareUrl) {
+              resultData._meta = {
+                ...((resultData._meta as Record<string, unknown>) || {}),
+                share_url: shareUrl,
+              };
+            }
+          }
+
+          const resp = new Response(JSON.stringify(resultData), {
             headers: { "Content-Type": "application/json", ...CORS_HEADERS },
           });
           _track("analyze", resp.status, domain);
