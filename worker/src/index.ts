@@ -16,7 +16,6 @@ import { scanSubdomains } from "./actions/subdomain-scan";
 import { getSubdomains } from "./actions/subdomains";
 import { getDomainSuggestions } from "./actions/suggestions";
 import { getApiHealth } from "./api-errors";
-import { checkRecursiveDns } from "./checks/recursive-dns";
 import { ALL_THRESHOLDS, SEVERITY_SCORES } from "./config/scoring-thresholds";
 import { EFFORT_MAP, FIX_DESC_MAP, NON_ACTIONABLE_SIGNALS, TIER_THRESHOLDS } from "./config/signal-registry";
 import { loadData } from "./data/kv-loader";
@@ -61,7 +60,6 @@ function getRateLimits(env: Env): Record<string, { limit: number; windowSecs: nu
     "/api/subdomain-scan": { limit: parseInt(env.RATE_LIMIT_SUBDOMAIN || "30", 10), windowSecs: 3600 },
     "/api/availability": { limit: parseInt(env.RATE_LIMIT_AVAILABILITY || "60", 10), windowSecs: 3600 },
     "/api/js-audit": { limit: 20, windowSecs: 3600 },
-    "/api/recursive-dns": { limit: parseInt(env.RATE_LIMIT_RECURSIVE_DNS || "30", 10), windowSecs: 3600 },
   };
 }
 
@@ -738,25 +736,6 @@ export default {
           );
         }
 
-        // POST /api/recursive-dns — trace DNS resolution across multiple public resolvers
-        if (method === "POST" && path === "/api/recursive-dns") {
-          const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/recursive-dns", env);
-          if (rl.blocked) {
-            _track("recursive-dns", 429);
-            return rl.blocked;
-          }
-          const body = await parseBody<{ domain?: string }>(request);
-          if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
-          const domain = cleanDomain(body.domain);
-          if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
-
-          const result = await checkRecursiveDns(domain);
-
-          await trackUsage(env.STATS_DB, "recursive-dns");
-          _track("recursive-dns", 200, domain);
-          return addHeaders(json(result), rl.headers);
-        }
-
         // GET /api/scoring — transparent scoring methodology
         if (method === "GET" && path === "/api/scoring") {
           return json(
@@ -911,11 +890,6 @@ export default {
               },
               "POST /api/subdomain-scan": {
                 description: "Active subdomain DNS scan — resolves discovered subdomains",
-                body: '{"domain": "example.com"}',
-                rate_limit: "30 req/hr",
-              },
-              "POST /api/recursive-dns": {
-                description: "Recursive DNS enumeration — discovers subdomains via zone walking and brute-force",
                 body: '{"domain": "example.com"}',
                 rate_limit: "30 req/hr",
               },

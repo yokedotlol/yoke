@@ -29,7 +29,6 @@ import { llmsTxtCheck } from "./llms-txt";
 import { outageLinksCheck } from "./outage-links";
 import { performanceCheck, performanceDesktopCheck } from "./performance";
 import { rdapCheck } from "./rdap";
-import { recursiveDnsCheck } from "./recursive-dns";
 import { ripeRoutingCheck } from "./ripe-routing";
 import { robotsSitemapCheck } from "./robots-sitemap";
 import { securityTxtCheck } from "./security-txt";
@@ -75,5 +74,4 @@ export const registry: readonly Check[] = [
   outageLinksCheck,
   connectionTimingCheck,
   socialAccountsCheck,
-  recursiveDnsCheck,
 ] as const;

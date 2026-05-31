@@ -157,9 +157,6 @@ export const api = {
 
   compareDomains: (args: { domain1: string; domain2: string }) =>
     apiFetch<CompareResult>("/api/compare", { method: "POST", body: JSON.stringify(args) }),
-
-  recursiveDns: (args: { domain: string }) =>
-    apiFetch<RecursiveDnsResult>("/api/recursive-dns", { method: "POST", body: JSON.stringify(args) }),
 };
 
 // ─── Type definitions (matching server response shapes) ──────────────
@@ -172,24 +169,6 @@ export interface DnsResolverResultData {
   status: "ok" | "timeout" | "error";
 }
 
-// ─── Recursive DNS Resolution types ──────────────────────────────────
-
-export interface ResolverResult {
-  name: string;
-  provider: string;
-  a_records: string[];
-  aaaa_records: string[];
-  ttl: number | null;
-  status: "ok" | "nxdomain" | "servfail" | "timeout" | "error";
-  response_time_ms: number;
-}
-
-export interface RecursiveDnsResult {
-  domain: string;
-  resolvers: ResolverResult[];
-  consensus: boolean;
-  timestamp: string;
-}
 export interface DnsPropagationData {
   resolvers: DnsResolverResultData[];
   consistent: boolean;
@@ -376,9 +355,6 @@ export interface AnalysisResult {
 
   // Network health
   network_health: NetworkHealthData | null;
-
-  // Recursive DNS resolution
-  recursive_dns: RecursiveDnsResult | null;
 }
 
 export interface DnsRecord {
