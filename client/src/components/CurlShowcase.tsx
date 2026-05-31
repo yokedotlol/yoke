@@ -39,6 +39,7 @@ const TAB_FILTERS: Record<TabId, { label: string; filter: string } | null> = {
   speed: { label: "Speed", filter: "'{performance, compression, http_protocols}'" },
   business: { label: "Business", filter: "'{rdap, tranco_rank, json_ld}'" },
   news: { label: "News & Social", filter: "'{social_meta}'" },
+  email: { label: "Email", filter: "'{email_auth}'" },
   explore: null,
   ai: null,
 };
