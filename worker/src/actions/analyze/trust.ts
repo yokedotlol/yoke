@@ -449,12 +449,16 @@ export function checkTrustSignals(input: TrustInput): TrustSignals {
   const opsHtml = input.html.slice(0, 50000);
 
   const OPS_SIGNATURES: Array<{ name: string; group: string; pattern: RegExp }> = [
-    // Status pages
+    // Status pages (third-party)
     { name: "Statuspage", group: "Status Page", pattern: /statuspage\.io/i },
     { name: "Better Uptime", group: "Status Page", pattern: /betteruptime\.com/i },
     { name: "Instatus", group: "Status Page", pattern: /instatus\.com/i },
     { name: "Cachet", group: "Status Page", pattern: /cachethq\.io/i },
     { name: "Hund", group: "Status Page", pattern: /hund\.io/i },
+    // Status pages (self-hosted — links to /status, /health, /uptime in the HTML)
+    { name: "Status Page", group: "Status Page", pattern: /href=["'][^"']*\/status\b/i },
+    { name: "Health Endpoint", group: "Status Page", pattern: /href=["'][^"']*\/health\b/i },
+    { name: "Uptime Page", group: "Status Page", pattern: /href=["'][^"']*\/uptime\b/i },
     // Uptime monitoring badges
     { name: "UptimeRobot", group: "Uptime Monitoring", pattern: /uptimerobot\.com/i },
     { name: "Pingdom", group: "Uptime Monitoring", pattern: /pingdom\.com/i },
@@ -486,8 +490,8 @@ export function checkTrustSignals(input: TrustInput): TrustSignals {
     }
   }
 
-  if (opsCount >= 2) {
-    positive.push(`${opsCount} operational transparency tools detected`);
+  if (opsCount >= 1) {
+    positive.push(`${opsCount} operational transparency tool${opsCount > 1 ? "s" : ""} detected`);
   }
 
   return { signals, trust_score_factors: { positive, negative, neutral } };

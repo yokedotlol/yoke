@@ -756,7 +756,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "CDN Detected",
     actionable: false,
     canBeNonGood: false,
-    weightRange: [2, 2],
+    weightRange: [3, 3],
     promptGuidance:
       "CDN detected is positive — reduces latency, improves caching. CDN-fronted sites handle compression/caching at edge.",
   },
@@ -773,7 +773,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "HTTP/3 Enabled",
     actionable: false,
     canBeNonGood: false,
-    weightRange: [2, 2],
+    weightRange: [3, 3],
     promptGuidance: "HTTP/3 (QUIC) is forward-looking — reduces connection latency. Bonus signal.",
   },
   http1_only: {
@@ -942,7 +942,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: true,
     effort: "~30 min — server/CDN optimization",
     fixDescription: "Optimize TCP connection time",
-    weightRange: [2, 2],
+    weightRange: [3, 3],
     promptGuidance: "Single probe location. <300ms=good, 300-500ms=ok, 500-1000ms=slow, >1000ms=very slow.",
   },
   dns_resolution_time: {
@@ -950,7 +950,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "DNS Resolution Time",
     actionable: false,
     canBeNonGood: true,
-    weightRange: [2, 2],
+    weightRange: [3, 3],
     promptGuidance: "Single probe location. <100ms=good, 100-200ms=ok, 200-500ms=slow, >500ms=very slow.",
   },
   ns_provider_diversity: {
@@ -1043,7 +1043,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "Domain Age",
     actionable: false,
     canBeNonGood: true,
-    weightRange: [3, 3],
+    weightRange: [4, 4],
     promptGuidance:
       "<30d=newly registered (NRD, high risk); 30-90d=recent; 90d-1yr=young; 1-3yr=growing; 3-5yr=mature; 5yr+=established. Young domain + EV cert suggests legitimate new business.",
   },
@@ -1240,7 +1240,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: true,
     effort: "~15 min — add organization page",
     fixDescription: "Add about/team/organization page",
-    weightRange: [2, 2],
+    weightRange: [3, 3],
     promptGuidance:
       "Privacy policy, terms, about page = organizational transparency. Missing is low concern for small/personal sites.",
   },
@@ -1274,7 +1274,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: true,
     effort: "~30 min — configure CMP properly",
     fixDescription: "Improve cookie consent management platform",
-    weightRange: [2, 2],
+    weightRange: [3, 3],
     promptGuidance: "CMP detected is positive trust signal. Higher confidence = stronger.",
   },
   cookie_compliance: {
@@ -1303,7 +1303,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "Blocklist Trust Impact",
     actionable: false,
     canBeNonGood: true,
-    weightRange: [2, 3],
+    weightRange: [3, 3],
     promptGuidance: "Clean record is positive. Being listed is serious — severity scales with count.",
   },
 

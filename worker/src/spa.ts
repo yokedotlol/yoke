@@ -17,7 +17,7 @@ export function getHtmlSecurityHeaders(baseUrl?: string): Record<string, string>
     "Permissions-Policy":
       "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(), serial=(), hid=(), ambient-light-sensor=(), accelerometer=(), gyroscope=(), magnetometer=()",
     "Content-Security-Policy":
-      "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; " +
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
       "style-src 'self' 'unsafe-inline'; " +
       `img-src 'self' data: https:; connect-src ${connectSrc} https://*.googleapis.com; ` +
       "font-src 'self'; frame-ancestors 'self' https://*.chromiumapp.org; base-uri 'self'; form-action 'self'",

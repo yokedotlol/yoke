@@ -2036,7 +2036,7 @@ export function calculateDomainScore(opts: {
 
     // Operational transparency bonus
     const opsSignals = opts.trustSignals.signals.filter((s) => s.category === "operational" && s.present);
-    if (opsSignals.length >= 2) {
+    if (opsSignals.length >= 1) {
       findings.push({
         signal: "ops_transparency",
         axis: "foundations",
@@ -2347,7 +2347,7 @@ export function calculateDomainScore(opts: {
         severity: "good",
         label: "HTTP/3 supported",
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     } else if (opts.httpProtocols.http2) {
       findings.push({
@@ -2378,7 +2378,7 @@ export function calculateDomainScore(opts: {
       severity: "good",
       label: `CDN: ${opts.hosting.cdn}`,
       tradeoff: null,
-      weight: 2,
+      weight: 3,
     });
   }
 
@@ -2521,7 +2521,7 @@ export function calculateDomainScore(opts: {
         severity: "good",
         label: `TCP connect: ${Math.round(tcpMs)}ms`,
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     } else if (tcpMs < 500) {
       findings.push({
@@ -2530,7 +2530,7 @@ export function calculateDomainScore(opts: {
         severity: "info",
         label: `TCP connect: ${Math.round(tcpMs)}ms`,
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     } else if (tcpMs < 1000) {
       findings.push({
@@ -2539,7 +2539,7 @@ export function calculateDomainScore(opts: {
         severity: "low",
         label: `TCP connect: ${Math.round(tcpMs)}ms — above average`,
         tradeoff: "Connection timing depends on server location relative to probe.",
-        weight: 2,
+        weight: 3,
       });
     } else {
       findings.push({
@@ -2548,7 +2548,7 @@ export function calculateDomainScore(opts: {
         severity: "medium",
         label: `TCP connect: ${Math.round(tcpMs)}ms — very slow`,
         tradeoff: "Connection timing depends on server location relative to probe.",
-        weight: 2,
+        weight: 3,
       });
     }
   }
@@ -2564,7 +2564,7 @@ export function calculateDomainScore(opts: {
         severity: "good",
         label: `DNS resolution: ${Math.round(dnsMs)}ms`,
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     } else if (dnsMs < 200) {
       findings.push({
@@ -2573,7 +2573,7 @@ export function calculateDomainScore(opts: {
         severity: "info",
         label: `DNS resolution: ${Math.round(dnsMs)}ms`,
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     } else if (dnsMs < 500) {
       findings.push({
@@ -2582,7 +2582,7 @@ export function calculateDomainScore(opts: {
         severity: "low",
         label: `DNS resolution: ${Math.round(dnsMs)}ms — slow`,
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     } else {
       findings.push({
@@ -2591,7 +2591,7 @@ export function calculateDomainScore(opts: {
         severity: "medium",
         label: `DNS resolution: ${Math.round(dnsMs)}ms — very slow`,
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     }
   }
@@ -2748,7 +2748,7 @@ export function calculateDomainScore(opts: {
       severity,
       label,
       tradeoff: null,
-      weight: 3,
+      weight: 4,
     });
   }
 
@@ -2781,7 +2781,7 @@ export function calculateDomainScore(opts: {
       severity: "good",
       label: "Clean blocklist record",
       tradeoff: null,
-      weight: 2,
+      weight: 3,
     });
   } else {
     findings.push({
@@ -3106,7 +3106,7 @@ export function calculateDomainScore(opts: {
         severity: "good",
         label: "Privacy policy, terms, and about page found",
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     } else if (orgCount >= 1) {
       const missing: string[] = [];
@@ -3119,7 +3119,7 @@ export function calculateDomainScore(opts: {
         severity: "info",
         label: `${orgCount}/3 organizational pages found (missing: ${missing.join(", ")})`,
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     } else {
       findings.push({
@@ -3128,7 +3128,7 @@ export function calculateDomainScore(opts: {
         severity: "low",
         label: "No organizational identity pages (privacy, terms, about)",
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     }
   }
@@ -3693,7 +3693,7 @@ export function calculateDomainScore(opts: {
         severity: cc.cmp_detected.confidence >= 0.5 ? "good" : "info",
         label: `Consent platform: ${cc.cmp_detected.name}`,
         tradeoff: null,
-        weight: 2,
+        weight: 3,
       });
     }
 
