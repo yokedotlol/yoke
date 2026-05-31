@@ -3,7 +3,7 @@
 
 import type { Env } from "./helpers";
 import { getBaseUrl, YOKE_VERSION } from "./helpers";
-import { ABOUT_HTML, PRIVACY_HTML, SECURITY_TXT, TERMS_HTML } from "./pages";
+import { ABOUT_HTML, PRIVACY_HTML, TERMS_HTML } from "./pages";
 
 // ─── Security Headers ────────────────────────────────────────────────
 // Applied to all HTML responses served by the worker.
@@ -17,18 +17,17 @@ export function getHtmlSecurityHeaders(baseUrl?: string): Record<string, string>
     "Permissions-Policy":
       "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(), serial=(), hid=(), ambient-light-sensor=(), accelerometer=(), gyroscope=(), magnetometer=()",
     "Content-Security-Policy":
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
+      "default-src 'self'; script-src 'self' 'sha256-uc4Eo0eLbA2bnen9IAsmPVnrCkYfuaETrxr4nohh0Mk='; " +
       "style-src 'self' 'unsafe-inline'; " +
       `img-src 'self' data: https:; connect-src ${connectSrc} https://*.googleapis.com; ` +
       "font-src 'self'; frame-ancestors 'self' https://*.chromiumapp.org; base-uri 'self'; form-action 'self'",
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
     "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Embedder-Policy": "credentialless",
+    "Cross-Origin-Resource-Policy": "same-origin",
     "X-Frame-Options": "SAMEORIGIN",
   };
 }
-
-// Default headers for backward compat (used by serveAssetOrFallback before request context is available)
-export const HTML_SECURITY_HEADERS: Record<string, string> = getHtmlSecurityHeaders();
 
 function htmlResponse(body: string, extra?: Record<string, string>, baseUrl?: string): Response {
   return new Response(body, {
@@ -176,9 +175,6 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
   const baseUrl = getBaseUrl(request, env);
 
   // ── Static pages ──
-  if (method === "GET" && (path === "/.well-known/security.txt" || path === "/security.txt")) {
-    return textResponse(SECURITY_TXT, "text/plain;charset=UTF-8");
-  }
   // Bluesky domain handle verification — proves yoke.lol owns this Bluesky account
   if (method === "GET" && path === "/.well-known/atproto-did") {
     return textResponse("did:plc:jx7ot6zjijwxh7phk7sv2taj", "text/plain;charset=UTF-8");
@@ -199,9 +195,12 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
     return htmlResponse(ABOUT_HTML, { "Cache-Control": "public, max-age=86400" }, baseUrl);
   }
   // Client-side rendered pages — serve the SPA shell
-  if ((method === "GET" || method === "HEAD") && (path === "/cli" || path === "/status" || path === "/usage")) {
+  if (
+    (method === "GET" || method === "HEAD") &&
+    (path === "/" || path === "/cli" || path === "/status" || path === "/usage")
+  ) {
     const indexHtml = await getIndexHtml(env, request.url);
-    return htmlResponse(indexHtml, { "Cache-Control": "public, max-age=1800" }, baseUrl);
+    return htmlResponse(indexHtml, { "Cache-Control": "public, max-age=3600" }, baseUrl);
   }
 
   // ── Domain path: content negotiation ──
@@ -234,7 +233,7 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
       description: `Free domain intelligence report for ${domain} — DNS, SSL, WHOIS, security audit, tech stack, performance, and more.`,
       url: `${baseUrl}/${domain}`,
     });
-    return htmlResponse(ogHtml, { "Cache-Control": "public, max-age=1800", Vary: "Accept" }, baseUrl);
+    return htmlResponse(ogHtml, { "Cache-Control": "public, max-age=3600", Vary: "Accept" }, baseUrl);
   }
 
   // ── Compare path: SPA with OG tags ──
@@ -247,7 +246,7 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
       description: `Side-by-side domain comparison of ${d1} and ${d2} — security, performance, infrastructure, trust, and visibility scores.`,
       url: `${baseUrl}/compare/${d1}/${d2}`,
     });
-    return htmlResponse(ogHtml, { "Cache-Control": "public, max-age=1800", Vary: "Accept" }, baseUrl);
+    return htmlResponse(ogHtml, { "Cache-Control": "public, max-age=3600", Vary: "Accept" }, baseUrl);
   }
 
   // ── Domain with trailing path: /github.com/kurtpayne → redirect to /github.com ──
@@ -307,7 +306,7 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
         "X-Yoke-Cache": isCached ? "HIT" : "MISS",
         "X-Yoke-Version": YOKE_VERSION,
         "X-Yoke-Docs": `${baseUrl}/api/docs`,
-        "Cache-Control": "public, max-age=1800",
+        "Cache-Control": "public, max-age=3600",
         Vary: "Accept",
       },
     });
@@ -331,6 +330,8 @@ function jsonResponse(data: unknown, status = 200): Response {
 // Try serving from Wrangler assets; if no match, serve index.html for client-side routing.
 
 export async function serveAssetOrFallback(request: Request, env: Env): Promise<Response> {
+  const baseUrl = getBaseUrl(request, env);
+
   // Try serving the exact asset
   const assetResp = await env.ASSETS.fetch(request);
 
@@ -343,8 +344,8 @@ export async function serveAssetOrFallback(request: Request, env: Env): Promise<
         status: assetResp.status,
         headers: {
           ...Object.fromEntries(assetResp.headers.entries()),
-          ...HTML_SECURITY_HEADERS,
-          "Cache-Control": "public, max-age=1800",
+          ...getHtmlSecurityHeaders(baseUrl),
+          "Cache-Control": "public, max-age=3600",
         },
       });
     }
@@ -369,5 +370,5 @@ export async function serveAssetOrFallback(request: Request, env: Env): Promise<
 
   // No matching asset — SPA fallback: serve index.html for client-side routing
   const indexHtml = await getIndexHtml(env, request.url);
-  return htmlResponse(indexHtml, { "Cache-Control": "public, max-age=1800" });
+  return htmlResponse(indexHtml, { "Cache-Control": "public, max-age=3600" }, baseUrl);
 }

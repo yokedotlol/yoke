@@ -1,0 +1,94 @@
+name: Publish Chrome Extension
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'extension/**'
+      - '.github/workflows/release-extension.yml'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual publish'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Package extension
+        run: |
+          cd extension
+          zip -r ../yoke-extension.zip . -x '*.DS_Store' '*.git*'
+          echo "Extension packaged ($(du -h ../yoke-extension.zip | cut -f1))"
+
+      - name: Upload to Chrome Web Store
+        # Uses the Chrome Web Store Publish API
+        # Docs: https://developer.chrome.com/docs/webstore/using-api
+        run: |
+          # Get OAuth2 access token from refresh token
+          ACCESS_TOKEN=$(curl -s -X POST "https://oauth2.googleapis.com/token" \
+            -d "client_id=${CWS_CLIENT_ID}" \
+            -d "client_secret=${CWS_CLIENT_SECRET}" \
+            -d "refresh_token=${CWS_REFRESH_TOKEN}" \
+            -d "grant_type=refresh_token" | jq -r '.access_token')
+
+          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
+            echo "::error::Failed to obtain access token from Chrome Web Store API"
+            exit 1
+          fi
+
+          # Upload new version
+          UPLOAD_RESULT=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "x-goog-api-version: 2" \
+            -X PUT \
+            -T yoke-extension.zip \
+            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${CWS_EXTENSION_ID}")
+
+          HTTP_CODE=$(echo "$UPLOAD_RESULT" | tail -1)
+          BODY=$(echo "$UPLOAD_RESULT" | sed '$d')
+          echo "Upload response ($HTTP_CODE): $BODY"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Upload failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          STATUS=$(echo "$BODY" | jq -r '.uploadState')
+          if [ "$STATUS" != "SUCCESS" ]; then
+            echo "::error::Upload state: $STATUS"
+            echo "$BODY" | jq '.itemError // empty'
+            exit 1
+          fi
+
+          # Publish to public
+          PUBLISH_RESULT=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Length: 0" \
+            -X POST \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/${CWS_EXTENSION_ID}/publish")
+
+          HTTP_CODE=$(echo "$PUBLISH_RESULT" | tail -1)
+          BODY=$(echo "$PUBLISH_RESULT" | sed '$d')
+          echo "Publish response ($HTTP_CODE): $BODY"
+
+          STATUS=$(echo "$BODY" | jq -r '.status[0] // empty')
+          if [ "$STATUS" != "OK" ] && [ "$STATUS" != "PUBLISHED_WITH_FRICTION_WARNING" ]; then
+            echo "::error::Publish failed: $STATUS"
+            exit 1
+          fi
+
+          echo "✅ Extension published to Chrome Web Store"
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}

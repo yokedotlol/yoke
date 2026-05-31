@@ -32,9 +32,7 @@ export interface Env {
 // ─── Shared Helpers ──────────────────────────────────────────────────
 
 // Re-export from centralized config for backward compatibility
-import { ANALYSIS_CACHE_TTL_MS, getAnalysisCacheTtlMs } from "./config/cache";
-
-const _CACHE_TTL_MS = ANALYSIS_CACHE_TTL_MS;
+import { getAnalysisCacheTtlMs } from "./config/cache";
 
 export { getAnalysisCacheTtlMs };
 
@@ -87,10 +85,10 @@ export async function fetchWithTimeout(url: string, opts: RequestInit & { timeou
 
 // ─── Version ─────────────────────────────────────────────────────────
 
-export const YOKE_VERSION = "1.5.0";
+export const YOKE_VERSION = "2.0.0";
 
 /** Minimum CLI version required. Bump when shipping breaking API changes. */
-export const MIN_CLIENT_VERSION = "1.0.0";
+export const MIN_CLIENT_VERSION = "2.0.0";
 
 // ─── Shared Constants ────────────────────────────────────────────────
 
@@ -131,18 +129,6 @@ export function getFlyAuthHeaders(env: Env): Record<string, string> {
 export function getBaseUrl(request: Request, env?: Env): string {
   if (env?.BASE_URL) return env.BASE_URL.replace(/\/$/, "");
   return new URL(request.url).origin;
-}
-
-/** Get the instance hostname (e.g. "yoke.lol") from request or env. */
-function _getInstanceHost(request: Request, env?: Env): string {
-  if (env?.BASE_URL) {
-    try {
-      return new URL(env.BASE_URL).hostname;
-    } catch {
-      /* fall through */
-    }
-  }
-  return new URL(request.url).hostname;
 }
 
 // ─── SSRF Protection ─────────────────────────────────────────────────

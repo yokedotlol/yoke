@@ -96,6 +96,13 @@ function useStreamingCompare() {
   const [dom2, setDom2] = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
+  // Abort in-flight SSE streams on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const mutate = useCallback(({ domain1, domain2 }: { domain1: string; domain2: string }) => {
     abortRef.current?.abort();
     const controller = new AbortController();

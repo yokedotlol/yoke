@@ -194,7 +194,7 @@ export async function analyzeHttp(domain: string, instanceHost?: string, env?: E
     const selfHeaders: Record<string, string> = {
       ...Object.fromEntries(Object.entries(runtimeHeaders).map(([k, v]) => [k.toLowerCase(), v])),
       "content-type": "text/html;charset=utf-8",
-      "cache-control": "public, max-age=1800",
+      "cache-control": "public, max-age=3600",
       server: "cloudflare",
       vary: "Accept-Encoding",
       "content-encoding": "br",

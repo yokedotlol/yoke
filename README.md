@@ -5,7 +5,7 @@
 **Free, open-source domain intelligence — DNS, WHOIS, SSL, security, tech stack, performance, breaches, AI analysis, and more. Web, API, CLI, and Chrome extension.**
 
 [![CI](https://github.com/yokedotlol/yoke/actions/workflows/ci.yml/badge.svg)](https://github.com/yokedotlol/yoke/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.5.0-blue)](https://github.com/yokedotlol/yoke/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/yokedotlol/yoke/blob/main/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/fghkhjlelidaepapcdfjifnlcjmkgpcj?label=Chrome%20Extension)](https://chromewebstore.google.com/detail/yoke/fghkhjlelidaepapcdfjifnlcjmkgpcj)
 
@@ -17,7 +17,7 @@
 
 ## What is Yoke?
 
-Yoke pulls 136 scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
+Yoke pulls 142 scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
 
 ```bash
 curl yoke.lol/stripe.com | jq
@@ -26,14 +26,14 @@ curl yoke.lol/stripe.com | jq
 ## Features
 
 ### 📊 Contextual Scoring
-5-axis scoring (Security, Performance, Infrastructure, Trust, Visibility) with radar visualization. Fixed axis weights: Security (0.28), Infrastructure (0.25), Performance (0.20), Visibility (0.15), Trust (0.12). Grades: A+≥95, A≥90, B+≥85, B≥80, C+≥75, C≥70, D+≥65, D≥50, F<50. Performance scoring is mobile-first (60% mobile + 40% desktop blending). Breach trust impact uses time decay — recent breaches weigh more heavily, while breaches older than 10 years have minimal impact. Auto-classifies sites into 7 archetypes (commerce, content, application, corporate, infrastructure, institutional, general) to adjust individual finding severity — missing HSTS is critical for e-commerce, low-priority for a blog. [Compare domains side-by-side](https://yoke.lol/compare/github.com/gitlab.com) with overlaid radar and per-axis deltas.
+6-axis scoring (Security, Speed, Foundations, Reputation, Discoverability, Email) with radar visualization. Fixed axis weights: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12). Tiers: Excellent ≥90, Strong ≥75, Moderate ≥60, Weak ≥40, Critical <40. Performance scoring is mobile-first (60% mobile + 40% desktop blending). Breach reputation impact uses time decay — recent breaches weigh more heavily, while breaches older than 10 years have minimal impact. Auto-classifies sites into 7 archetypes (commerce, content, application, corporate, infrastructure, institutional, general) to adjust individual finding severity — missing HSTS is critical for e-commerce, low-priority for a blog. [Compare domains side-by-side](https://yoke.lol/compare/github.com/gitlab.com) with overlaid radar and per-axis deltas.
 
 ### 🔍 Core Analysis
 - **DNS** — A, AAAA, MX, NS, TXT, CNAME, CAA, SOA with TTL and provider detection
 - **WHOIS / RDAP** — 4-tier resolution: RDAP bootstrap → IANA fallback → WhoisFreaks → raw WHOIS. Registrar, dates, domain age, nameservers
 - **SSL/TLS** — Grade, issuer, validity, protocols, key exchange. SSL Labs deep link
 - **HTTP** — Redirect chain, response times, HTTP/2 and HTTP/3 detection
-- **Network Health** — Global availability (check-host.net), DNS propagation (4 resolvers), TCP timing breakdown, BGP routing (RIPE RIS)
+- **Network Health** — Global availability (check-host.net), TCP timing breakdown, BGP routing (RIPE RIS)
 
 ### 🛡️ Security
 - **Headers Audit** — CSP, HSTS, X-Frame-Options, Permissions-Policy, Referrer-Policy, and more with pass/fail grading
@@ -111,7 +111,6 @@ curl yoke.lol/api/scoring | jq
 | Analyze | 50/hr per IP |
 | Compare | 50/hr per IP |
 | Subdomain Scan | 30/hr per IP |
-| Recursive DNS | 30/hr per IP |
 | Availability | 60/hr per IP |
 | AI Analysis (platform key) | 10/hr per IP |
 | AI Analysis (BYO key) | Unlimited |
@@ -127,7 +126,6 @@ All limits use a rolling 1-hour window. Self-hosted instances can override or di
 | `POST` | `/api/compare` | Side-by-side domain comparison |
 | `POST` | `/api/subdomains` | CT log subdomain discovery |
 | `POST` | `/api/subdomain-scan` | Active subdomain enumeration |
-| `POST` | `/api/recursive-dns` | Recursive DNS record enumeration |
 | `POST` | `/api/availability` | Global HTTP availability check |
 | `POST` | `/api/company` | Company enrichment + stock data |
 | `POST` | `/api/news` | News aggregation |
@@ -245,7 +243,7 @@ Analysis checks use a registry pattern — each check is a self-contained file u
 
 Yoke is designed to be self-hosted on Cloudflare's free/paid tiers. You'll need a **Workers Paid plan** ($5/mo).
 
-> **Why not the free tier?** The free plan caps CPU time at 10ms per request. A single domain analysis runs ~30 external API calls, parses HTML, scores 136 signals, and writes results to KV/D1 — that needs hundreds of milliseconds of CPU time minimum. The free tier also limits subrequests to 50/request (compare mode alone exceeds that) and KV writes to 1,000/day (a few hundred analyses would exhaust it). The $5/mo paid plan removes all three constraints.
+> **Why not the free tier?** The free plan caps CPU time at 10ms per request. A single domain analysis runs ~30 external API calls, parses HTML, scores 142 signals, and writes results to KV/D1 — that needs hundreds of milliseconds of CPU time minimum. The free tier also limits subrequests to 50/request (compare mode alone exceeds that) and KV writes to 1,000/day (a few hundred analyses would exhaust it). The $5/mo paid plan removes all three constraints.
 
 ### Prerequisites
 
@@ -489,7 +487,6 @@ All set via `npx wrangler secret put <NAME>` or as `[vars]` in `wrangler.toml` (
 | `RATE_LIMIT_COMPARE` | Optional | Max compare requests/hr per IP (default: 50, 0 = disable) |
 | `RATE_LIMIT_SUBDOMAIN` | Optional | Max subdomain-scan requests/hr per IP (default: 30, 0 = disable) |
 | `RATE_LIMIT_AVAILABILITY` | Optional | Max availability requests/hr per IP (default: 60, 0 = disable) |
-| `RATE_LIMIT_RECURSIVE_DNS` | Optional | Max recursive-dns requests/hr per IP (default: 30, 0 = disable) |
 | `CACHE_TTL_HOURS` | Optional | Analysis cache TTL in hours (default: 1, 0 = disable) |
 
 ### Updating
