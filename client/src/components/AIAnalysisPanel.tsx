@@ -891,6 +891,8 @@ function generateLevelUpPlan(data: AnalysisResult): {
 
       // Skip signals whose required context isn't present
       if (def.requiresContext && !scoringCtx?.[def.requiresContext as keyof typeof scoringCtx]) continue;
+      // Skip HTTP-dependent signals when HTTP probe was blocked
+      if (def.requiresHttpAccess && scoringCtx?.httpBlocked) continue;
 
       // Simulate adding this signal as "good" to its axis
       const axisName = def.axis;

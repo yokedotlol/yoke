@@ -73,6 +73,20 @@ export interface SignalDef {
    * Values: "cookies" (site sets cookies), "wordpress" (site runs WordPress).
    */
   requiresContext?: "cookies" | "wordpress";
+  /**
+   * When this signal fires (any non-good severity), the named signal is
+   * suppressed from the absent-signal pool. Prevents double-dipping where
+   * a bad-variant finding AND an absent good-variant both penalize.
+   * E.g. referrer_policy_unsafe fires → referrer_policy excluded from absent.
+   */
+  suppressesAbsent?: string;
+  /**
+   * When true, this signal requires HTTP/HTML access to detect.
+   * If the scan's HTTP probe was blocked (http_blocked), these signals
+   * are excluded from the absent-signal pool instead of penalizing the
+   * site for our scanner's limitation.
+   */
+  requiresHttpAccess?: boolean;
 }
 
 // ─── Signal Registry ────────────────────────────────────────────────
@@ -150,6 +164,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   ssl_certificate_transparency: {
     axis: "security",
     label: "Certificate Transparency SCTs",
+    fixDescription: "Detected automatically — Certificate Transparency SCTs enable public audit of issued certificates",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -160,12 +175,14 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   hsts: {
     axis: "security",
     label: "HSTS Enabled",
+    fixDescription: "Detected automatically — HSTS forces browsers to use HTTPS, preventing downgrade attacks",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [4, 4],
     promptGuidance:
       "HSTS prevents protocol downgrade attacks. Presence is a positive signal — weight 4, the highest security weight.",
+    requiresHttpAccess: true,
   },
   hsts_missing: {
     axis: "security",
@@ -195,26 +212,31 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     weightRange: [1, 2],
     promptGuidance:
       "Recommended max-age ≥31536000 (1 year). Short max-age (<86400) undermines protection. Let's Encrypt 90-day rotation means long max-age requires reliable auto-renewal.",
+    requiresHttpAccess: true,
   },
   hsts_preload: {
     axis: "security",
     label: "HSTS Preload",
+    fixDescription: "Submit your domain to the HSTS preload list at hstspreload.org",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
     promptGuidance:
       "HSTS preload means domain is in browsers' built-in HSTS list. Requires max-age ≥1 year + includeSubDomains. Bonus-only signal.",
+    requiresHttpAccess: true,
   },
   csp: {
     axis: "security",
     label: "Content Security Policy Present",
+    fixDescription: "Detected automatically — Content Security Policy restricts resource loading to prevent XSS",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [3, 3],
     promptGuidance:
       "CSP presence is a positive security signal. Quality matters more than presence — check csp_quality for details.",
+    requiresHttpAccess: true,
   },
   csp_missing: {
     axis: "security",
@@ -249,6 +271,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       application:
         "SPAs using React/Vue styled-components may need 'unsafe-inline' in style-src — don't flag this. Focus on script-src.",
     },
+    requiresHttpAccess: true,
   },
   csp_missing_base_uri: {
     axis: "security",
@@ -297,6 +320,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       commerce: "Payment pages must have clickjacking protection.",
       application: "Some apps need iframe embedding (widgets, payments) — DENY would break this.",
     },
+    requiresHttpAccess: true,
   },
   xcto: {
     axis: "security",
@@ -308,6 +332,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     fixDescription: "Add X-Content-Type-Options: nosniff",
     weightRange: [1, 1],
     promptGuidance: "X-Content-Type-Options: nosniff prevents MIME type sniffing. Low weight (1), easy one-line fix.",
+    requiresHttpAccess: true,
   },
   dnssec: {
     axis: "security",
@@ -338,6 +363,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   email_auth: {
     axis: "email",
     label: "Email Authentication",
+    fixDescription: "Detected automatically — combined SPF + DKIM + DMARC alignment for email authentication",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -373,15 +399,19 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   waf_detected: {
     axis: "security",
     label: "WAF Detected",
+    fixDescription: "Detected automatically — Web Application Firewall protects against common web attacks",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 2],
     promptGuidance: "WAF presence is defense-in-depth. High-confidence detection is more meaningful.",
+    requiresHttpAccess: true,
   },
   caa_records: {
     axis: "security",
     label: "CAA Records Present",
+    fixDescription:
+      "Detected automatically — CAA DNS records restrict which Certificate Authorities can issue certificates",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -403,6 +433,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   caa_iodef: {
     axis: "security",
     label: "CAA iodef Reporting",
+    fixDescription: "Add a CAA iodef DNS record to receive email alerts about unauthorized certificate requests",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -458,6 +489,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     requiresContext: "cookies",
     promptGuidance:
       "Secure flag required for HTTPS. HttpOnly prevents XSS cookie theft. SameSite prevents CSRF. All three on session cookies.",
+    requiresHttpAccess: true,
   },
   server_version_disclosure: {
     axis: "security",
@@ -474,12 +506,14 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   referrer_policy: {
     axis: "security",
     label: "Referrer-Policy Configured",
+    fixDescription: "Detected automatically — a safe Referrer-Policy limits information leaked in HTTP headers",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
     weightRange: [1, 2],
     promptGuidance:
       "Best: strict-origin-when-cross-origin or no-referrer. Missing = browsers default to strict-origin-when-cross-origin (safe).",
+    requiresHttpAccess: true,
   },
   referrer_policy_missing: {
     axis: "security",
@@ -490,8 +524,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~5 min — add response header",
     fixDescription: "Add Referrer-Policy header",
     weightRange: [2, 2],
+    suppressesAbsent: "referrer_policy",
     promptGuidance:
       "Modern browsers default to strict-origin-when-cross-origin. Missing is safe but explicit is better. Low severity.",
+    requiresHttpAccess: true,
   },
   referrer_policy_unsafe: {
     axis: "security",
@@ -502,18 +538,22 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~5 min — update response header",
     fixDescription: "Change Referrer-Policy to strict-origin-when-cross-origin or no-referrer",
     weightRange: [2, 2],
+    suppressesAbsent: "referrer_policy",
     promptGuidance:
       "unsafe-url leaks full URLs to all origins. no-referrer-when-downgrade leaks on HTTP downgrades. Replace with strict-origin-when-cross-origin.",
+    requiresHttpAccess: true,
   },
   permissions_policy: {
     axis: "security",
     label: "Permissions-Policy Configured",
+    fixDescription: "Detected automatically — Permissions-Policy restricts browser features like camera and microphone",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 2],
     promptGuidance:
       "Restrictive policies (camera=(), microphone=()) show defense-in-depth. Overly permissive (feature=*) is medium concern.",
+    requiresHttpAccess: true,
   },
   permissions_policy_missing: {
     axis: "security",
@@ -524,7 +564,9 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~10 min — add response header",
     fixDescription: "Add Permissions-Policy header",
     weightRange: [2, 2],
+    suppressesAbsent: "permissions_policy",
     promptGuidance: "Absence is a minor gap. Permissions-Policy is defense-in-depth, not critical.",
+    requiresHttpAccess: true,
   },
   permissions_policy_unrestricted: {
     axis: "security",
@@ -535,7 +577,9 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~15 min — restrict policy directives",
     fixDescription: "Restrict Permissions-Policy directives",
     weightRange: [2, 2],
+    suppressesAbsent: "permissions_policy",
     promptGuidance: "Wildcard grants (feature=*) for sensitive features like camera/microphone are a medium concern.",
+    requiresHttpAccess: true,
   },
   http_to_https_redirect: {
     axis: "security",
@@ -574,11 +618,13 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   subresource_integrity: {
     axis: "security",
     label: "Subresource Integrity",
+    fixDescription: "Detected automatically — SRI ensures third-party scripts have not been tampered with",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [2, 2],
     promptGuidance: "SRI ensures CDN-hosted scripts haven't been tampered with. Positive signal.",
+    requiresHttpAccess: true,
   },
   subresource_integrity_missing: {
     axis: "security",
@@ -589,7 +635,9 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — add SRI hashes to external scripts",
     fixDescription: "Add SRI integrity attributes to external scripts",
     weightRange: [1, 1],
+    suppressesAbsent: "subresource_integrity",
     promptGuidance: "SRI ideal for third-party CDN scripts. Not feasible for dynamic scripts.",
+    requiresHttpAccess: true,
   },
   subresource_integrity_partial: {
     axis: "security",
@@ -600,7 +648,9 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~15 min — add SRI to remaining scripts",
     fixDescription: "Add SRI to remaining external scripts",
     weightRange: [1, 1],
+    suppressesAbsent: "subresource_integrity",
     promptGuidance: "Partial SRI = incremental adoption. Acknowledge progress.",
+    requiresHttpAccess: true,
   },
   form_action_security: {
     axis: "security",
@@ -613,6 +663,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     weightRange: [3, 3],
     promptGuidance: "Forms posting to HTTP transmit data in plaintext. High severity for credential/personal data.",
     archetypeNotes: { commerce: "Payment/checkout forms over HTTP are critical vulnerabilities." },
+    requiresHttpAccess: true,
   },
   mta_sts: {
     axis: "email",
@@ -637,6 +688,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     weightRange: [2, 2],
     promptGuidance:
       "Meta-signal: how many of 6 key headers deployed (HSTS, CSP, XFO, XCTO, Referrer-Policy, Permissions-Policy). 6/6=good, 4+=info, 2+=low, <2=medium.",
+    requiresHttpAccess: true,
   },
   hpkp_deprecated: {
     axis: "security",
@@ -701,6 +753,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       commerce: "E-commerce universally has third-party scripts — COEP is impractical and dangerous.",
       content: "Content sites with ads/social embeds cannot safely use COEP.",
     },
+    requiresHttpAccess: true,
   },
   tls_version: {
     axis: "security",
@@ -768,6 +821,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     weightRange: [1, 3],
     promptGuidance:
       "CVE detection is version-based, doesn't confirm exploitability. Site may not use vulnerable function. Note this caveat. EOL libraries are additional concern.",
+    requiresHttpAccess: true,
   },
 
   // ── WordPress Security (display-only, zero score impact) ──────────
@@ -860,6 +914,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   wp_security_plugin_detected: {
     axis: "security",
     label: "WordPress Security Plugin Active",
+    fixDescription: "Detected automatically — WordPress security plugin providing additional hardening",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -870,6 +925,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   wp_caching_plugin_detected: {
     axis: "speed",
     label: "WordPress Caching Plugin Active",
+    fixDescription: "Detected automatically — WordPress caching plugin improving page load performance",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -979,6 +1035,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   cdn: {
     axis: "foundations",
     label: "CDN Detected",
+    fixDescription: "Detected automatically — CDN distributes content across global edge servers for faster delivery",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -998,6 +1055,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   http3: {
     axis: "foundations",
     label: "HTTP/3 Enabled",
+    fixDescription: "Detected automatically — HTTP/3 uses QUIC protocol for faster, more reliable connections",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1030,6 +1088,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       commerce: "Dynamic content (prices, inventory) should avoid aggressive caching.",
       content: "Content sites benefit most from proper cache headers.",
     },
+    requiresHttpAccess: true,
   },
   no_compression: {
     axis: "speed",
@@ -1057,12 +1116,14 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   render_blocking_scripts: {
     axis: "speed",
     label: "Render-Blocking Scripts",
+    fixDescription: "Detected automatically — no third-party scripts blocking page rendering",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
     weightRange: [3, 3],
     promptGuidance:
       "Render-blocking scripts delay rendering. 1-2=low, 3-5=medium, 6+=high. async/defer may cause timing issues.",
+    requiresHttpAccess: true,
   },
   third_party_count: {
     axis: "speed",
@@ -1091,6 +1152,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   resource_hints: {
     axis: "speed",
     label: "Resource Hints",
+    fixDescription:
+      "Detected automatically — preload, prefetch, preconnect, and modulepreload link hints improve loading",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1098,6 +1161,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     promptGuidance:
       "preload/preconnect/dns-prefetch indicate performance-aware engineering. Absence is NOT negative — bonus-only.",
     archetypeNotes: { infrastructure: "Static sites/APIs don't need resource hints." },
+    requiresHttpAccess: true,
   },
   http_blocked_performance: {
     axis: "speed",
@@ -1132,6 +1196,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   ns_redundancy: {
     axis: "foundations",
     label: "Nameserver Count",
+    fixDescription: "Detected automatically — multiple nameservers ensure DNS availability",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1152,6 +1217,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   lb: {
     axis: "foundations",
     label: "Load Balancing",
+    fixDescription: "Detected automatically — multiple A records indicate load-balanced infrastructure",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1193,6 +1259,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   dns_resolution_time: {
     axis: "foundations",
     label: "DNS Resolution Time",
+    fixDescription: "Detected automatically — fast DNS resolution from authoritative nameservers",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1212,6 +1279,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   mx_redundancy: {
     axis: "email",
     label: "MX Redundancy",
+    fixDescription: "Detected automatically — multiple MX records ensure email delivery reliability",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1263,6 +1331,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   dns_consistent: {
     axis: "foundations",
     label: "DNS Consistent",
+    fixDescription: "Detected automatically — DNS records consistent across global resolvers",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1294,6 +1363,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   domain_age_trust: {
     axis: "reputation",
     label: "Domain Age",
+    fixDescription: "Domain age builds naturally over time — newly registered domains start with reduced trust",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1326,6 +1396,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   tranco_rank: {
     axis: "reputation",
     label: "Tranco Rank",
+    fixDescription: "Detected automatically — Tranco measures web traffic popularity among the top 1M sites",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1381,10 +1452,12 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       corporate: "Corporate sites should have security.txt.",
       institutional: "Enterprise/government benefit from security.txt.",
     },
+    requiresHttpAccess: true,
   },
   bimi_record: {
     axis: "email",
     label: "BIMI Record",
+    fixDescription: "Add a BIMI DNS record with your brand logo SVG for display in email clients",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1443,6 +1516,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   dmarc_subdomain_policy: {
     axis: "email",
     label: "DMARC Subdomain Policy",
+    fixDescription: "Add sp=reject to your DMARC record to protect subdomains from email spoofing",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1465,6 +1539,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   tls_rpt: {
     axis: "email",
     label: "TLS-RPT",
+    fixDescription: "Add a TLS-RPT DNS record (_smtp._tls.domain TXT) to receive TLS delivery failure reports",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1486,6 +1561,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   cert_validation_type: {
     axis: "foundations",
     label: "Certificate Validation Type",
+    fixDescription: "Detected automatically — certificate validation level (DV, OV, or EV)",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1522,6 +1598,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   ops_transparency: {
     axis: "foundations",
     label: "Operational Transparency",
+    fixDescription: "Detected automatically — public status pages, uptime monitoring, or incident tracking",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1537,6 +1614,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~1-2 hours — implement consent banner",
     fixDescription: "Implement cookie consent banner",
     weightRange: [2, 2],
+    suppressesAbsent: "cookie_consent_cmp",
     promptGuidance:
       "GDPR requires consent for EU-facing sites. US requirements minimal. Low concern for US-only sites without tracking cookies.",
     archetypeNotes: {
@@ -1544,6 +1622,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       commerce: "E-commerce collecting user data should have consent management.",
     },
     requiresContext: "cookies",
+    requiresHttpAccess: true,
   },
   cookie_consent_cmp: {
     axis: "reputation",
@@ -1556,6 +1635,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     weightRange: [3, 3],
     promptGuidance: "CMP detected is positive trust signal. Higher confidence = stronger.",
     requiresContext: "cookies",
+    requiresHttpAccess: true,
   },
   cookie_compliance: {
     axis: "reputation",
@@ -1583,6 +1663,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   blocklist_trust: {
     axis: "reputation",
     label: "Blocklist Trust Impact",
+    fixDescription: "Detected automatically — domain and IP checked against major security and email blocklists",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1595,6 +1676,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   domain_popularity: {
     axis: "discoverability",
     label: "Domain Popularity",
+    fixDescription: "Detected automatically — web popularity ranking from Tranco and other sources",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1604,6 +1686,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   structured_data: {
     axis: "discoverability",
     label: "Structured Data Present",
+    fixDescription: "Detected automatically — JSON-LD or microdata structured data for rich search results",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1615,6 +1698,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       content: "Article/BlogPosting improves search.",
       corporate: "Organization schema helps identity.",
     },
+    requiresHttpAccess: true,
   },
   no_structured_data: {
     axis: "discoverability",
@@ -1647,6 +1731,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       infrastructure: "API domains don't need social meta.",
       application: "Apps behind login don't benefit.",
     },
+    requiresHttpAccess: true,
   },
   robots_txt: {
     axis: "discoverability",
@@ -1659,6 +1744,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     weightRange: [2, 2],
     promptGuidance: "Controls crawler access. Presence is standard. Absence is fine — crawlers index all by default.",
     archetypeNotes: { application: "Private apps may intentionally omit or block." },
+    requiresHttpAccess: true,
   },
   sitemap: {
     axis: "discoverability",
@@ -1676,6 +1762,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       infrastructure: "API domains don't need sitemaps.",
       application: "Apps behind login don't need sitemaps.",
     },
+    requiresHttpAccess: true,
   },
   legal_pages: {
     axis: "reputation",
@@ -1691,11 +1778,13 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   social_accounts: {
     axis: "discoverability",
     label: "Social Accounts",
+    fixDescription: "Detected automatically — verified social media accounts linked via rel=me attributes",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 3],
     promptGuidance: "rel=me verified > homepage links. Relevance varies by site type.",
+    requiresHttpAccess: true,
   },
   no_social_accounts: {
     axis: "discoverability",
@@ -1737,11 +1826,13 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   canonical_url: {
     axis: "discoverability",
     label: "Canonical URL",
+    fixDescription: "Detected automatically — canonical URL properly set for SEO deduplication",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
     promptGuidance: "Self-referencing is standard. Cross-domain may be intentional.",
+    requiresHttpAccess: true,
   },
   canonical_url_missing: {
     axis: "discoverability",
@@ -1841,6 +1932,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     weightRange: [2, 2],
     promptGuidance: "Viewport meta is fundamental for mobile-first indexing. width=device-width is correct.",
     archetypeNotes: { infrastructure: "APIs may not need mobile-friendly design." },
+    requiresHttpAccess: true,
   },
   og_completeness: {
     axis: "discoverability",
@@ -1857,6 +1949,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       infrastructure: "API domains don't need OG tags.",
       application: "Apps behind login don't benefit.",
     },
+    requiresHttpAccess: true,
   },
   accessibility: {
     axis: "discoverability",
@@ -1873,6 +1966,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       institutional: "Government/education have higher legal obligations (Section 508).",
       corporate: "Increasing ADA litigation risk.",
     },
+    requiresHttpAccess: true,
   },
   site_unreachable_visibility: {
     axis: "discoverability",
@@ -1895,6 +1989,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
 export interface ScoringContext {
   cookies?: boolean;
   wordpress?: boolean;
+  /** True when the HTTP probe was blocked (403/etc.), meaning header/content-based signals couldn't be assessed */
+  httpBlocked?: boolean;
 }
 
 /** Precomputed max achievable good-bonus per axis (all contexts assumed present).
@@ -1921,6 +2017,8 @@ export function computeEffectiveMaxGoodWeight(ctx?: ScoringContext): Record<Axis
     if (!def.canBeGood) continue;
     // Skip signals that require a context not present in this scan
     if (def.requiresContext && !ctx[def.requiresContext]) continue;
+    // Skip HTTP-dependent signals when the HTTP probe was blocked
+    if (def.requiresHttpAccess && ctx.httpBlocked) continue;
     const axis = def.axis;
     result[axis] = (result[axis] ?? 0) + def.weightRange[1];
   }

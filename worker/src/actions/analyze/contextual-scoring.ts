@@ -210,6 +210,10 @@ export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: 
   let totalDeduction = 0;
   let presentWeight = 0; // weight of canBeGood signals that appeared (any severity)
 
+  // Collect signals suppressed from the absent pool by fired bad-variant signals.
+  // E.g. referrer_policy_unsafe fires → referrer_policy excluded from absent.
+  const suppressedFromAbsent = new Set<string>();
+
   for (const f of findings) {
     const share = (Math.max(f.weight, 1) / totalGoodWeight) * 100;
     const factor = SEVERITY_DEDUCTION_FACTOR[f.severity];
@@ -221,6 +225,22 @@ export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: 
     const reg = SIGNAL_REGISTRY[f.signal as keyof typeof SIGNAL_REGISTRY];
     if (reg?.canBeGood) {
       presentWeight += f.weight;
+    }
+    // If this finding suppresses a good-variant from the absent pool, track it
+    if (reg?.suppressesAbsent) {
+      suppressedFromAbsent.add(reg.suppressesAbsent);
+    }
+  }
+
+  // Add suppressed signals' weights to presentWeight so they're not counted as absent
+  for (const suppId of suppressedFromAbsent) {
+    const suppDef = SIGNAL_REGISTRY[suppId as keyof typeof SIGNAL_REGISTRY];
+    if (suppDef?.canBeGood && suppDef.axis === axis) {
+      // Only add if not already present from a fired finding
+      const alreadyFired = findings.some((f) => f.signal === suppId);
+      if (!alreadyFired) {
+        presentWeight += suppDef.weightRange[1];
+      }
     }
   }
 
@@ -257,6 +277,10 @@ export function computeAxisScoreWithDeductions(
   let totalDeduction = 0;
   let presentWeight = 0;
 
+  // Collect signals suppressed from the absent pool by fired bad-variant signals.
+  // E.g. referrer_policy_unsafe fires → referrer_policy excluded from absent.
+  const suppressedFromAbsent = new Set<string>();
+
   for (const f of findings) {
     const share = (Math.max(f.weight, 1) / totalGoodWeight) * 100;
     const factor = SEVERITY_DEDUCTION_FACTOR[f.severity];
@@ -280,6 +304,21 @@ export function computeAxisScoreWithDeductions(
     if (reg?.canBeGood) {
       presentWeight += f.weight;
     }
+    // If this finding suppresses a good-variant from the absent pool, track it
+    if (reg?.suppressesAbsent) {
+      suppressedFromAbsent.add(reg.suppressesAbsent);
+    }
+  }
+
+  // Add suppressed signals' weights to presentWeight so they're not counted as absent
+  for (const suppId of suppressedFromAbsent) {
+    const suppDef = SIGNAL_REGISTRY[suppId as keyof typeof SIGNAL_REGISTRY];
+    if (suppDef?.canBeGood && suppDef.axis === axis) {
+      const alreadyFired = findings.some((f) => f.signal === suppId);
+      if (!alreadyFired) {
+        presentWeight += suppDef.weightRange[1];
+      }
+    }
   }
 
   // Absent signals: canBeGood signals that didn't fire at all
@@ -294,8 +333,12 @@ export function computeAxisScoreWithDeductions(
       for (const [id, def] of Object.entries(SIGNAL_REGISTRY)) {
         if (def.axis !== axis || !def.canBeGood) continue;
         if (firedSignals.has(id)) continue;
+        // Skip signals suppressed by a fired bad-variant (prevents double-dipping)
+        if (suppressedFromAbsent.has(id)) continue;
         // Skip signals whose required context isn't present (already excluded from denominator)
         if (def.requiresContext && scoringCtx && !scoringCtx[def.requiresContext as keyof typeof scoringCtx]) continue;
+        // Skip HTTP-dependent signals when HTTP probe was blocked (excluded from denominator)
+        if (def.requiresHttpAccess && scoringCtx?.httpBlocked) continue;
         absentSignals.push({
           signal: id,
           label: def.label,
@@ -4150,9 +4193,18 @@ export function calculateDomainScore(opts: {
 
   // Build scoring context for context-aware normalization.
   // Excludes inapplicable signals from the max achievable score denominator.
+  // Detect HTTP-blocked scans (403/etc.) — scanner limitation, not site fault.
+  const httpBlocked = findings.some(
+    (f) =>
+      f.signal === "http_blocked_security" ||
+      f.signal === "http_blocked_performance" ||
+      f.signal === "http_error_response",
+  );
+
   const scoringCtx: ScoringContext = {
     cookies: !!(opts.cookieSecurity && opts.cookieSecurity.cookies.length > 0),
     wordpress: !!opts.wordpress,
+    httpBlocked,
   };
 
   for (const axis of axes) {
