@@ -158,3 +158,12 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 - **Why:** Axes scoring 93/98/97/99 with zero suggestions destroyed user trust — the product told users something was wrong without explaining what. Root cause: scoring engine deducted in aggregate (all absent signals pooled) while Level-Up evaluated individually (each below display threshold). The structural mismatch persisted across multiple fix attempts because the fundamental sync invariant was never established.
 - **Rejected:** Option 2 (don't deduct what you can't explain — inflates scores artificially), Option 3 (show all opportunities regardless of threshold — too much noise).
 - **Directive:** `sum(displayed_items) = 100 - axis_score` for every axis. Added as invariant in INVARIANTS.md and core directive in CONSTITUTION.md. Server must return enriched absent-signal data (which signals, why absent). Client must display them.
+
+---
+
+### 2026-06-01: Scoring fairness overhaul — 10 signals reclassified, 2 detection bugs fixed
+
+**What:** Reclassified 10 signals from scoring to informational (non-scoring): ads_txt, greynoise_riot, ns_provider_diversity, http_to_https_redirect, pwa_ready, mobile_app_links, hreflang, rss_feed, crux_field_data, inp. Fixed 2 detection bugs: render_blocking_scripts and subresource_integrity now emit "good" when zero third-party scripts are present.
+**Why:** These signals penalized sites for things that are either not applicable (ads.txt on non-ad sites, hreflang on English-only sites), architectural choices (PWA), traffic-dependent (CrUX/INP), redundant with other signals (GreyNoise RIOT overlaps CDN detection), or UX rather than security (HTTP→HTTPS redirect when TLS+HSTS present). Industry pattern (Lighthouse, Mozilla Observatory, SecurityHeaders) is clear: score on universals, inform on niche features.
+**Rejected:** Archetype-specific weighting (too complex, maintainability risk). Removing signals entirely (they're still useful as informational indicators). cookie_consent_cmp was NOT reclassified — it already had requiresContext: "cookies" gating, which is the correct behavior (score when cookies present, exclude when absent).
+**Directive:** Score on universals, inform on niche features. Use `canBeGood: false` + `weightRange: [0, 0]` for informational signals. Use `requiresContext` when a signal is valid only in specific contexts. Informational signals are still detected and displayed — they just don't affect scores.

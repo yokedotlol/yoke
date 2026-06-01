@@ -1701,7 +1701,17 @@ export function calculateDomainScore(opts: {
         /* skip malformed URLs */
       }
     }
-    if (thirdPartyTotal >= 3) {
+    if (thirdPartyTotal === 0) {
+      // No third-party scripts — better than having them with SRI
+      findings.push({
+        signal: "subresource_integrity",
+        axis: "security",
+        severity: "good",
+        label: "No third-party scripts — SRI not needed",
+        tradeoff: null,
+        weight: 2,
+      });
+    } else if (thirdPartyTotal >= 3) {
       if (thirdPartyWithSri === thirdPartyTotal) {
         findings.push({
           signal: "subresource_integrity",
@@ -3815,12 +3825,16 @@ export function calculateDomainScore(opts: {
         tradeoff: "Adding async/defer may cause timing issues for scripts that depend on load order.",
         weight: 3,
       });
-    } else if (tps.third_party > 0) {
+    } else {
+      // Zero render-blocking scripts — whether zero 3P scripts or all non-blocking
       findings.push({
         signal: "render_blocking_scripts",
         axis: "speed",
         severity: "good",
-        label: "No render-blocking third-party scripts",
+        label:
+          tps.third_party > 0
+            ? "No render-blocking third-party scripts"
+            : "No third-party scripts — no render-blocking risk",
         tradeoff: null,
         weight: 3,
       });

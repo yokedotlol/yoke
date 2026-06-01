@@ -61,8 +61,6 @@
 ## Open / Known Issues
 
 - **Fly proxy deploy**: Requires manual `cd fly-proxy && fly deploy` by Kurt (no `FLY_API_TOKEN` in CI env). Affects desktop PageSpeed and MTA-STS self-scan.
-- **`docs/internal/` exposure**: Directory gitignored but `SCORING-REDESIGN.md` was tracked — now removed. `calibration/` directory (8 files) still tracked — decision pending.
-- **`calibration/` in public repo**: 8 files tracked (CALIBRATION-REPORT.md, analysis-data.json, Python scripts). Per INVARIANTS.md, calibration methodology shouldn't be public. Needs Kurt's decision on whether to untrack.
 - **OG Worker not in CI**: The `og-worker/` has its own `wrangler.toml` but no CI pipeline.
 - **External uptime monitoring**: Not set up yet.
 

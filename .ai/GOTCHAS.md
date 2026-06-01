@@ -110,3 +110,12 @@
 
 **Don't:** Apply display-threshold filters without a fallback that accounts for the residual gap. Don't assume that because individual items are small, the aggregate is invisible.
 **Do:** Enforce the invariant: `sum(displayed_items) = 100 - axis_score` for every axis. If filtering removes items, show a grouped residual entry that explains the remaining points. Server must return enriched absent data (which signals, why absent) so the client can explain every deducted point.
+
+---
+
+### Informational signals must not affect the scoring budget
+
+**What happened:** Signals like ads_txt, pwa_ready, hreflang, and mobile_app_links were canBeGood: true with non-zero weights, causing them to inflate the absent-signal pool. Sites were penalized for not having features irrelevant to their type (e.g., ads.txt on a security tool, hreflang on an English-only site, PWA on a dashboard).
+
+**Don't:** Add canBeGood: true to signals that are only relevant to specific site types without requiresContext gating.
+**Do:** When adding a new signal, ask: "Does every website need this?" If not, either gate with requiresContext or make it informational (canBeGood: false, weightRange: [0, 0]). The industry pattern: score on universals, inform on niche features.

@@ -542,9 +542,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "HTTP→HTTPS Redirect",
     actionable: false,
     canBeNonGood: false,
-    canBeGood: true,
-    weightRange: [3, 3],
-    promptGuidance: "HTTP→HTTPS redirect is a positive signal. Weight 3.",
+    canBeGood: false,
+    weightRange: [0, 0],
+    promptGuidance:
+      "HTTP→HTTPS redirect detected. With TLS + HSTS in place, the redirect is UX convenience, not a security requirement. Informational — does not affect score.",
   },
   no_http_to_https_redirect: {
     axis: "security",
@@ -946,14 +947,12 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   inp: {
     axis: "speed",
     label: "Interaction to Next Paint",
-    actionable: true,
-    canBeNonGood: true,
-    canBeGood: true,
-    effort: "~1-2 hours — optimize JS execution",
-    fixDescription: "Reduce Interaction to Next Paint time",
-    weightRange: [3, 3],
+    actionable: false,
+    canBeNonGood: false,
+    canBeGood: false,
+    weightRange: [0, 0],
     promptGuidance:
-      "Interaction to Next Paint: ≤200ms good, ≤500ms needs-improvement, >500ms poor. Core Web Vital (replaced FID March 2024). CrUX only. High INP = JS execution problems.",
+      "Interaction to Next Paint: ≤200ms good, ≤500ms needs-improvement, >500ms poor. Core Web Vital (replaced FID March 2024). CrUX-dependent — can't measure without field data. Informational — does not affect score.",
   },
   tbt: {
     axis: "speed",
@@ -972,10 +971,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "CrUX Field Data",
     actionable: false,
     canBeNonGood: false,
-    canBeGood: true,
-    weightRange: [1, 1],
+    canBeGood: false,
+    weightRange: [0, 0],
     promptGuidance:
-      "CrUX provides real-user data — more authoritative than lab. CrUX good + lab poor = CDN/caching helps real users. CrUX poor + lab good = real users face worse conditions.",
+      "CrUX provides real-user data — more authoritative than lab. Traffic-dependent, not quality-dependent. Informational — does not affect score.",
   },
   cdn: {
     axis: "foundations",
@@ -1203,14 +1202,12 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   ns_provider_diversity: {
     axis: "foundations",
     label: "NS Provider Diversity",
-    actionable: true,
-    canBeNonGood: true,
-    canBeGood: true,
-    effort: "~30 min — add secondary DNS provider",
-    fixDescription: "Add secondary DNS provider for redundancy",
-    weightRange: [1, 1],
+    actionable: false,
+    canBeNonGood: false,
+    canBeGood: false,
+    weightRange: [0, 0],
     promptGuidance:
-      "Multi-provider DNS is positive. Single major provider (Cloudflare/Route53/Google) runs massive anycast — secondary DNS unnecessary.",
+      "Multi-provider DNS detected. Major providers (Cloudflare/Route53/Google) are already globally redundant. Informational — does not affect score.",
   },
   mx_redundancy: {
     axis: "email",
@@ -1351,9 +1348,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "GreyNoise RIOT",
     actionable: false,
     canBeNonGood: false,
-    canBeGood: true,
-    weightRange: [2, 2],
-    promptGuidance: "IP belongs to known legitimate service. Positive. CDN RIOT is expected, not additional bonus.",
+    canBeGood: false,
+    weightRange: [0, 0],
+    promptGuidance:
+      "IP belongs to known legitimate service. Overlaps with CDN detection. Informational — does not affect score.",
   },
   email_trust: {
     axis: "email",
@@ -1479,9 +1477,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "ads.txt",
     actionable: false,
     canBeNonGood: false,
-    canBeGood: true,
-    weightRange: [1, 1],
-    promptGuidance: "Declares authorized ad sellers. Only relevant for publisher sites.",
+    canBeGood: false,
+    weightRange: [0, 0],
+    promptGuidance:
+      "Declares authorized ad sellers. Only relevant for publisher sites. Informational — does not affect score.",
     archetypeNotes: { content: "Content sites with advertising should have ads.txt." },
   },
   cert_validation_type: {
@@ -1544,6 +1543,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       institutional: "Government/education face higher compliance scrutiny.",
       commerce: "E-commerce collecting user data should have consent management.",
     },
+    requiresContext: "cookies",
   },
   cookie_consent_cmp: {
     axis: "reputation",
@@ -1555,6 +1555,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     fixDescription: "Improve cookie consent management platform",
     weightRange: [3, 3],
     promptGuidance: "CMP detected is positive trust signal. Higher confidence = stronger.",
+    requiresContext: "cookies",
   },
   cookie_compliance: {
     axis: "reputation",
@@ -1726,13 +1727,12 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   pwa_ready: {
     axis: "discoverability",
     label: "PWA Readiness",
-    actionable: true,
-    canBeNonGood: true,
-    canBeGood: true,
-    effort: "~1-2 hours — manifest + service worker",
-    fixDescription: "Add PWA manifest and service worker",
-    weightRange: [2, 2],
-    promptGuidance: "PWA readiness is capability/UX, not visibility. Don't over-recommend as 'visibility improvement.'",
+    actionable: false,
+    canBeNonGood: false,
+    canBeGood: false,
+    weightRange: [0, 0],
+    promptGuidance:
+      "PWA readiness is an architectural choice, not a quality indicator. Even Lighthouse treats PWA as informational. Does not affect score.",
   },
   canonical_url: {
     axis: "discoverability",
@@ -1760,20 +1760,20 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "Mobile App Links",
     actionable: false,
     canBeNonGood: false,
-    canBeGood: true,
-    weightRange: [1, 1],
-    promptGuidance: "Deep links configured. Bonus signal.",
+    canBeGood: false,
+    weightRange: [0, 0],
+    promptGuidance:
+      "Deep links configured. Only relevant for sites with native apps. Informational — does not affect score.",
   },
   rss_feed: {
     axis: "discoverability",
     label: "RSS Feed",
-    actionable: true,
-    canBeNonGood: true,
-    canBeGood: true,
-    effort: "~30 min — generate RSS/Atom feed",
-    fixDescription: "Add RSS/Atom feed",
-    weightRange: [1, 1],
-    promptGuidance: "RSS enables syndication. More valuable for content sites.",
+    actionable: false,
+    canBeNonGood: false,
+    canBeGood: false,
+    weightRange: [0, 0],
+    promptGuidance:
+      "RSS enables syndication. Only relevant for content/blog sites. Informational — does not affect score.",
     archetypeNotes: { content: "Content sites should have RSS." },
   },
   hreflang: {
@@ -1781,9 +1781,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "Hreflang Tags",
     actionable: false,
     canBeNonGood: false,
-    canBeGood: true,
-    weightRange: [1, 1],
-    promptGuidance: "International targeting tags. Positive for multi-language sites.",
+    canBeGood: false,
+    weightRange: [0, 0],
+    promptGuidance:
+      "International targeting tags. Only relevant for multi-language sites. Informational — does not affect score.",
   },
   favicon_missing: {
     axis: "discoverability",

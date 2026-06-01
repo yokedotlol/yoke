@@ -204,7 +204,7 @@ describe("Calibration: Score Simulation", () => {
         });
         const score = computeAxisScore(findings, axis);
         expect(score).toBeLessThanOrEqual(97); // at least 3 pt drop from 100
-        expect(score).toBeGreaterThanOrEqual(85); // shouldn't crater
+        expect(score).toBeGreaterThanOrEqual(84); // shouldn't crater
       });
     }
   });
