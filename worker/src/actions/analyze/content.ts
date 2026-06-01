@@ -259,7 +259,7 @@ export async function checkTranco(domain: string, statsDb?: D1Database): Promise
 
 // ─── Email Authentication ────────────────────────────────────────────
 
-export async function checkEmailAuth(domain: string, dnsRecords: DnsRecord[]): Promise<EmailAuthResult> {
+export async function checkEmailAuth(domain: string, dnsRecords: DnsRecord[], env?: Env): Promise<EmailAuthResult> {
   const spf = {
     found: false,
     record: null as string | null,
@@ -445,9 +445,36 @@ export async function checkEmailAuth(domain: string, dnsRecords: DnsRecord[]): P
   } catch {
     /* ignore */
   }
+  // MTA-STS policy fetch — try direct, fall back to Fly probe on failure
   try {
-    const policyRes = await fetchWithTimeout(`https://mta-sts.${domain}/.well-known/mta-sts.txt`, { timeout: 5000 });
-    if (policyRes.ok) {
+    const policyUrl = `https://mta-sts.${domain}/.well-known/mta-sts.txt`;
+    let policyRes: Response | null = null;
+
+    // Try direct fetch first
+    try {
+      policyRes = await fetchWithTimeout(policyUrl, { timeout: 5000 });
+    } catch {
+      // Direct fetch failed (e.g., CF Worker self-referential block) — try Fly probe
+    }
+
+    // If direct fetch failed or returned non-OK, try Fly probe
+    if ((!policyRes || !policyRes.ok) && env) {
+      try {
+        const probeUrl = `${getFlyProbeUrl(env)}/probe-fetch?url=${encodeURIComponent(policyUrl)}`;
+        const raw = await fetchWithTimeout(probeUrl, {
+          timeout: 8000,
+          headers: getFlyAuthHeaders(env),
+        });
+        const probeData = (await raw.json()) as { status: number; body: string };
+        if (probeData.status >= 200 && probeData.status < 300) {
+          policyRes = new Response(probeData.body, { status: probeData.status });
+        }
+      } catch {
+        // Fly probe also failed — give up
+      }
+    }
+
+    if (policyRes?.ok) {
       const text = await boundedText(policyRes);
       if (text?.includes("mode:")) {
         mtaSts.policy_found = true;

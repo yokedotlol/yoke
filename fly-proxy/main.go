@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -360,6 +361,46 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-cache")
 		json.NewEncoder(w).Encode(result)
+		return
+	}
+
+	// General-purpose URL fetch — used for self-domain fetches that CF Workers
+	// can't make (e.g., MTA-STS policy on a subdomain routed to the same worker).
+	if r.URL.Path == "/probe-fetch" {
+		targetURL := r.URL.Query().Get("url")
+		if targetURL == "" {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, `{"error":"missing url parameter"}`, 400)
+			return
+		}
+		parsedURL, err := url.Parse(targetURL)
+		if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, `{"error":"invalid url"}`, 400)
+			return
+		}
+		client := &http.Client{
+			Transport: safeTransport(),
+			Timeout:   10 * time.Second,
+		}
+		resp, err := client.Get(targetURL)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":  err.Error(),
+				"status": 0,
+			})
+			return
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024)) // 64KB max
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-cache")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  resp.StatusCode,
+			"body":    string(body),
+			"headers": resp.Header,
+		})
 		return
 	}
 

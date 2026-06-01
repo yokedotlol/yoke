@@ -12,5 +12,5 @@ export const emailAuthCheck: Check = {
     mta_sts: { dns_found: false, policy_found: false, mode: null },
     tls_rpt: { found: false, record: null, rua: null },
   },
-  run: (ctx) => checkEmailAuth(ctx.domain, ctx.dnsRecords),
+  run: (ctx) => checkEmailAuth(ctx.domain, ctx.dnsRecords, ctx.env),
 };
