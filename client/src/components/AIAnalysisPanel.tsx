@@ -730,10 +730,18 @@ function generateLevelUpPlan(data: AnalysisResult): {
   const currentScore = score.composite;
   const currentTier = score.tier;
   const next = getNextTier(currentTier);
-  if (!next) return null; // already Excellent
 
-  const pointsNeeded = next.min - currentScore;
-  if (pointsNeeded <= 0) return null;
+  // For Excellent-tier domains, target score 100 instead of a tier threshold
+  const isExcellent = !next;
+  const targetThreshold = isExcellent ? 100 : next!.min;
+  const targetTier = isExcellent ? "Excellent" : next!.tier;
+  const pointsNeeded = targetThreshold - currentScore;
+  if (pointsNeeded <= 0 && isExcellent) {
+    // Perfect score — nothing to improve
+    // Still continue to collect items for display
+  } else if (pointsNeeded <= 0) {
+    return null;
+  }
 
   const items: GradeUpItem[] = [];
 
@@ -850,13 +858,16 @@ function generateLevelUpPlan(data: AnalysisResult): {
 
   drags.sort((a, b) => b.pointCost - a.pointCost);
 
+  // If Excellent and no actionable items found, return null
+  if (isExcellent && items.length === 0 && drags.length === 0) return null;
+
   return {
     items,
     drags,
     currentScore,
     currentTier,
-    targetTier: next.tier,
-    targetThreshold: next.min,
+    targetTier,
+    targetThreshold,
     pointsNeeded,
   };
 }
@@ -1909,7 +1920,9 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
         <ArrowUp size={14} style={{ color: "var(--accent)" }} />
         <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>Level-Up Plan</span>
         <span style={{ fontSize: "11px", color: "var(--muted)", marginLeft: "auto" }}>
-          {plan.currentTier} → {plan.targetTier}
+          {plan.pointsNeeded > 0
+            ? `${plan.currentTier} → ${plan.targetTier}`
+            : "Already Excellent — here's what would push the score higher"}
         </span>
       </div>
 
@@ -1920,7 +1933,7 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
             {plan.currentScore} pts ({plan.currentTier})
           </span>
           <span style={{ color: "var(--muted)" }}>
-            {plan.targetThreshold} pts ({plan.targetTier})
+            {plan.pointsNeeded > 0 ? `${plan.targetThreshold} pts (${plan.targetTier})` : "100 pts"}
           </span>
         </div>
         <div style={{ height: "6px", borderRadius: "3px", background: "var(--border)", overflow: "hidden" }}>
@@ -1935,7 +1948,9 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
           />
         </div>
         <div style={{ fontSize: "10px", color: "var(--muted)", marginTop: "3px" }}>
-          Need +{plan.pointsNeeded} points · fixing all items below → {projectedScore} pts ({projectedTier})
+          {plan.pointsNeeded > 0
+            ? `Need +${plan.pointsNeeded} points · fixing all items below → ${projectedScore} pts (${projectedTier})`
+            : `Fixing all items below → ${projectedScore} pts (${projectedTier})`}
         </div>
       </div>
 

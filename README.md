@@ -580,15 +580,16 @@ bun test
 
 ## Versioning
 
-Yoke uses **independent versioning** across its three components:
+Yoke uses **independent versioning** across its components:
 
-| Component | Version | Release mechanism |
-|-----------|---------|-------------------|
-| **Service** (Worker) | `YOKE_VERSION` in `helpers.ts` | Bumps with each deploy batch |
-| **CLI** | Set by GoReleaser at build time | Bumps only on CLI code changes |
-| **Extension** | `manifest.json` version | Bumps only on extension changes |
+| Component | Version | Tag format | Release mechanism |
+|-----------|---------|------------|-------------------|
+| **Service** (Worker + Client) | `YOKE_VERSION` in `helpers.ts` | Bumps with each deploy | `wrangler deploy` |
+| **CLI** | Set by GoReleaser at build time | `cli/v*` (e.g. `cli/v1.5.0`) | GoReleaser via GitHub Actions |
+| **MCP Server** | `mcp-server/package.json` | `mcp/v*` (e.g. `mcp/v1.0.1`) | npm publish via GitHub Actions |
+| **Extension** | `manifest.json` version | `ext/v*` | Chrome Web Store via GitHub Actions |
 
-All components share the same major version (`1.x`) for API generation compatibility. The service returns `X-Yoke-Version` and `X-Yoke-Min-Client` headers on every API response — the CLI checks these to warn when an update is needed.
+Components share the same major version for API compatibility. The service returns `X-Yoke-Version` and `X-Yoke-Min-Client` headers on every API response — the CLI checks these to warn when an update is needed.
 
 ---
 

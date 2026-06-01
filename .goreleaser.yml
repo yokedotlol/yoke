@@ -2,9 +2,6 @@ version: 2
 
 project_name: yoke
 
-monorepo:
-  tag_prefix: cli/v
-
 before:
   hooks:
     - bash -c "cd cli && go mod tidy"

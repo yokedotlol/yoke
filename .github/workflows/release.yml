@@ -21,12 +21,17 @@ jobs:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
 
+      - name: Extract version from tag
+        id: version
+        run: echo "tag=${GITHUB_REF_NAME#cli/}" >> "$GITHUB_OUTPUT"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           version: '~> v2'
           args: release --clean
         env:
+          GORELEASER_CURRENT_TAG: ${{ steps.version.outputs.tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # PAT with repo write access to yokedotlol/homebrew-tap
           # Create at: https://github.com/settings/tokens → Fine-grained → yokedotlol/homebrew-tap → Contents: Read+Write

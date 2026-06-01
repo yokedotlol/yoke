@@ -2225,10 +2225,10 @@ export function calculateDomainScore(opts: {
       blendedScore = Math.round((perf?.score ?? 0) * 0.6 + (perfDesktop?.score ?? 0) * 0.4);
       sourceLabel = "Lighthouse lab (mobile 60% + desktop 40%)";
     } else if (hasMobile) {
-      blendedScore = perf?.score ?? null;
+      blendedScore = perf?.score ?? 0;
       sourceLabel = "Lighthouse lab (mobile)";
     } else {
-      blendedScore = perfDesktop?.score ?? null;
+      blendedScore = perfDesktop?.score ?? 0;
       sourceLabel = "Lighthouse lab (desktop)";
     }
 
