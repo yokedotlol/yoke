@@ -574,6 +574,18 @@ cd worker && bun install && cd ..
 bun test
 ```
 
+### AI Contributors
+
+If you're an AI agent working on this codebase, start with **[CLAUDE.md](CLAUDE.md)** for technical context. The **[.ai/](.ai/)** directory contains structured project context:
+
+- **[.ai/CONSTITUTION.md](.ai/CONSTITUTION.md)** — Architecture, scoring philosophy, red lines
+- **[.ai/INVARIANTS.md](.ai/INVARIANTS.md)** — Things that must always be true
+- **[.ai/DECISIONS.md](.ai/DECISIONS.md)** — Why things are the way they are
+- **[.ai/STATE.md](.ai/STATE.md)** — Current project snapshot (versions, counts)
+- **[.ai/GOTCHAS.md](.ai/GOTCHAS.md)** — Lessons learned, common mistakes
+
+Run `bash .ai/staleness-check.sh` to verify docs match the codebase.
+
 ---
 
 ## Versioning

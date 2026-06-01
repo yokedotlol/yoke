@@ -2,6 +2,12 @@
 
 Thanks for wanting to contribute! Yoke is MIT-licensed and welcomes pull requests.
 
+## Before You Start
+
+Read **[.ai/INVARIANTS.md](.ai/INVARIANTS.md)** before submitting changes — it lists things that must always be true in this project (scoring model rules, naming conventions, security requirements). Significant design decisions should be logged in **[.ai/DECISIONS.md](.ai/DECISIONS.md)**.
+
+For full project context (architecture, scoring philosophy, red lines), see **[.ai/CONSTITUTION.md](.ai/CONSTITUTION.md)** and **[CLAUDE.md](CLAUDE.md)**.
+
 ## Quick Start
 
 ```bash
@@ -58,7 +64,7 @@ yoke/
 ├── extension/               # Chrome extension (Manifest V3, side panel)
 ├── cli/                     # Go CLI (goreleaser, Homebrew tap)
 ├── prompts/                 # AI analysis prompt (.txt, imported by worker)
-└── tests/                   # Vitest test suite (508+ tests)
+└── tests/                   # Vitest test suite (505+ tests)
 ```
 
 ### Storage
@@ -172,7 +178,7 @@ The Go CLI at `cli/` is distributed via goreleaser and Homebrew (`yokedotlol/hom
 Tests use [Vitest](https://vitest.dev/) and live in `tests/`:
 
 ```bash
-npx vitest run              # Run all tests (508+ tests)
+npx vitest run              # Run all tests (505+ tests)
 npx vitest run --watch      # Watch mode
 npx vitest run scoring      # Run specific test file
 ```
@@ -203,7 +209,7 @@ If you need to bypass the hook for a WIP commit: `git commit --no-verify`.
 
 ## Pull Request Checklist
 
-- [ ] `npx vitest run` passes (all 508+ tests)
+- [ ] `npx vitest run` passes (all 505+ tests)
 - [ ] `cd worker && bun run typecheck` passes with zero errors
 - [ ] `npx @biomejs/biome check .` passes with zero errors (warnings are OK)
 - [ ] New checks include a test for the expected output shape

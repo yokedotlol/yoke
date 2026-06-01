@@ -2,6 +2,20 @@
 
 Project context for AI coding assistants (Claude Code, Cursor, Copilot, Codex, Hatch, etc.).
 
+## ⚡ Start Here: .ai/ Context Framework
+
+**Before working on this project, read these files in `.ai/`:**
+
+| File | When to read | What it contains |
+|------|-------------|------------------|
+| `.ai/CONSTITUTION.md` | **Always** | Architecture, scoring philosophy, red lines |
+| `.ai/INVARIANTS.md` | **Always** | Things that must always be true — check before any change |
+| `.ai/STATE.md` | **Always** | Current versions, signal counts, test counts |
+| `.ai/DECISIONS.md` | Before modifying scoring, signals, or architecture | Why things are the way they are |
+| `.ai/GOTCHAS.md` | Before modifying scoring, signals, or client code | Mistakes we've made and how to avoid them |
+
+Run `bash .ai/staleness-check.sh` to verify docs match the codebase.
+
 ## What This Is
 
 Yoke is a domain intelligence / OSINT tool. Users enter a domain → get a comprehensive multi-tab analysis (DNS, WHOIS, SSL, security, tech stack, performance, breaches, AI insights). Served as a web SPA, a JSON API (`curl yoke.lol/stripe.com`), and a Chrome extension.
@@ -37,7 +51,7 @@ CF Workers cannot `fetch()` their own domain (creates a loop). Yoke detects self
 
 ### Signal Registry (`worker/src/config/signal-registry.ts`)
 
-Single source of truth for all ~136 scoring signals. Every signal declares its axis, actionability, effort, fix description, and severity. Derived constants (`NON_ACTIONABLE`, `EFFORT_MAP`, `FIX_DESC_MAP`, etc.) are exported for use across server and client.
+Single source of truth for all ~155 scoring signals. Every signal declares its axis, actionability, effort, fix description, and severity. Derived constants (`NON_ACTIONABLE`, `EFFORT_MAP`, `FIX_DESC_MAP`, etc.) are exported for use across server and client.
 
 When adding a signal:
 1. Add it to `signal-registry.ts`
@@ -110,7 +124,7 @@ CORS headers are applied by the `json()` helper in `helpers.ts` for public endpo
 - **Grade strings include plus tiers** — the grading system produces `A+`, `A`, `B+`, `B`, `C+`, `C`, `D+`, `D`, `F`. Any string comparison (display labels, signal text, conditionals) must handle the `+` variants, not just bare letters. E.g. checking `grade === "A"` misses `A+`.
 - **Client changes require a deploy** — edits to `client/build.ts` or `client/src/` only take effect after CI builds and deploys. Don't expect changes to be live immediately when testing against production.
 - **DNS inconsistency is expected for distributed hosting** — sites using CDN anycast, geo-DNS, or multi-datacenter hosting intentionally return different IPs to different resolvers. The scoring logic suppresses this when a CDN is detected OR when the site is up with multiple IPs. Don't flag it as a problem.
-- **The 5 axes are: Security, Performance, Infrastructure, Trust, Visibility** — "Infrastructure" (formerly "Reliability") measures DNS hygiene and hosting best practices, not actual uptime. D1 column names still say `reliability_score` (internal storage only).
+- **The 6 axes are: Security, Speed, Foundations, Reputation, Discoverability, Email** — axis type names in code are lowercase (`security`, `speed`, `foundations`, `reputation`, `discoverability`, `email`). D1 column names may still use legacy names like `reliability_score` (internal storage only). See `.ai/INVARIANTS.md` for authoritative axis weights.
 - **Social account detection depends on `rel="me"` links in served HTML** — adding a link to `client/build.ts` doesn't make it detectable until the build is deployed and the target site's HTML is re-fetched.
 - **Pre-commit hooks live in `.githooks/`** — git must be configured with `git config core.hooksPath .githooks` for them to run. If `git-filter-repo` or a fresh clone resets local config, hooks silently stop working. After any repo reset, re-run the config command.
 
@@ -129,11 +143,11 @@ CORS headers are applied by the `json()` helper in `helpers.ts` for public endpo
 ## Testing
 
 ```bash
-npx vitest run        # 192 tests, all should pass
+npx vitest run        # 505 tests, all should pass
 cd fly-proxy && go test -v   # Go proxy unit tests
 ```
 
-Tests cover: scoring thresholds, signal registry enforcement, detection fingerprints, WHOIS parsing, helpers, registry order, content negotiation, structured data, scoring integration. No D1 mocking or integration tests — tests are pure functions only.
+Tests cover: scoring thresholds, signal registry enforcement, detection fingerprints, WHOIS parsing, helpers, registry order, content negotiation, structured data, scoring integration, scoring calibration (291 "busy customer POV" tests). No D1 mocking or integration tests — tests are pure functions only.
 
 When adding a check, add a test for its expected output shape and a test for graceful failure.
 
