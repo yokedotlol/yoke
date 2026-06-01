@@ -663,7 +663,7 @@ function generateActionItems(data: AnalysisResult): ActionItem[] {
 // ─── Level-Up Plan Engine ────────────────────────────────────────────
 // TIER_THRESHOLDS, SEVERITY_SCORES, AXIS_WEIGHTS imported from signal-registry (single source of truth)
 
-interface GradeUpItem {
+interface LevelUpItem {
   signal: string;
   label: string;
   axis: Axis;
@@ -675,7 +675,7 @@ interface GradeUpItem {
 }
 
 /** Missing canBeGood signal that the site could earn */
-interface GradeUpOpportunity {
+interface LevelUpOpportunity {
   signal: string;
   label: string;
   axis: Axis;
@@ -726,8 +726,8 @@ function estimateSignalGain(
 }
 
 function generateLevelUpPlan(data: AnalysisResult): {
-  items: GradeUpItem[];
-  opportunities: GradeUpOpportunity[];
+  items: LevelUpItem[];
+  opportunities: LevelUpOpportunity[];
   drags: ScoreDragItem[];
   currentScore: number;
   currentTier: string;
@@ -755,7 +755,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
     return null;
   }
 
-  const items: GradeUpItem[] = [];
+  const items: LevelUpItem[] = [];
 
   // Build current axis scores map for composite simulation
   const currentAxisScores: Record<string, number> = {};
@@ -842,7 +842,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
   // ── Positive Opportunities ──────────────────────────────────────
   // Surface canBeGood signals that didn't fire — actionable improvements
   // the user could earn that aren't in the current findings.
-  const opportunities: GradeUpOpportunity[] = [];
+  const opportunities: LevelUpOpportunity[] = [];
   {
     // Build set of all signals that fired (any severity)
     const firedSignals = new Set<string>();
@@ -2385,12 +2385,12 @@ function _QuickWinsPanel({ actionItems, data }: { actionItems: ActionItem[]; dat
         {quickWins.map((item, i) => {
           const ref = findReferenceLink(item.title);
           // Try to find matching fix link from the level-up plan
-          const gradeUpMatch = plan?.items.find(
+          const levelUpMatch = plan?.items.find(
             (g) =>
               g.fixDescription.toLowerCase().includes(item.title.toLowerCase().slice(0, 20)) ||
               item.title.toLowerCase().includes(g.fixDescription.toLowerCase().slice(0, 20)),
           );
-          const fixLink = gradeUpMatch?.fixLink || null;
+          const fixLink = levelUpMatch?.fixLink || null;
 
           return (
             <div

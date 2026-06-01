@@ -56,9 +56,9 @@ export interface SignalDef {
   canBeNonGood: boolean;
   /** Can this signal produce a "good" finding? Used for per-axis score ceiling computation */
   canBeGood: boolean;
-  /** Grade-Up effort estimate (when actionable and canBeNonGood) */
+  /** Level-Up effort estimate (when actionable and canBeNonGood) */
   effort?: string;
-  /** Grade-Up fix description (when actionable and canBeNonGood) */
+  /** Level-Up fix description (when actionable and canBeNonGood) */
   fixDescription?: string;
   /** Weight range [min, max] used in scoring */
   weightRange: [number, number];
@@ -1930,7 +1930,7 @@ export function computeEffectiveMaxGoodWeight(ctx?: ScoringContext): Record<Axis
   return result as Record<Axis, number>;
 }
 
-/** Signal IDs for signals that are non-actionable but CAN be non-good (i.e. should be excluded from Grade-Up) */
+/** Signal IDs for signals that are non-actionable but CAN be non-good (i.e. should be excluded from Level-Up) */
 export const NON_ACTIONABLE_SIGNALS: string[] = Object.entries(SIGNAL_REGISTRY)
   .filter(([, def]) => !def.actionable)
   .map(([id]) => id);

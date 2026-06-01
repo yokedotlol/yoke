@@ -376,7 +376,7 @@ describe("Resource hints scoring", () => {
     expect(rh).toBeUndefined();
   });
 
-  // ─── Grade-Up / Non-Actionable Signal Tests ──────────────────────
+  // ─── Level-Up / Non-Actionable Signal Tests ──────────────────────
 
   it('gives "good" severity to clean blocklist record', () => {
     const opts = baseOpts();

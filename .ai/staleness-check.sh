@@ -118,7 +118,15 @@ else
   ok "No Grade-Up references (Level-Up used consistently)"
 fi
 
-# ── 9. CLAUDE.md signal count ────────────────────────────────────────
+# ── 9. Internal docs tracked in git ──────────────────────────────────
+INTERNAL_TRACKED=$(git ls-files docs/internal/ 2>/dev/null | wc -l | tr -d ' ')
+if [ "$INTERNAL_TRACKED" != "0" ]; then
+  warn "Found $INTERNAL_TRACKED tracked file(s) in docs/internal/ — should be gitignored only"
+else
+  ok "No internal docs tracked in git"
+fi
+
+# ── 10. CLAUDE.md signal count ───────────────────────────────────────
 if [ -f CLAUDE.md ]; then
   CLAUDE_SIGNALS=$(grep -oP '~?\K[0-9]+(?=\s*scoring signals)' CLAUDE.md 2>/dev/null || echo "0")
   if [ "$CLAUDE_SIGNALS" != "0" ] && [ "$CLAUDE_SIGNALS" != "$ACTUAL_SIGNALS" ]; then
