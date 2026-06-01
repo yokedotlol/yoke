@@ -216,7 +216,8 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
       path.endsWith(".ico") ||
       path.endsWith(".png") ||
       path.endsWith(".svg") ||
-      path.endsWith(".woff2")
+      path.endsWith(".woff2") ||
+      path.endsWith(".json")
     ) {
       return null; // let asset handler deal with it
     }
