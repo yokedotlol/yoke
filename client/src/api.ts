@@ -789,7 +789,7 @@ export interface DomainScoreData {
   axes: Record<Axis, AxisScoreData>;
   archetype: ArchetypeData;
   /** Detected context flags for context-aware normalization */
-  scoringContext?: { cookies?: boolean; wordpress?: boolean };
+  scoringContext?: { cookies?: boolean; wordpress?: boolean; httpBlocked?: boolean };
 }
 
 // ─── Subdomain scan types ────────────────────────────────────────────
