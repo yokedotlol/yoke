@@ -1277,7 +1277,7 @@ export function App() {
             ·
           </span>
           <a
-            href="https://yoke.canny.io"
+            href="https://github.com/yokedotlol/yoke/issues"
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: "var(--dim)", textDecoration: "none", transition: "color 0.15s" }}
