@@ -40,17 +40,12 @@ release:
   draft: false
   prerelease: auto
 
-brews:
+homebrew_casks:
   - name: yoke
     repository:
       owner: yokedotlol
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
     homepage: https://yoke.lol
     description: "Domain intelligence in one pass — DNS, WHOIS, SSL, security, tech stack, performance, breaches, and AI analysis"
     license: MIT
-    install: |
-      bin.install "yoke"
-    test: |
-      assert_match version.to_s, shell_output("#{bin}/yoke --version")

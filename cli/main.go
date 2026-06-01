@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-isatty"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 )
@@ -25,6 +26,10 @@ var (
 )
 
 var apiBase string
+
+// isTTY is true when stdout is an interactive terminal (not piped).
+// When false, spinners, progress bars, and raw ANSI escape codes are suppressed.
+var isTTY = isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
 
 // ─── Version Check ──────────────────────────────────────────────────
 
@@ -310,6 +315,15 @@ var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 
 func startSpinner(message string) *spinner {
 	s := &spinner{msg: message, stopCh: make(chan struct{})}
+	if !isTTY {
+		// No animation when piped — just return a no-op spinner
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+			<-s.stopCh
+		}()
+		return s
+	}
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
@@ -660,6 +674,9 @@ func runCompareJSON(d1, d2 string) error {
 // renderProgress draws the live progress display and returns the number
 // of lines printed (so we can clear them on the next update).
 func renderProgress(domain string, checks []sseCheck, completed, total int, prevLines int) int {
+	if !isTTY {
+		return 0
+	}
 	clearProgress(prevLines)
 
 	if total == 0 {
@@ -721,6 +738,9 @@ func renderProgress(domain string, checks []sseCheck, completed, total int, prev
 // clearProgress moves the cursor up and clears the lines we previously printed.
 // After Println, the cursor is on the line *below* the last printed content.
 func clearProgress(lines int) {
+	if !isTTY {
+		return
+	}
 	for i := 0; i < lines; i++ {
 		fmt.Print("\033[A")  // cursor up one line
 		fmt.Print("\033[2K") // clear entire line
