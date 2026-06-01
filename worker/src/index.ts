@@ -437,6 +437,49 @@ export default {
     const spaResponse = await handleSPARoute(request, env, path);
     if (spaResponse) return spaResponse;
 
+    // GET /_/recent — internal ticker data for the SPA homepage (not a public API)
+    if (method === "GET" && path === "/_/recent") {
+      if (!env.REFERENCE_DATA) return json({ lookups: [] });
+      try {
+        const raw = await env.REFERENCE_DATA.get("recent:index", "text");
+        if (!raw) return json({ lookups: [] });
+        const entries = JSON.parse(raw) as Array<{
+          domain: string;
+          analyzed_at: string;
+          score: number | null;
+          tier: string | null;
+          archetype: string | null;
+        }>;
+        return json({ lookups: entries.slice(0, 12) });
+      } catch {
+        return json({ lookups: [] });
+      }
+    }
+
+    // GET /manifest.json — PWA manifest for installability
+    if (method === "GET" && path === "/manifest.json") {
+      const manifest = {
+        name: "Yoke — Domain Intelligence",
+        short_name: "Yoke",
+        description: "Free domain intelligence tool. Analyze any domain instantly.",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#0f1419",
+        theme_color: "#0f1419",
+        icons: [
+          { src: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+          { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+        ],
+      };
+      return new Response(JSON.stringify(manifest, null, 2), {
+        headers: {
+          "Content-Type": "application/manifest+json",
+          "Cache-Control": "public, max-age=86400",
+          ...CORS_HEADERS,
+        },
+      });
+    }
+
     // API routes
     if (path.startsWith("/api/")) {
       const clientIP =
@@ -530,25 +573,6 @@ export default {
         }
 
         // GET /api/recent — removed (privacy: global search history should not be public API)
-
-        // GET /_/recent — internal ticker data for the SPA homepage (not a public API)
-        if (method === "GET" && path === "/_/recent") {
-          if (!env.REFERENCE_DATA) return json({ lookups: [] });
-          try {
-            const raw = await env.REFERENCE_DATA.get("recent:index", "text");
-            if (!raw) return json({ lookups: [] });
-            const entries = JSON.parse(raw) as Array<{
-              domain: string;
-              analyzed_at: string;
-              score: number | null;
-              tier: string | null;
-              archetype: string | null;
-            }>;
-            return json({ lookups: entries.slice(0, 12) });
-          } catch {
-            return json({ lookups: [] });
-          }
-        }
 
         // POST /api/subdomains
         if (method === "POST" && path === "/api/subdomains") {
