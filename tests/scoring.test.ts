@@ -139,10 +139,10 @@ describe("Composite Score Computation", () => {
     expect(computeComposite(axes, "commerce")).toBe(100);
   });
 
-  it("should return 1 when all axes are 0 (floored at 1 for log safety)", () => {
+  it("should return 0 when all axes are 0", () => {
     const axes = { security: 0, speed: 0, foundations: 0, reputation: 0, discoverability: 0, email: 0 };
-    // All axes floor to 1, so exp(sum(w_i * ln(1))) = exp(0) = 1
-    expect(computeComposite(axes, "general")).toBe(1);
+    // Arithmetic mean of all zeros = 0
+    expect(computeComposite(axes, "general")).toBe(0);
   });
 
   it("should produce the same score regardless of archetype", () => {
@@ -163,31 +163,19 @@ describe("Composite Score Computation", () => {
     expect(commerceScore).toBe(generalScore);
   });
 
-  it("should use weighted geometric mean (not arithmetic)", () => {
+  it("should use weighted arithmetic mean", () => {
     const axes = { security: 60, speed: 80, foundations: 70, reputation: 90, discoverability: 50, email: 75 };
-    // Geometric mean: exp(0.24*ln(60) + 0.18*ln(80) + 0.18*ln(70) + 0.15*ln(90) + 0.13*ln(50) + 0.12*ln(75))
-    const expected = Math.round(
-      Math.exp(
-        0.24 * Math.log(60) +
-          0.18 * Math.log(80) +
-          0.18 * Math.log(70) +
-          0.15 * Math.log(90) +
-          0.13 * Math.log(50) +
-          0.12 * Math.log(75),
-      ),
-    );
+    // Arithmetic: 60*0.24 + 80*0.18 + 70*0.18 + 90*0.15 + 50*0.13 + 75*0.12 = 70.4 → 70
+    const expected = Math.round(60 * 0.24 + 80 * 0.18 + 70 * 0.18 + 90 * 0.15 + 50 * 0.13 + 75 * 0.12);
     expect(computeComposite(axes, "general")).toBe(expected);
-    // Geometric mean should be strictly less than arithmetic mean for non-uniform inputs
-    const arithmetic = Math.round(60 * 0.24 + 80 * 0.18 + 70 * 0.18 + 90 * 0.15 + 50 * 0.13 + 75 * 0.12);
-    expect(computeComposite(axes, "general")).toBeLessThanOrEqual(arithmetic);
   });
 
-  it("geometric mean penalizes low outliers more than arithmetic", () => {
-    // One very low axis (10) + rest high (90) — geometric mean should be notably lower
+  it("outlier floor caps composite when any axis < 40", () => {
+    // One very low axis (10) + rest high (90) — outlier floor should cap at 74
     const axes = { security: 90, speed: 90, foundations: 90, reputation: 90, discoverability: 90, email: 10 };
-    const geoScore = computeComposite(axes, "general");
-    const arithmeticScore = Math.round(90 * 0.24 + 90 * 0.18 + 90 * 0.18 + 90 * 0.15 + 90 * 0.13 + 10 * 0.12);
-    expect(geoScore).toBeLessThan(arithmeticScore);
+    const score = computeComposite(axes, "general");
+    // Arithmetic would be 80.4 → 80, but email=10 < 40 triggers outlier floor → 74
+    expect(score).toBe(74);
   });
 
   it("composite should always be in 0-100 range", () => {

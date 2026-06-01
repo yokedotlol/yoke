@@ -254,14 +254,21 @@ export function computeAxisScore(findings: Finding[], axis?: Axis): number {
 }
 
 export function computeComposite(axisScores: Record<Axis, number>, _archetype: ArchetypeName): number {
-  // Weighted geometric mean — punishes low outliers more than arithmetic mean.
-  // A site can't mask a weak category with strong ones.
-  let logSum = 0;
+  // Weighted arithmetic mean — straightforward, predictable, no log/exp surprises.
+  let sum = 0;
   for (const axis of Object.keys(AXIS_WEIGHTS) as Axis[]) {
-    const s = Math.max(axisScores[axis], 1); // floor at 1 to prevent log(0)
-    logSum += AXIS_WEIGHTS[axis] * Math.log(s);
+    sum += AXIS_WEIGHTS[axis] * axisScores[axis];
   }
-  return Math.max(0, Math.min(100, Math.round(Math.exp(logSum))));
+  let score = Math.max(0, Math.min(100, Math.round(sum)));
+
+  // Outlier floor: if ANY axis < 40, cap tier at Moderate (score ≤ 74).
+  // Replaces geometric mean's implicit outlier punishment with one explicit rule.
+  const hasLowOutlier = (Object.keys(AXIS_WEIGHTS) as Axis[]).some((a) => axisScores[a] < 40);
+  if (hasLowOutlier && score > 74) {
+    score = 74;
+  }
+
+  return score;
 }
 
 export function tierFromComposite(score: number): string {
@@ -269,11 +276,10 @@ export function tierFromComposite(score: number): string {
 }
 
 // ─── Per-Category Hard Caps ──────────────────────────────────────────
-// Hard caps removed — severity penalties + geometric mean provide sufficient
+// Hard caps removed — severity penalties + outlier floor provide sufficient
 // downward pressure. Caps created confusing score/grade paradoxes and
-// triple-penalized findings (per-axis penalty + geometric mean drag + cap).
-// The breach grade cap below (in calculateDomainScore) is retained as a
-// separate, specific mechanism for catastrophic data breaches.
+// triple-penalized findings. The breach grade cap below (in calculateDomainScore)
+// is retained as a separate, specific mechanism for catastrophic data breaches.
 
 /** @deprecated Hard caps removed. Kept as pass-through for API compatibility. */
 export function applyHardCaps(composite: number, _allFindings: Finding[], _axisScores: Record<Axis, number>): number {
@@ -4091,7 +4097,7 @@ export function calculateDomainScore(opts: {
   }
 
   // ─── Compute Composite Score ─────────────────────────────────────
-  // Weighted geometric mean — low outliers are punished more than arithmetic.
+  // Weighted arithmetic mean with outlier floor cap.
   // Axes marked "Not Assessed" are excluded and weights are re-normalized.
 
   const rawAxisScores: Record<Axis, number> = {} as Record<Axis, number>;
@@ -4109,13 +4115,18 @@ export function calculateDomainScore(opts: {
   } else {
     // Re-normalize weights for assessed axes only
     const totalWeight = assessedAxes.reduce((sum, a) => sum + AXIS_WEIGHTS[a], 0);
-    let logSum = 0;
+    let weightedSum = 0;
     for (const axis of assessedAxes) {
-      const s = Math.max(rawAxisScores[axis], 1);
       const normalizedWeight = AXIS_WEIGHTS[axis] / totalWeight;
-      logSum += normalizedWeight * Math.log(s);
+      weightedSum += normalizedWeight * rawAxisScores[axis];
     }
-    rawComposite = Math.max(0, Math.min(100, Math.round(Math.exp(logSum))));
+    rawComposite = Math.max(0, Math.min(100, Math.round(weightedSum)));
+
+    // Outlier floor: if ANY assessed axis < 40, cap at 74 (Moderate ceiling)
+    const hasLowOutlier = assessedAxes.some((a) => rawAxisScores[a] < 40);
+    if (hasLowOutlier && rawComposite > 74) {
+      rawComposite = 74;
+    }
   }
 
   // ─── Hard Caps ───────────────────────────────────────────────────

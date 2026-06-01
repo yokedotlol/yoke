@@ -723,6 +723,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
   targetTier: string;
   targetThreshold: number;
   pointsNeeded: number;
+  projectedComposite: number;
 } | null {
   const score = data.domain_score;
   if (!score) return null;
@@ -745,7 +746,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
 
   const items: GradeUpItem[] = [];
 
-  // Build current axis scores map for geometric mean simulation
+  // Build current axis scores map for composite simulation
   const currentAxisScores: Record<string, number> = {};
   // Track which axes are assessed (not not_measured) for weight renormalization
   const assessedAxes: string[] = [];
@@ -766,18 +767,23 @@ function generateLevelUpPlan(data: AnalysisResult): {
     absenceAdjustment[axisName] = axisData.score - rawClientScore;
   }
 
-  // Helper: compute weighted geometric mean from axis scores
-  // Only includes assessed axes with renormalized weights (matches server behavior)
-  function geoComposite(axisScoresMap: Record<string, number>): number {
+  // Helper: compute weighted arithmetic mean from axis scores with outlier floor cap.
+  // Only includes assessed axes with renormalized weights (matches server behavior).
+  function compositeFromAxes(axisScoresMap: Record<string, number>): number {
     if (assessedAxes.length === 0) return 0;
     const totalWeight = assessedAxes.reduce((sum, a) => sum + (AXIS_WEIGHTS[a as Axis] ?? 0), 0);
-    let logSum = 0;
+    let weightedSum = 0;
     for (const axis of assessedAxes) {
-      const s = Math.max(axisScoresMap[axis] ?? 1, 1);
       const normalizedWeight = (AXIS_WEIGHTS[axis as Axis] ?? 0) / totalWeight;
-      logSum += normalizedWeight * Math.log(s);
+      weightedSum += normalizedWeight * (axisScoresMap[axis] ?? 0);
     }
-    return Math.max(0, Math.min(100, Math.round(Math.exp(logSum))));
+    let score = Math.max(0, Math.min(100, Math.round(weightedSum)));
+    // Outlier floor: if ANY assessed axis < 40, cap at 74 (Moderate ceiling)
+    const hasLowOutlier = assessedAxes.some((a) => (axisScoresMap[a] ?? 0) < 40);
+    if (hasLowOutlier && score > 74) {
+      score = 74;
+    }
+    return score;
   }
 
   // For each axis, find non-good findings and compute what fixing each one would do
@@ -796,9 +802,9 @@ function generateLevelUpPlan(data: AnalysisResult): {
       const rawNewAxisScore = computeAxisScore(fixedFindings);
       const newAxisScore = Math.max(0, Math.min(100, Math.round(rawNewAxisScore + (absenceAdjustment[axisName] ?? 0))));
 
-      // Compute composite delta using geometric mean
+      // Compute composite delta using weighted arithmetic mean
       const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
-      const newComposite = geoComposite(simScores);
+      const newComposite = compositeFromAxes(simScores);
       const compositeDelta = Math.round((newComposite - currentScore) * 10) / 10;
 
       if (compositeDelta < 0.1) continue; // negligible impact
@@ -840,7 +846,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
         Math.min(100, Math.round(rawDragAxisScore + (absenceAdjustment[axisName] ?? 0))),
       );
       const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
-      const newComposite = geoComposite(simScores);
+      const newComposite = compositeFromAxes(simScores);
       const costDelta = Math.round((newComposite - currentScore) * 10) / 10;
 
       if (costDelta < 0.1) continue;
@@ -861,6 +867,27 @@ function generateLevelUpPlan(data: AnalysisResult): {
   // If Excellent and no actionable items found, return null
   if (isExcellent && items.length === 0 && drags.length === 0) return null;
 
+  // Compute projected composite by simulating ALL fixes at once via compositeFromAxes.
+  // Individual pointGain values are computed independently (each assumes only that
+  // one fix), so summing them double-counts the interaction effect.
+  // Instead: for each axis, re-score with ALL that axis's actionable findings
+  // flipped to "good", then run compositeFromAxes on the full set.
+  const allFixedAxisScores = { ...currentAxisScores };
+  for (const [axisName, axisData] of Object.entries(score.axes) as [Axis, (typeof score.axes)[Axis]][]) {
+    if (axisData.not_measured || !axisData.findings) continue;
+    const actionableSignals = new Set(items.filter((i) => i.axis === axisName).map((i) => i.signal));
+    if (actionableSignals.size === 0) continue;
+    const fixedFindings = axisData.findings.map((f) =>
+      actionableSignals.has(f.signal) ? { ...f, severity: "good" as Severity } : f,
+    );
+    const rawFixed = computeAxisScore(fixedFindings);
+    allFixedAxisScores[axisName] = Math.max(
+      0,
+      Math.min(100, Math.round(rawFixed + (absenceAdjustment[axisName] ?? 0))),
+    );
+  }
+  const projectedComposite = compositeFromAxes(allFixedAxisScores);
+
   return {
     items,
     drags,
@@ -869,6 +896,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
     targetTier,
     targetThreshold,
     pointsNeeded,
+    projectedComposite,
   };
 }
 
@@ -1863,8 +1891,9 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
 
   const hasMore = plan.items.length > 3;
 
-  const totalGain = plan.items.reduce((sum, i) => sum + i.pointGain, 0);
-  const projectedScore = Math.min(100, Math.round(plan.currentScore + totalGain));
+  // Use the properly-computed projected composite instead of
+  // arithmetically summing individual item gains (which double-counts interaction).
+  const projectedScore = plan.projectedComposite;
   // Tier thresholds from signal-registry (single source of truth)
   const projectedTier = (
     TIER_THRESHOLDS.find((t) => projectedScore >= t.min) ?? TIER_THRESHOLDS[TIER_THRESHOLDS.length - 1]

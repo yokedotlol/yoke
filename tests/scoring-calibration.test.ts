@@ -311,11 +311,11 @@ describe("Calibration: Score Simulation", () => {
     }
   });
 
-  // ── 2g. Low Outlier Punishment ─────────────────────────────────
-  // Geometric mean should penalize low outliers harder than arithmetic.
+  // ── 2g. Low Outlier Floor Cap ───────────────────────────────────
+  // If any axis scores below 40, composite is capped at 74 (Moderate).
 
-  describe("Geometric mean outlier punishment", () => {
-    it("one axis at 20 with rest at 90 → composite well below arithmetic mean", () => {
+  describe("Low outlier floor cap", () => {
+    it("one axis at 20 with rest at 90 → composite capped at 74", () => {
       const axes: Record<Axis, number> = {
         security: 90,
         speed: 90,
@@ -325,11 +325,35 @@ describe("Calibration: Score Simulation", () => {
         email: 20,
       };
       const composite = computeComposite(axes, "general");
-      const arithmetic = 90 * 0.88 + 20 * 0.12;
-      expect(composite).toBeLessThan(Math.round(arithmetic));
-      // Should still be in a reasonable range
-      expect(composite).toBeGreaterThan(50);
-      expect(composite).toBeLessThan(85);
+      // Arithmetic mean would be ~81.6, but email=20 < 40 triggers floor cap
+      expect(composite).toBe(74);
+    });
+
+    it("no outlier → no cap applied", () => {
+      const axes: Record<Axis, number> = {
+        security: 90,
+        speed: 90,
+        foundations: 90,
+        reputation: 90,
+        discoverability: 90,
+        email: 40,
+      };
+      const composite = computeComposite(axes, "general");
+      // email=40 is exactly at threshold, no cap
+      expect(composite).toBeGreaterThan(74);
+    });
+
+    it("axis at 39 triggers cap", () => {
+      const axes: Record<Axis, number> = {
+        security: 90,
+        speed: 90,
+        foundations: 90,
+        reputation: 90,
+        discoverability: 90,
+        email: 39,
+      };
+      const composite = computeComposite(axes, "general");
+      expect(composite).toBe(74);
     });
   });
 
