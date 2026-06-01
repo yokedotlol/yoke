@@ -151,7 +151,7 @@ const SEVERITY_DEDUCTION_FACTOR: Record<Severity, number> = {
 };
 
 /** Deduction factor for applicable "canBeGood" signals that didn't fire at all. */
-const ABSENT_DEDUCTION_FACTOR = 0.15;
+const ABSENT_DEDUCTION_FACTOR = 0.3;
 
 // ─── Expected Baselines (Absence Penalties) ──────────────────────────
 // ─── Exported Scoring Helpers ────────────────────────────────────────
@@ -4238,15 +4238,20 @@ export function calculateDomainScore(opts: {
 
   // ─── Compute Composite Score ─────────────────────────────────────
   // Weighted arithmetic mean with outlier floor cap.
-  // Axes marked "Not Assessed" are excluded and weights are re-normalized.
+  // Null axes are imputed at a below-average floor (35 = "Weak") rather than
+  // excluded, because unassessable axes are themselves a negative signal.
+  // This prevents domains from dodging their weakest areas by being unobservable.
 
+  const NULL_AXIS_IMPUTE = 35;
   const rawAxisScores: Record<Axis, number> = {} as Record<Axis, number>;
   const assessedAxes: Axis[] = [];
   for (const axis of axes) {
     if (axisScores[axis].score != null) {
       rawAxisScores[axis] = axisScores[axis].score as number;
-      assessedAxes.push(axis);
+    } else {
+      rawAxisScores[axis] = NULL_AXIS_IMPUTE;
     }
+    assessedAxes.push(axis);
   }
 
   let rawComposite: number;
