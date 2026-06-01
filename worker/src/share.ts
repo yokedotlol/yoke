@@ -110,7 +110,14 @@ function parseShareToken(token: string): { payload: string; signature: string; d
   try {
     const jsonStr = bytesToText(base64urlDecode(payload));
     const data = JSON.parse(jsonStr) as SharePayload;
-    if (!data.d || typeof data.s !== "number" || !data.g || !Array.isArray(data.a) || data.a.length !== 5) {
+    if (
+      !data.d ||
+      typeof data.s !== "number" ||
+      !data.g ||
+      !Array.isArray(data.a) ||
+      data.a.length < 5 ||
+      data.a.length > 6
+    ) {
       return null;
     }
     return { payload, signature, data };
@@ -137,9 +144,11 @@ function parseCompareShareToken(
       !data.g1 ||
       !data.g2 ||
       !Array.isArray(data.a1) ||
-      data.a1.length !== 5 ||
+      data.a1.length < 5 ||
+      data.a1.length > 6 ||
       !Array.isArray(data.a2) ||
-      data.a2.length !== 5
+      data.a2.length < 5 ||
+      data.a2.length > 6
     ) {
       return null;
     }
