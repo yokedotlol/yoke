@@ -9,6 +9,7 @@ import { DomainSignals, ExternalTools } from "./components/DomainSignals";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SkeletonPanel } from "./components/Panel";
 import { type PanelDef, PanelGrid, ResetLayoutButton } from "./components/PanelLayout";
+import { RecentLookups } from "./components/RecentLookups";
 import { ScreenshotPanel, TrancoPanel } from "./components/ReputationPanels";
 import { ShareBar } from "./components/ShareBar";
 // Eagerly loaded components (needed for Overview tab and landing page)
@@ -1210,11 +1211,12 @@ export function App() {
                     >
                       AI-powered analysis with expert personas. Free JSON API:{" "}
                       <code style={{ fontSize: "10px", color: "var(--text)" }}>
-                        curl {window.location.host}/stripe.com
+                        curl -s https://{window.location.host}/stripe.com
                       </code>
                     </p>
                   </div>
                 </div>
+                <RecentLookups onSelect={handleNavigate} />
                 <ApiTeaser />
               </div>
             )}

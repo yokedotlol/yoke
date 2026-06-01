@@ -20,7 +20,7 @@
 Yoke pulls 155 scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
 
 ```bash
-curl yoke.lol/stripe.com | jq
+curl -s https://yoke.lol/stripe.com | jq
 ```
 
 ## Features
@@ -65,7 +65,7 @@ curl yoke.lol/stripe.com | jq
 **Cross-Signal Insights** (LLM) — AI-powered analysis that finds correlations across findings, explains their combined impact, and provides strategic recommendations. Powered by DeepSeek V3 via OpenRouter. BYO API key to bypass rate limits — your key is passed through to OpenRouter and never logged or stored. Includes model picker and prompt editor.
 
 ### 🔗 API & Sharing
-- **JSON API** — `curl yoke.lol/stripe.com | jq` — content-negotiated, no auth required
+- **JSON API** — `curl -s https://yoke.lol/stripe.com | jq` — content-negotiated, no auth required
 - **SSE Streaming** — Real-time per-check progress
 - **Share Bar** — Copy link, X, LinkedIn, Reddit, native Web Share
 - **Dynamic OG Tags** — Rich previews when sharing analysis URLs
@@ -81,26 +81,26 @@ No auth required. JSON by default for programmatic clients, HTML for browsers.
 
 ```bash
 # Full analysis
-curl yoke.lol/stripe.com | jq
+curl -s https://yoke.lol/stripe.com | jq
 
 # Pretty-printed (no jq needed)
-curl "yoke.lol/stripe.com?pretty"
+curl -s "https://yoke.lol/stripe.com?pretty"
 
 # Specific fields
-curl -s yoke.lol/stripe.com | jq '.ssl'
-curl -s yoke.lol/stripe.com | jq '.domain_score'
-curl -s yoke.lol/stripe.com | jq '.tech_stack'
+curl -s https://yoke.lol/stripe.com | jq '.ssl'
+curl -s https://yoke.lol/stripe.com | jq '.domain_score'
+curl -s https://yoke.lol/stripe.com | jq '.tech_stack'
 
 # Compare two domains
-curl -s yoke.lol/api/compare -X POST \
+curl -s https://yoke.lol/api/compare -X POST \
   -H "Content-Type: application/json" \
   -d '{"domain1":"github.com","domain2":"gitlab.com"}' | jq '.comparison'
 
 # Health / status
-curl yoke.lol/api/health | jq
+curl -s https://yoke.lol/api/health | jq
 
 # Scoring methodology
-curl yoke.lol/api/scoring | jq
+curl -s https://yoke.lol/api/scoring | jq
 ```
 
 ### Rate Limits

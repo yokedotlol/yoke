@@ -1171,6 +1171,30 @@ async function runAnalysisCore(
         } catch (e) {
           console.warn(`[yoke:cache] KV write failed for ${domain}:`, e instanceof Error ? e.message : e);
         }
+
+        // Update recent lookups ticker (non-critical, swallow errors)
+        try {
+          const ds = result.domain_score as
+            | { composite: number; tier: string; archetype?: { detected?: string } }
+            | null
+            | undefined;
+          const entry = {
+            domain,
+            analyzed_at: new Date().toISOString(),
+            score: ds?.composite ?? null,
+            tier: ds?.tier ?? null,
+            archetype: ds?.archetype?.detected ?? null,
+          };
+          const raw = await env.REFERENCE_DATA.get("recent:index", "text");
+          const existing: (typeof entry)[] = raw ? JSON.parse(raw) : [];
+          // Prepend, deduplicate by domain, cap at 20
+          const updated = [entry, ...existing.filter((e) => e.domain !== domain)].slice(0, 20);
+          await env.REFERENCE_DATA.put("recent:index", JSON.stringify(updated), {
+            expirationTtl: 86400, // 24h TTL
+          });
+        } catch {
+          /* recent ticker update is non-critical */
+        }
       } else {
         // Skip cache write for unreachable sites silently
       }

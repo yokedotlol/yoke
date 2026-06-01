@@ -69,4 +69,4 @@
 ## Launch
 
 - **Target date:** June 23, 2026
-- **Show HN framing:** Lead with `curl yoke.lol/stripe.com`, MCP server as secondary hook.
+- **Show HN framing:** Lead with `curl -s https://yoke.lol/stripe.com`, MCP server as secondary hook.

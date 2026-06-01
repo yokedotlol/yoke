@@ -18,7 +18,7 @@ Run `bash .ai/staleness-check.sh` to verify docs match the codebase.
 
 ## What This Is
 
-Yoke is a domain intelligence / OSINT tool. Users enter a domain → get a comprehensive multi-tab analysis (DNS, WHOIS, SSL, security, tech stack, performance, breaches, AI insights). Served as a web SPA, a JSON API (`curl yoke.lol/stripe.com`), and a Chrome extension.
+Yoke is a domain intelligence / OSINT tool. Users enter a domain → get a comprehensive multi-tab analysis (DNS, WHOIS, SSL, security, tech stack, performance, breaches, AI insights). Served as a web SPA, a JSON API (`curl -s https://yoke.lol/stripe.com`), and a Chrome extension.
 
 ## Architecture
 

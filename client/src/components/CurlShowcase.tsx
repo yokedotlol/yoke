@@ -51,12 +51,16 @@ export function CurlBar({ domain, activeTab = "overview" }: { domain: string; ac
 
   const tabFilter = TAB_FILTERS[activeTab];
   const host = window.location.host;
-  const mainCmd = tabFilter ? `curl -s ${host}/${domain} | jq ${tabFilter.filter}` : `curl ${host}/${domain} | jq`;
+  const mainCmd = tabFilter
+    ? `curl -s https://${host}/${domain} | jq ${tabFilter.filter}`
+    : `curl -s https://${host}/${domain} | jq`;
 
   const extraCmds = [
-    { label: "Full output", cmd: `curl ${host}/${domain} | jq` },
-    ...(tabFilter ? [{ label: tabFilter.label, cmd: `curl -s ${host}/${domain} | jq ${tabFilter.filter}` }] : []),
-    { label: "Pretty print", cmd: `curl "${host}/${domain}?pretty"` },
+    { label: "Full output", cmd: `curl -s https://${host}/${domain} | jq` },
+    ...(tabFilter
+      ? [{ label: tabFilter.label, cmd: `curl -s https://${host}/${domain} | jq ${tabFilter.filter}` }]
+      : []),
+    { label: "Pretty print", cmd: `curl -s "https://${host}/${domain}?pretty"` },
   ];
 
   return (
@@ -165,7 +169,7 @@ export function CurlBar({ domain, activeTab = "overview" }: { domain: string; ac
 
 export function ApiTeaser() {
   const host = window.location.host;
-  const cmd = `curl ${host}/any-domain.com | jq`;
+  const cmd = `curl -s https://${host}/any-domain.com | jq`;
   const [copied, setCopied] = useState(false);
 
   return (

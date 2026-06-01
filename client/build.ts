@@ -102,7 +102,7 @@ const html = `<!DOCTYPE html>
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Yoke — Free Domain Intelligence Tool" />
-    <meta name="twitter:description" content="Analyze any domain instantly. DNS, SSL, WHOIS, security headers, tech stack, performance, and breach detection. Free API: curl yoke.lol/stripe.com" />
+    <meta name="twitter:description" content="Analyze any domain instantly. DNS, SSL, WHOIS, security headers, tech stack, performance, and breach detection. Free API: curl -s https://yoke.lol/stripe.com" />
     <meta name="twitter:image" content="https://yoke.lol/og-banner.png" />
 
     <!-- Social verification (rel="me") -->
@@ -144,7 +144,7 @@ const html = `<!DOCTYPE html>
         "Shodan and GreyNoise threat intelligence",
         "Certificate Transparency log monitoring",
         "AI-powered domain analysis with multiple expert personas",
-        "Free JSON API (curl yoke.lol/example.com)",
+        "Free JSON API (curl -s https://yoke.lol/example.com)",
         "Chrome extension for in-browser analysis"
       ],
       "author": {

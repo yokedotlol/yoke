@@ -54,7 +54,7 @@
 ## Security & Operations
 
 - [ ] **API responses include X-Yoke-Version header.**
-  - _Verify:_ `curl -sI yoke.lol/api/health | grep X-Yoke-Version`.
+  - _Verify:_ `curl -sI https://yoke.lol/api/health | grep X-Yoke-Version`.
 
 - [ ] **SHARE_SECRET hard-fails if missing.** No dev fallback, no empty-string bypass.
   - _Verify:_ Check `share.ts` for `SHARE_SECRET` usage — must throw/reject if undefined.

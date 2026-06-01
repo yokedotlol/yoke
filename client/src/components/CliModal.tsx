@@ -454,8 +454,8 @@ export function networkHealthCliCommands(domain: string, ip?: string): CliComman
     {
       label: "Yoke Network Health",
       platforms: {
-        linux: `curl -s yoke.lol/${domain} | jq '.network_health'`,
-        windows: `curl -s yoke.lol/${domain} | jq ".network_health"`,
+        linux: `curl -s https://yoke.lol/${domain} | jq '.network_health'`,
+        windows: `curl -s https://yoke.lol/${domain} | jq ".network_health"`,
       },
     },
     {

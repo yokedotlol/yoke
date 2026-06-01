@@ -378,7 +378,7 @@ export default {
 
     if (method === "GET" && path === "/llms.txt") {
       return new Response(
-        `# Yoke — Free Domain Intelligence & OSINT Tool\n\n> Yoke is a free, open-source domain intelligence tool at ${baseUrl}\n\n## What Yoke Does\n\nYoke provides instant, comprehensive analysis of any internet domain. Enter a domain name and get detailed intelligence across security, infrastructure, technology, performance, and business dimensions.\n\n## Key Capabilities\n\n- DNS Analysis: A, AAAA, MX, NS, TXT, CNAME, SOA records with DNSSEC validation\n- SSL/TLS: Certificate details, chain validation, TLS configuration grading, CAA records\n- WHOIS/RDAP: Registrar, registration and expiry dates, domain age\n- Security Audit: HTTP security headers, cookie security\n- Data Breaches: HIBP breach detection with time-decay scoring\n- Threat Intelligence: Shodan port/vulnerability data, GreyNoise IP classification\n- Technology Detection: Frameworks, CMS, CDN, WAF, deep WordPress fingerprinting\n- Email Authentication: SPF, DKIM, DMARC validation\n- Performance: Google PageSpeed, Core Web Vitals (mobile-first 60/40 blend), compression\n- Certificate Transparency: CT log monitoring for subdomain discovery\n- Business Intelligence: Company enrichment via Wikidata, Brandfetch, Crunchbase\n- AI Analysis: LLM-powered analysis from 6 expert personas\n\n## Free JSON API\n\nNo authentication required.\n\ncurl ${host}/stripe.com | jq\ncurl "${host}/stripe.com?pretty"\ncurl -s ${host}/stripe.com | jq '.ssl'\n\n## Links\n\n- Web UI: ${baseUrl}\n- API Docs: ${baseUrl}/api/docs\n- Chrome Extension: Chrome Web Store\n- Source: https://github.com/yokedotlol/yoke\n- License: MIT`,
+        `# Yoke — Free Domain Intelligence & OSINT Tool\n\n> Yoke is a free, open-source domain intelligence tool at ${baseUrl}\n\n## What Yoke Does\n\nYoke provides instant, comprehensive analysis of any internet domain. Enter a domain name and get detailed intelligence across security, infrastructure, technology, performance, and business dimensions.\n\n## Key Capabilities\n\n- DNS Analysis: A, AAAA, MX, NS, TXT, CNAME, SOA records with DNSSEC validation\n- SSL/TLS: Certificate details, chain validation, TLS configuration grading, CAA records\n- WHOIS/RDAP: Registrar, registration and expiry dates, domain age\n- Security Audit: HTTP security headers, cookie security\n- Data Breaches: HIBP breach detection with time-decay scoring\n- Threat Intelligence: Shodan port/vulnerability data, GreyNoise IP classification\n- Technology Detection: Frameworks, CMS, CDN, WAF, deep WordPress fingerprinting\n- Email Authentication: SPF, DKIM, DMARC validation\n- Performance: Google PageSpeed, Core Web Vitals (mobile-first 60/40 blend), compression\n- Certificate Transparency: CT log monitoring for subdomain discovery\n- Business Intelligence: Company enrichment via Wikidata, Brandfetch, Crunchbase\n- AI Analysis: LLM-powered analysis from 6 expert personas\n\n## Free JSON API\n\nNo authentication required.\n\ncurl -s https://${host}/stripe.com | jq\ncurl -s "https://${host}/stripe.com?pretty"\ncurl -s https://${host}/stripe.com | jq '.ssl'\n\n## Links\n\n- Web UI: ${baseUrl}\n- API Docs: ${baseUrl}/api/docs\n- Chrome Extension: Chrome Web Store\n- Source: https://github.com/yokedotlol/yoke\n- License: MIT`,
         {
           headers: {
             "Content-Type": "text/plain;charset=UTF-8",
@@ -530,6 +530,25 @@ export default {
         }
 
         // GET /api/recent — removed (privacy: global search history should not be public API)
+
+        // GET /_/recent — internal ticker data for the SPA homepage (not a public API)
+        if (method === "GET" && path === "/_/recent") {
+          if (!env.REFERENCE_DATA) return json({ lookups: [] });
+          try {
+            const raw = await env.REFERENCE_DATA.get("recent:index", "text");
+            if (!raw) return json({ lookups: [] });
+            const entries = JSON.parse(raw) as Array<{
+              domain: string;
+              analyzed_at: string;
+              score: number | null;
+              tier: string | null;
+              archetype: string | null;
+            }>;
+            return json({ lookups: entries.slice(0, 12) });
+          } catch {
+            return json({ lookups: [] });
+          }
+        }
 
         // POST /api/subdomains
         if (method === "POST" && path === "/api/subdomains") {
@@ -1084,10 +1103,10 @@ export default {
               headers: ["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
             },
             examples: {
-              curl_simple: `curl ${host}/stripe.com`,
-              curl_pretty: `curl '${host}/stripe.com?pretty' | less`,
-              curl_jq: `curl -s ${host}/stripe.com | jq '.ssl'`,
-              curl_post: `curl -X POST ${host}/api/analyze -H 'Content-Type: application/json' -d '{"domain":"stripe.com"}'`,
+              curl_simple: `curl -s https://${host}/stripe.com`,
+              curl_pretty: `curl -s 'https://${host}/stripe.com?pretty' | less`,
+              curl_jq: `curl -s https://${host}/stripe.com | jq '.ssl'`,
+              curl_post: `curl -s -X POST https://${host}/api/analyze -H 'Content-Type: application/json' -d '{"domain":"stripe.com"}'`,
             },
             source: baseUrl,
           });
