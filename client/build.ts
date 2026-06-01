@@ -59,13 +59,13 @@ console.log(`  Chunks: ${jsChunks.length} lazy-loaded chunk(s)`);
 
 // CSS served as a separate cacheable file (avoids large inline block, improves cacheability)
 const cssLink = cssOutput ? `<link rel="stylesheet" href="/${cssPath}" />` : "";
-const cssPreload = cssOutput ? `<link rel="preload" href="/${cssPath}" as="style" />` : "";
-const jsPreload = `<link rel="preload" href="/${jsPath}" as="script" crossorigin />`;
+const jsPreload = `<link rel="modulepreload" href="/${jsPath}" />`;
 const html = `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    ${cssLink}
     ${jsPreload}
     <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
     <style>
@@ -157,8 +157,12 @@ const html = `<!DOCTYPE html>
     <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAFCElEQVR4nO1UX0xTVxj/zjm9/UOL6RzGbRDlYQvtk3OLBE0UkZK58DKzRYxsCWzyIM5YGTNb3JYlOqNhjZBlssYRZMv4ZwgJoJtv0I6OEJw6El2GxlqR8EekTQu3vbfnfHvAskpvx8we9jB+ycm5+e53z/f7fvd8P4BVrOI/BlkeaGtr+8hutxdFo9EFQggBAMAnMjA5gIRSgYiMAAAiAhDy16GUAgoBiIgZJpP52rVrvRUVFV/9LaPr169fMZlMAADAGNNclNKlPbHS5TLGAADAYrGQ0dHR/uX16PJAKBQal2UZ8vLyDAcOHNjMOQdEBM750hJCLO2Jlfw+OefQ+4cKcnNzdZFIBMPh8MyKBCRJ0hNC4IXsbLPT6XTBY2klSUpRIZ0CkiQBIgJjDGqO1jRmZWUZCSFAGZNWJICIgIgwfv9+xGazFZ08eeJ1RARVVVM6TKeAqqpACIGGhoa3N27c+PLExISMiLD8NgEA6JYHhBCcUgr37t1Turq6Pj1+/JPLDkfJ952dneeGh4d/R0T4oLbWyShlljWWdQQJhsPhh7FYbN7lcp0zGAy6goIC+/79+2s3bdr0RnNz88GpqSkuSRIIIXgKg+UY8A5ceHz5wWw2k+7u7s8ePXo0jogYCARu9PT01NXV1e2x2WwGh8ORVVxc/KzNZjM0NjZW9vb2fjk9Mz2OiPhw9qG/tbX1qCQtqq7T6cDn83WtSMD7s/cCAECCRGZmJjl27MMd7e3tH1dXV7966tQXe7S+M5lM4HK5yo84j2zt6Og4XlNTs81sNhNCCBBCgDGmSSDlDgACUEoBEcHhKF7n9Xp/mpiYmJRlObhr167Sysp36/Lz8zMJISBJEiQ63FlU9Fx5efmJbVu3FcqyHJycmpzx+XxXSkpK1iMiUEo1XEeLAAAIIYBSCh6Pd6a/v/9CcbGjuKWlpTMSiSwEg8Hx+vr6c5RS4JxDPB4Hg8EA9fX1HcFQ8P78wnysqampdfdru3d7PJ4fBgYGpgghIITQuoOpBBLSIyIoigJOp7NtaGhocPMrm186f/58U0NDQ20wGJwrLS3NFosuB/v27bP57969cfbs2dqmb5ua8/PzbUNDQ97Dhw+3xGKxRYdMOjsZKVOAyJcIJOB2u39LPNe56o6EQ+H5ubm5aCI2PT0VMhgM1rK9ZRXub9yHBgcHf9FSVgsaCrCUJMYYGI1GoJRCwB+4sX379qqxsbFQwnhuj90OFhYWvnPnzp2rlFIwGo2g06X0Blr/IIUAx9RRTZiLEAIu/3i5R1GVhcnJyXjCeB5MPIgqihLv6+u7IoQAVVUhHo//g/IavyAdOOdACIH2tvY/Cnfs+Nzj8TQFAoFRxhjLzs62ud3ug319fQ8IIcD5yn7z1AQSUBQFzGaL/tKlS9+dPn26X5blyJkzZ97asGHDi5zzpRH+FwQ0J3MJhBDYsmXLmzk5OXnDw8MX4/G4Wlpa+p5erzcDwNdPUzxtNa1xSY6Xle3dKcuyarFY1q9duzZ3dnZ2uqKycm/C9Z7mzNQx5FxN14UQAgAARkauRqqqqqrtdvsziAg3b96cCwQCKgCklZ9zDoILdUUCVqs1R6/Xg6IomgcBLFq13+9X/X7/dHIsQVALRqORWK3W51ckcOvWrQGfz9cdjUbDjDEmhABCCCDi4g4IBAgQQhillAIAIGKcc/5E68mSCyF4RkbGmpFfR7rTMlzFKv63+BOhUKBf8MM3LQAAAABJRU5ErkJggg==" />
     <link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAB2klEQVR4nNWRP48SURTFz3sz88gEx2gMg8bKws4AuxRubCyIoaCxM0Ss+AJQ4Wa/gGQLdqGClgISEikIhckSEyxdAsNWSizExA3djsUszJ93LRaMK36BPdVN7rm/m5MD3HixzVAul1+ORqOJpmka55wREQDQxscYg5RSep7nJ5PJnVKp1L0GyGQy9znnrN/vn0sp//tNCIF0Ov0AAOv1ej8BQN0siQiRSOT2YDA4qFar74IgkKZp3gGAxWJxIYRQCoXCQb1eP7R/2cstejabfcQ5R61Wez2ejPvFYnEvGo1y0zT52/3955ZlfahUKq8458jlco83d3wzSCnJMAw2m82+dt93j2OJ2FPbvpCO41AiHn/W6XQO5/P5d8MwmPwr458ImqYptm1To9H4rOs6azabL8LhW1zXdR42wvdqtdrAdVd0ebmEpmnqFkDSFdTzPCyXSzo7m36KxWJ3hRDcGlsfbdsmRVHAGAOtK7oGYIxDURSEQiG4rovT09Gk3W6PASCfz++pqgohBFar1VWn/wJcd+UFQQDHcQAAJ4OTH0fHR2+ICMPh8Nz3ffi+v/a6/hZgd2c3oXCFA2BERK7r+lNr+gUAUqnUQyGEuv5M8Xj8SavV+rZV5c3Ub/GuzsO6WllAAAAAAElFTkSuQmCC" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    ${cssPreload}
-    ${cssLink}
+    <style>
+      /* Critical inline styles for CLS skeleton — renders before external CSS loads */
+      @keyframes shimmer{0%{opacity:.5}50%{opacity:.8}100%{opacity:.5}}
+      .sk{border-radius:4px;background:var(--border,#21262d);animation:shimmer 2s ease-in-out infinite}
+      .sk-surface{background:var(--surface,#161b22);border:1px solid var(--border,#21262d);border-radius:8px}
+    </style>
 
   </head>
   <body>
@@ -169,16 +173,38 @@ const html = `<!DOCTYPE html>
         <main id="main-content"><h1>Yoke — Domain Intelligence</h1><p>JavaScript is required to use Yoke. Please enable JavaScript in your browser settings.</p></main>
         <footer role="contentinfo"><p>&copy; 2026 Yoke</p><nav aria-label="Legal"><a href="/about">About</a> | <a href="/privacy">Privacy Policy</a> | <a href="/terms">Terms of Service</a></nav></footer>
       </noscript>
-      <!-- CLS skeleton: reserves layout space before React mounts -->
+      <!-- CLS skeleton: matches full landing page layout to prevent layout shift when React mounts -->
       <div id="shell" aria-hidden="true" style="min-height:100vh;background:var(--bg,#0f1419);padding:24px 24px 48px">
         <div style="max-width:1440px;margin:0 auto">
+          <!-- Nav bar -->
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;height:24px">
-            <div style="width:24px;height:24px;border-radius:4px;background:var(--border,#21262d)"></div>
-            <div style="width:48px;height:18px;border-radius:4px;background:var(--border,#21262d)"></div>
+            <div class="sk" style="width:24px;height:24px"></div>
+            <div class="sk" style="width:48px;height:18px"></div>
             <div style="width:1px;height:16px;background:var(--border,#21262d);margin:0 4px"></div>
-            <div style="width:120px;height:14px;border-radius:4px;background:var(--border,#21262d)"></div>
+            <div class="sk" style="width:120px;height:14px"></div>
           </div>
-          <div style="height:46px;border-radius:8px;background:var(--surface,#161b22)"></div>
+          <!-- Search bar -->
+          <div class="sk-surface" style="height:46px"></div>
+          <!-- Landing page content placeholder -->
+          <div style="display:flex;flex-direction:column;align-items:center;padding:64px 0">
+            <!-- Search icon -->
+            <div class="sk-surface" style="width:64px;height:64px;border-radius:12px;margin-bottom:20px"></div>
+            <!-- Heading -->
+            <div class="sk" style="width:340px;max-width:80%;height:20px;margin-bottom:12px"></div>
+            <!-- Description lines -->
+            <div class="sk" style="width:420px;max-width:90%;height:14px;margin-bottom:8px"></div>
+            <div class="sk" style="width:360px;max-width:75%;height:14px;margin-bottom:24px"></div>
+            <!-- Feature grid: 2x2 -->
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:100%;max-width:700px;margin-bottom:24px">
+              <div class="sk-surface" style="height:72px"></div>
+              <div class="sk-surface" style="height:72px"></div>
+              <div class="sk-surface" style="height:72px"></div>
+              <div class="sk-surface" style="height:72px"></div>
+            </div>
+            <!-- API teaser -->
+            <div class="sk" style="width:100px;height:12px;margin-bottom:10px"></div>
+            <div class="sk-surface" style="width:100%;max-width:440px;height:40px"></div>
+          </div>
         </div>
       </div>
     </div>
