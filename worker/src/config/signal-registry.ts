@@ -145,7 +145,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: true,
     effort: "~10 min — server configuration",
     fixDescription: "Enable OCSP stapling",
-    weightRange: [1, 1],
+    weightRange: [1, 2],
     promptGuidance:
       "OCSP stapling improves TLS handshake speed and privacy by including certificate revocation status in the handshake. Most modern servers support it.",
   },

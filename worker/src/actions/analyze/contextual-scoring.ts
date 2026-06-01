@@ -222,9 +222,12 @@ export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: 
     // Track weight of canBeGood signals that fired, regardless of severity.
     // Only canBeGood signals count toward the "present" budget — non-good-only
     // signals (e.g. canBeGood=false security warnings) don't reduce absent weight.
+    // Use registry max weight (not finding weight) so signals that fire at lower
+    // contextual weights (e.g. DV cert w=1 vs maxW=3) don't create phantom absent
+    // weight — the lower finding weight already reduces their direct bonus.
     const reg = SIGNAL_REGISTRY[f.signal as keyof typeof SIGNAL_REGISTRY];
     if (reg?.canBeGood) {
-      presentWeight += f.weight;
+      presentWeight += reg.weightRange[1];
     }
     // If this finding suppresses a good-variant from the absent pool, track it
     if (reg?.suppressesAbsent) {
@@ -299,10 +302,13 @@ export function computeAxisScoreWithDeductions(
     }
     totalDeduction += deduction;
 
-    // Only count canBeGood signals toward present weight (see computeAxisScore)
+    // Only count canBeGood signals toward present weight (see computeAxisScore).
+    // Use registry max weight (not finding weight) so signals that fire at lower
+    // contextual weights (e.g. DV cert w=1 vs maxW=3) don't create phantom absent
+    // weight — the lower finding weight already reduces their direct bonus.
     const reg = SIGNAL_REGISTRY[f.signal as keyof typeof SIGNAL_REGISTRY];
     if (reg?.canBeGood) {
-      presentWeight += f.weight;
+      presentWeight += reg.weightRange[1];
     }
     // If this finding suppresses a good-variant from the absent pool, track it
     if (reg?.suppressesAbsent) {
