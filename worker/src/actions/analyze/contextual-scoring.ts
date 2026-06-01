@@ -2896,30 +2896,30 @@ export function calculateDomainScore(opts: {
     findings.push({
       signal: "http_blocked_infrastructure",
       axis: "foundations",
-      severity: "medium",
+      severity: "info",
       label: "HTTP probe blocked — analysis is limited",
       tradeoff: "Site may be blocking automated requests. Scoring is based on DNS/WHOIS/SSL data only.",
-      weight: 3,
+      weight: 0,
     });
     // Can't trust performance data if we couldn't fetch the page
     if (!opts.performance) {
       findings.push({
         signal: "http_blocked_performance",
         axis: "speed",
-        severity: "medium",
+        severity: "info",
         label: "Cannot measure performance — HTTP blocked",
         tradeoff: null,
-        weight: 4,
+        weight: 0,
       });
     }
     // Security headers are unknown
     findings.push({
       signal: "http_blocked_security",
       axis: "security",
-      severity: "medium",
+      severity: "info",
       label: "Security headers unknown — HTTP blocked",
       tradeoff: "Cannot audit CSP, HSTS, or other headers without HTTP access.",
-      weight: 3,
+      weight: 0,
     });
   }
 
@@ -2933,19 +2933,19 @@ export function calculateDomainScore(opts: {
         findings.push({
           signal: "http_error_response",
           axis: "foundations",
-          severity: "high",
+          severity: "medium",
           label: `Server error (HTTP ${code})`,
           tradeoff: null,
-          weight: 4,
+          weight: 2,
         });
       } else {
         findings.push({
           signal: "http_error_response",
           axis: "foundations",
-          severity: "medium",
+          severity: "low",
           label: `Client error response (HTTP ${code})`,
           tradeoff: "Some sites return 4xx to automated probes while working fine in browsers.",
-          weight: 3,
+          weight: 1,
         });
       }
     }
