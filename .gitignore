@@ -76,3 +76,4 @@ calibration/corpus-raw.json
 
 # Go build artifacts
 fly-proxy/yoke-probe
+calibration/
