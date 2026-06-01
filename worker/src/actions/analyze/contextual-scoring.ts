@@ -14,6 +14,7 @@ import {
   TTFB,
 } from "../../config/scoring-thresholds";
 import {
+  AXIS_MAX_GOOD_WEIGHT,
   AXIS_WEIGHTS as REGISTRY_AXIS_WEIGHTS,
   tierFromComposite as registryTierFromComposite,
 } from "../../config/signal-registry";
@@ -221,19 +222,30 @@ export function applyAbsencePenalties(score: number, axis: Axis, findings: Findi
 // ─── Exported Scoring Helpers ────────────────────────────────────────
 // Pure functions extracted for testability. Used by calculateDomainScore below.
 
-export function computeAxisScore(findings: Finding[]): number {
+export function computeAxisScore(findings: Finding[], axis?: Axis): number {
   if (findings.length === 0) return BASELINE;
 
-  let score = BASELINE;
+  const TARGET_RANGE = 100 - BASELINE; // 45
 
+  // Get max possible good bonus for this axis (only when axis explicitly provided)
+  const maxGoodWeight = axis ? AXIS_MAX_GOOD_WEIGHT[axis] : 0;
+  const maxRawBonus = maxGoodWeight > 0 ? maxGoodWeight * 2 : 0;
+
+  // Compute raw bonus and penalty separately
+  let rawBonus = 0;
+  let penalty = 0;
   for (const f of findings) {
     if (f.severity === "good") {
-      score += goodBonus(f.weight);
+      rawBonus += goodBonus(f.weight);
     } else {
-      score += SEVERITY_PENALTY[f.severity] * Math.max(f.weight, 1);
+      penalty += SEVERITY_PENALTY[f.severity] * Math.max(f.weight, 1);
     }
   }
 
+  // Normalize bonus so max possible = TARGET_RANGE (45) when axis provided
+  const normalizedBonus = maxRawBonus > 0 ? (rawBonus / maxRawBonus) * TARGET_RANGE : rawBonus;
+
+  const score = BASELINE + normalizedBonus + penalty;
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
@@ -1050,6 +1062,48 @@ export function calculateDomainScore(opts: {
         label: "TLS-RPT configured — TLS delivery failure reporting enabled",
         tradeoff: null,
         weight: 1,
+      });
+    }
+
+    // ── MTA-STS ─────────────────────────────────────────────────────
+    if (opts.emailAuth.mta_sts?.policy_found && opts.emailAuth.mta_sts.mode === "enforce") {
+      findings.push({
+        signal: "mta_sts",
+        axis: "email",
+        severity: "good",
+        label: "MTA-STS enforcing TLS for inbound email",
+        tradeoff: null,
+        weight: 2,
+      });
+    } else if (opts.emailAuth.mta_sts?.policy_found && opts.emailAuth.mta_sts.mode === "testing") {
+      findings.push({
+        signal: "mta_sts",
+        axis: "email",
+        severity: "info",
+        label: "MTA-STS in testing mode",
+        tradeoff: null,
+        weight: 2,
+      });
+    } else if (opts.emailAuth.mta_sts?.dns_found && !opts.emailAuth.mta_sts.policy_found) {
+      findings.push({
+        signal: "mta_sts",
+        axis: "email",
+        severity: "low",
+        label: "MTA-STS DNS record exists but policy file missing",
+        tradeoff: null,
+        weight: 2,
+      });
+    }
+
+    // ── BIMI ────────────────────────────────────────────────────────
+    if (opts.emailAuth.bimi?.found) {
+      findings.push({
+        signal: "bimi_record",
+        axis: "email",
+        severity: "good",
+        label: "BIMI record found — brand logo in email clients",
+        tradeoff: null,
+        weight: 2,
       });
     }
   }
@@ -4023,7 +4077,7 @@ export function calculateDomainScore(opts: {
       axisScores[axis] = { score: null, weight: AXIS_WEIGHTS[axis], findings: axisFindings, not_measured: true };
       continue;
     }
-    let score = computeAxisScore(axisFindings);
+    let score = computeAxisScore(axisFindings, axis);
 
     // Apply absence penalties — expected-but-missing signals get mild deductions.
     // Pass all findings so absence detection can check if HTTP/SSL ran.

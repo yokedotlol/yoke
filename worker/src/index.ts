@@ -318,6 +318,26 @@ export default {
       });
     }
 
+    // ── MTA-STS policy file (served from mta-sts.yoke.lol) ──────────
+    if (url.hostname === "mta-sts.yoke.lol" && path === "/.well-known/mta-sts.txt") {
+      return new Response(
+        [
+          "version: STSv1",
+          "mode: enforce",
+          "mx: route1.mx.cloudflare.net",
+          "mx: route2.mx.cloudflare.net",
+          "mx: route3.mx.cloudflare.net",
+          "max_age: 86400",
+        ].join("\n"),
+        {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "public, max-age=86400",
+          },
+        },
+      );
+    }
+
     // Static content routes (SEO + LLMO) — URLs derived from request origin
     const baseUrl = getBaseUrl(request, env);
     const host = new URL(baseUrl).hostname;
