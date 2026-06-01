@@ -287,22 +287,26 @@ export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: 
 
   // Compute deductions from findings that fired
   let totalDeduction = 0;
-  let earnedGoodWeight = 0;
+  let presentWeight = 0; // weight of canBeGood signals that appeared (any severity)
 
   for (const f of findings) {
     const share = (Math.max(f.weight, 1) / totalGoodWeight) * 100;
     const factor = SEVERITY_DEDUCTION_FACTOR[f.severity];
     totalDeduction += share * factor;
 
-    if (f.severity === "good") {
-      earnedGoodWeight += f.weight;
-    }
+    // Track weight of signals that fired, regardless of severity.
+    // Only count weights that are part of the axis budget (canBeGood signals).
+    // Heuristic: any signal that CAN fire as good but fired as non-good
+    // still "accounts for" its weight — it should NOT also be absent.
+    // We count all finding weights up to totalGoodWeight.
+    presentWeight += f.weight;
   }
 
-  // Absent signals: canBeGood signals that didn't fire as "good".
-  // The gap between total applicable good weight and earned good weight
-  // represents signals that could improve the score.
-  const absentWeight = Math.max(0, totalGoodWeight - earnedGoodWeight);
+  // Absent signals: canBeGood signals that didn't fire at all.
+  // Only the gap between totalGoodWeight and the weight of signals that
+  // DID appear represents truly absent signals.
+  // Cap presentWeight at totalGoodWeight to avoid negative absent.
+  const absentWeight = Math.max(0, totalGoodWeight - Math.min(presentWeight, totalGoodWeight));
   if (absentWeight > 0) {
     const absentShare = (absentWeight / totalGoodWeight) * 100;
     totalDeduction += absentShare * ABSENT_DEDUCTION_FACTOR;

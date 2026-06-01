@@ -357,7 +357,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		apiKey := os.Getenv("GOOGLE_PAGESPEED_API_KEY")
-		result := proxyPageSpeed(domain, apiKey)
+		strategy := r.URL.Query().Get("strategy")
+		if strategy != "desktop" {
+			strategy = "mobile"
+		}
+		result := proxyPageSpeed(domain, apiKey, strategy)
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-cache")
 		json.NewEncoder(w).Encode(result)
@@ -1272,42 +1276,42 @@ type PageSpeedResult struct {
 	Screenshot *string  `json:"screenshot"`
 }
 
-func proxyPageSpeed(domain string, apiKey string) PageSpeedResult {
+func proxyPageSpeed(domain string, apiKey string, strategy string) PageSpeedResult {
 	keyParam := ""
 	if apiKey != "" {
 		keyParam = "&key=" + apiKey
 	}
 	
-	url := fmt.Sprintf("https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=https://%s&strategy=mobile&category=performance%s", domain, keyParam)
+	url := fmt.Sprintf("https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=https://%s&strategy=%s&category=performance%s", domain, strategy, keyParam)
 	
 	client := &http.Client{Timeout: 60 * time.Second}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		errStr := fmt.Sprintf("request failed: %s", err.Error())
-		return PageSpeedResult{Error: &errStr, Strategy: "mobile"}
+		return PageSpeedResult{Error: &errStr, Strategy: strategy}
 	}
 	
 	resp, err := client.Do(req)
 	if err != nil {
 		errStr := fmt.Sprintf("API request failed: %s", err.Error())
-		return PageSpeedResult{Error: &errStr, Strategy: "mobile"}
+		return PageSpeedResult{Error: &errStr, Strategy: strategy}
 	}
 	defer resp.Body.Close()
 	
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 5<<20)) // 5MB limit
 	if err != nil {
 		errStr := fmt.Sprintf("read failed: %s", err.Error())
-		return PageSpeedResult{Error: &errStr, Strategy: "mobile"}
+		return PageSpeedResult{Error: &errStr, Strategy: strategy}
 	}
 	
 	if resp.StatusCode == 429 {
 		errStr := "Rate limited — try again later"
-		return PageSpeedResult{Error: &errStr, Strategy: "mobile"}
+		return PageSpeedResult{Error: &errStr, Strategy: strategy}
 	}
 	
 	if resp.StatusCode != 200 {
 		errStr := fmt.Sprintf("API error (%d)", resp.StatusCode)
-		return PageSpeedResult{Error: &errStr, Strategy: "mobile"}
+		return PageSpeedResult{Error: &errStr, Strategy: strategy}
 	}
 	
 	var data struct {
@@ -1328,7 +1332,7 @@ func proxyPageSpeed(domain string, apiKey string) PageSpeedResult {
 	
 	if err := json.Unmarshal(body, &data); err != nil {
 		errStr := fmt.Sprintf("parse failed: %s", err.Error())
-		return PageSpeedResult{Error: &errStr, Strategy: "mobile"}
+		return PageSpeedResult{Error: &errStr, Strategy: strategy}
 	}
 	
 	lr := data.LighthouseResult
@@ -1368,7 +1372,7 @@ func proxyPageSpeed(domain string, apiKey string) PageSpeedResult {
 		CLS:        auditMetric("cumulative-layout-shift"),
 		SI:         auditMetric("speed-index"),
 		TTFB:       auditMetric("server-response-time"),
-		Strategy:   "mobile",
+		Strategy:   strategy,
 		Error:      nil,
 		Screenshot: screenshot,
 	}
