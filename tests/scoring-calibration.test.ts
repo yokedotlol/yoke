@@ -2,14 +2,16 @@
 // Automated guardrails that keep scoring balanced as signals evolve.
 // See docs/SCORING-CALIBRATION.md for design rationale.
 //
-// Three layers:
+// Four layers:
 //   1. Registry lint — static analysis of signal weights and coverage
 //   2. Score simulation — synthetic findings through computeAxisScore
-//   3. Reference domain assertions — fixture-based end-to-end scoring
+//   3. Busy customer POV — the math must add up from the outside
+//   4. Diagnostics — printed axis health summary every run
 
 import {
   type Axis,
   computeAxisScore,
+  computeAxisScoreWithDeductions,
   computeComposite,
   type Finding,
   tierFromComposite,
@@ -405,8 +407,273 @@ describe("Calibration: Score Simulation", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// LAYER 3: Score Diagnostics (printed every run)
+// LAYER 3: Busy Customer POV
 // ═══════════════════════════════════════════════════════════════════
+// A busy customer doesn't care about registry internals. They see a
+// score, wonder why it isn't 100, look at Level-Up, and expect the
+// math to add up. If it doesn't, they leave. These tests enforce
+// that contract.
+
+describe("Calibration: Busy Customer POV", () => {
+  /** Build perfect findings for an axis */
+  function perfectFindings(axis: Axis): Finding[] {
+    return Object.entries(SIGNAL_REGISTRY)
+      .filter(([, s]) => s.axis === axis && s.canBeGood)
+      .map(([key, s]) => ({
+        signal: key,
+        axis,
+        severity: "good" as Severity,
+        label: s.label,
+        tradeoff: null,
+        weight: s.weightRange[1],
+      }));
+  }
+
+  /** Build findings with one specific signal downgraded to a non-good severity */
+  function findingsWithOneIssue(axis: Axis, issueSignal: string, issueSeverity: Severity): Finding[] {
+    return Object.entries(SIGNAL_REGISTRY)
+      .filter(([, s]) => s.axis === axis && s.canBeGood)
+      .map(([key, s]) => ({
+        signal: key,
+        axis,
+        severity: key === issueSignal ? issueSeverity : ("good" as Severity),
+        label: s.label,
+        tradeoff: null,
+        weight: s.weightRange[1],
+      }));
+  }
+
+  // ── 3a. No Phantom Points ─────────────────────────────────────
+  // "My score is 82. Level-Up says I can gain +15. Where did the other 3 go?"
+  // In deductive scoring, Σ deductions must equal 100 - score exactly.
+
+  describe("No phantom points — deductions account for every lost point", () => {
+    for (const axis of AXES) {
+      it(`${axis}: Σ deductions = 100 - score (perfect minus one high issue)`, () => {
+        // Pick the first canBeNonGood signal to make it a "high" issue
+        const penalizable = Object.entries(SIGNAL_REGISTRY).find(
+          ([, s]) => s.axis === axis && s.canBeNonGood && s.canBeGood,
+        );
+        if (!penalizable) return; // skip if no dual-state signal
+
+        const findings = findingsWithOneIssue(axis, penalizable[0], "high");
+        const { score, deductions } = computeAxisScoreWithDeductions(findings, axis);
+        const deductionSum = deductions.reduce((sum, d) => sum + d.deduction, 0);
+
+        // The rounded score should match 100 - sum(deductions) within rounding
+        expect(Math.abs(100 - score - deductionSum)).toBeLessThanOrEqual(1);
+      });
+
+      it(`${axis}: Σ deductions = 100 - score (multiple mixed issues)`, () => {
+        const signals = Object.entries(SIGNAL_REGISTRY).filter(([, s]) => s.axis === axis && s.canBeGood);
+        const severities: Severity[] = ["good", "low", "medium", "high"];
+        const findings: Finding[] = signals.map(([key, s], i) => ({
+          signal: key,
+          axis,
+          severity: severities[i % severities.length],
+          label: s.label,
+          tradeoff: null,
+          weight: s.weightRange[1],
+        }));
+
+        const { score, deductions } = computeAxisScoreWithDeductions(findings, axis);
+        const deductionSum = deductions.reduce((sum, d) => sum + d.deduction, 0);
+
+        expect(Math.abs(100 - score - deductionSum)).toBeLessThanOrEqual(1);
+      });
+    }
+  });
+
+  // ── 3b. Fixing Something Visibly Helps ─────────────────────────
+  // "I fixed the thing you told me to. Did my score go up?"
+  // Every fixable finding in Level-Up must produce a visible score increase
+  // when resolved.
+
+  describe("Fixing an issue always improves the score", () => {
+    for (const axis of AXES) {
+      it(`${axis}: resolving a high-severity finding raises the score`, () => {
+        const penalizable = Object.entries(SIGNAL_REGISTRY).find(
+          ([, s]) => s.axis === axis && s.canBeNonGood && s.canBeGood,
+        );
+        if (!penalizable) return;
+
+        const withIssue = findingsWithOneIssue(axis, penalizable[0], "high");
+        const withoutIssue = perfectFindings(axis);
+
+        const scoreBefore = computeAxisScore(withIssue, axis);
+        const scoreAfter = computeAxisScore(withoutIssue, axis);
+
+        expect(scoreAfter).toBeGreaterThan(scoreBefore);
+      });
+
+      it(`${axis}: resolving a medium-severity finding raises the score`, () => {
+        const penalizable = Object.entries(SIGNAL_REGISTRY).find(
+          ([, s]) => s.axis === axis && s.canBeNonGood && s.canBeGood,
+        );
+        if (!penalizable) return;
+
+        const withIssue = findingsWithOneIssue(axis, penalizable[0], "medium");
+        const withoutIssue = perfectFindings(axis);
+
+        const scoreBefore = computeAxisScore(withIssue, axis);
+        const scoreAfter = computeAxisScore(withoutIssue, axis);
+
+        expect(scoreAfter).toBeGreaterThan(scoreBefore);
+      });
+    }
+  });
+
+  // ── 3c. Composite Matches Weighted Sum ─────────────────────────
+  // "How do these six numbers turn into my score?"
+  // The composite must be verifiable with a calculator.
+
+  describe("Composite is hand-verifiable from axis scores", () => {
+    const testCases: Record<Axis, number>[] = [
+      { security: 95, speed: 80, foundations: 90, reputation: 70, discoverability: 85, email: 92 },
+      { security: 60, speed: 50, foundations: 70, reputation: 45, discoverability: 55, email: 80 },
+      { security: 100, speed: 100, foundations: 100, reputation: 100, discoverability: 100, email: 100 },
+    ];
+
+    for (const axes of testCases) {
+      const expected = Math.round(
+        axes.security * AXIS_WEIGHTS.security +
+          axes.speed * AXIS_WEIGHTS.speed +
+          axes.foundations * AXIS_WEIGHTS.foundations +
+          axes.reputation * AXIS_WEIGHTS.reputation +
+          axes.discoverability * AXIS_WEIGHTS.discoverability +
+          axes.email * AXIS_WEIGHTS.email,
+      );
+
+      it(`axes [${Object.values(axes).join(",")}] → composite ${expected}`, () => {
+        const composite = computeComposite(axes, "general");
+        // Before outlier cap, composite should match weighted sum
+        const hasOutlier = Object.values(axes).some((s) => s < 40);
+        if (hasOutlier) {
+          expect(composite).toBeLessThanOrEqual(74);
+        } else {
+          expect(composite).toBe(expected);
+        }
+      });
+    }
+  });
+
+  // ── 3d. Severity Labels Match Intuition ────────────────────────
+  // "A 'low' issue shouldn't tank my score. A 'critical' should hurt."
+  // Customers eyeball severity labels and expect proportional impact.
+
+  describe("Severity impact matches the label", () => {
+    for (const axis of AXES) {
+      it(`${axis}: low issue costs less than half of what critical costs`, () => {
+        const penalizable = Object.entries(SIGNAL_REGISTRY).find(
+          ([, s]) => s.axis === axis && s.canBeNonGood && s.canBeGood,
+        );
+        if (!penalizable) return;
+
+        const base = perfectFindings(axis);
+        const perfect = computeAxisScore(base, axis); // 100
+
+        const withLow = findingsWithOneIssue(axis, penalizable[0], "low");
+        const withCritical = findingsWithOneIssue(axis, penalizable[0], "critical");
+
+        const lowCost = perfect - computeAxisScore(withLow, axis);
+        const criticalCost = perfect - computeAxisScore(withCritical, axis);
+
+        // Critical should cost at least 2x what low costs (actually 3x: 1.5/0.5)
+        expect(criticalCost).toBeGreaterThanOrEqual(lowCost * 2);
+      });
+    }
+  });
+
+  // ── 3e. Tier Labels Are Defensible ─────────────────────────────
+  // "You say my site is 'Weak' at 50. My competitor is 'Moderate' at 60.
+  //  That 10-point gap shouldn't flip the label on a rounding edge."
+  // Tier boundaries should be far enough apart that small changes don't
+  // cause confusing label swings.
+
+  describe("Tier boundaries have safe margins", () => {
+    const boundaries = [
+      { score: 90, tier: "Excellent" },
+      { score: 75, tier: "Strong" },
+      { score: 60, tier: "Moderate" },
+      { score: 40, tier: "Weak" },
+      { score: 39, tier: "Critical" },
+    ];
+
+    for (const { score, tier } of boundaries) {
+      it(`score ${score} → "${tier}"`, () => {
+        expect(tierFromComposite(score)).toBe(tier);
+      });
+
+      // ±1 around boundary should be stable (no jitter)
+      if (score >= 41) {
+        it(`score ${score - 1} is one tier below or same as ${score}`, () => {
+          const tierAtBoundary = tierFromComposite(score);
+          const tierBelow = tierFromComposite(score - 1);
+          // Either same tier or the next tier down — not two jumps
+          expect([tierAtBoundary, boundaries.find((b) => b.score < score)?.tier]).toContain(tierBelow);
+        });
+      }
+    }
+  });
+
+  // ── 3f. All-Good Means 100, Not 97 ────────────────────────────
+  // "Every check is green. Why isn't my score 100?"
+
+  describe("All green checks = 100", () => {
+    for (const axis of AXES) {
+      it(`${axis}: every applicable signal at 'good' → exactly 100`, () => {
+        const findings = perfectFindings(axis);
+        expect(computeAxisScore(findings, axis)).toBe(100);
+      });
+    }
+
+    it("all axes at 100 → composite exactly 100", () => {
+      const axes: Record<Axis, number> = {
+        security: 100,
+        speed: 100,
+        foundations: 100,
+        reputation: 100,
+        discoverability: 100,
+        email: 100,
+      };
+      expect(computeComposite(axes, "general")).toBe(100);
+    });
+  });
+
+  // ── 3g. Level-Up Potential Sums to the Gap ─────────────────────
+  // "Level-Up says I can gain +5 here, +3 there. That should match
+  //  what I'm missing."
+
+  describe("Level-Up potential accounts for the full gap to 100", () => {
+    for (const axis of AXES) {
+      it(`${axis}: sum of improvable deductions ≤ gap to 100`, () => {
+        const signals = Object.entries(SIGNAL_REGISTRY).filter(([, s]) => s.axis === axis && s.canBeGood);
+        // Simulate a mixed bag: alternate good/medium/low
+        const severities: Severity[] = ["good", "medium", "low", "good", "good"];
+        const findings: Finding[] = signals.map(([key, s], i) => ({
+          signal: key,
+          axis,
+          severity: severities[i % severities.length],
+          label: s.label,
+          tradeoff: null,
+          weight: s.weightRange[1],
+        }));
+
+        const { score, deductions } = computeAxisScoreWithDeductions(findings, axis);
+        const gap = 100 - score;
+        const totalPotential = deductions.reduce((sum, d) => sum + d.deduction, 0);
+
+        // totalPotential should be ≥ gap (rounding) and ≤ gap + 1
+        expect(totalPotential).toBeGreaterThanOrEqual(gap - 1);
+        expect(totalPotential).toBeLessThanOrEqual(gap + 1);
+      });
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// LAYER 4: Score Diagnostics (printed every run)
+// ═════════════════════════════════════════════════════════════════════
 
 describe("Calibration: Diagnostics", () => {
   it("prints axis health summary", () => {

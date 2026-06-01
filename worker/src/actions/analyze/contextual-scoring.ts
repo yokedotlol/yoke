@@ -1383,9 +1383,13 @@ export function calculateDomainScore(opts: {
       // Parse CAA issue/issuewild directives → set of authorized CA domains
       const authorizedCAs = new Set<string>();
       for (const caa of caaRecords) {
-        // CAA data format: "0 issue \"letsencrypt.org\"" or "0 issuewild \"digicert.com\""
+        // CAA data format: "0 issue \"letsencrypt.org\"" or "0 issuewild \"digicert.com; cansignhttpexchanges=yes\""
         const match = caa.data.match(/\b(?:issue|issuewild)\s+"([^"]+)"/i);
-        if (match) authorizedCAs.add(match[1].toLowerCase());
+        if (match) {
+          // Strip optional parameters (e.g., "; cansignhttpexchanges=yes") — keep only the domain
+          const domain = match[1].split(";")[0].trim().toLowerCase();
+          if (domain) authorizedCAs.add(domain);
+        }
       }
 
       if (authorizedCAs.size > 0) {
