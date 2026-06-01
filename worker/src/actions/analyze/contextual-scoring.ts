@@ -333,7 +333,7 @@ export function computeAxisScoreWithDeductions(
 
   const deductions: AxisDeduction[] = [];
   let totalDeduction = 0;
-  let earnedGoodWeight = 0;
+  let presentWeight = 0;
 
   for (const f of findings) {
     const share = (Math.max(f.weight, 1) / totalGoodWeight) * 100;
@@ -353,13 +353,11 @@ export function computeAxisScoreWithDeductions(
     }
     totalDeduction += deduction;
 
-    if (f.severity === "good") {
-      earnedGoodWeight += f.weight;
-    }
+    presentWeight += f.weight;
   }
 
-  // Absent signals deduction
-  const absentWeight = Math.max(0, totalGoodWeight - earnedGoodWeight);
+  // Absent signals: canBeGood signals that didn't fire at all
+  const absentWeight = Math.max(0, totalGoodWeight - Math.min(presentWeight, totalGoodWeight));
   if (absentWeight > 0) {
     const absentShare = (absentWeight / totalGoodWeight) * 100;
     const absentDeduction = absentShare * ABSENT_DEDUCTION_FACTOR;
