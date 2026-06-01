@@ -757,10 +757,22 @@ export interface ScoreFinding {
   source?: string | null;
 }
 
+export interface AxisDeductionData {
+  signal: string;
+  label: string;
+  severity: string;
+  weight: number;
+  share: number;
+  deduction: number;
+  category: "fixable" | "time_dependent" | "infrastructure" | "not_detected";
+}
+
 export interface AxisScoreData {
   score: number | null;
   weight: number;
   findings: ScoreFinding[];
+  /** Itemized deductions explaining the gap from 100 */
+  deductions?: AxisDeductionData[];
   not_measured?: boolean;
 }
 

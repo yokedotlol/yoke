@@ -21,8 +21,6 @@ import { describe, expect, it } from "vitest";
 // ─── Constants ──────────────────────────────────────────────────────
 
 const AXES: Axis[] = ["security", "speed", "foundations", "reputation", "discoverability", "email"];
-const BASELINE = 55;
-const TARGET_RANGE = 100 - BASELINE; // 45
 
 // ═══════════════════════════════════════════════════════════════════
 // LAYER 1: Registry Lint
@@ -53,22 +51,24 @@ describe("Calibration: Registry Lint", () => {
   });
 
   // ── 1b. Penalty Visibility ─────────────────────────────────────
-  // Ensures medium-severity penalties are at least MIN_VISIBLE_DELTA
+  // Ensures medium-severity deductions are at least MIN_VISIBLE_DELTA
   // points at the median penalizable weight for each axis.
 
   describe("Penalty visibility", () => {
-    const MIN_VISIBLE_DELTA = 1.5; // points (before rounding)
+    const MIN_VISIBLE_DELTA = 1; // at least 1 point of deduction
 
     for (const axis of AXES) {
       const penalizable = Object.values(SIGNAL_REGISTRY).filter((s) => s.axis === axis && s.canBeNonGood);
 
       if (penalizable.length === 0) continue;
 
-      it(`${axis}: medium-severity penalty at median weight ≥ ${MIN_VISIBLE_DELTA} pts`, () => {
+      it(`${axis}: medium-severity deduction at median weight ≥ ${MIN_VISIBLE_DELTA} pts`, () => {
         const weights = penalizable.map((s) => s.weightRange[1]).sort((a, b) => a - b);
         const medianWeight = weights[Math.floor(weights.length / 2)];
-        const penaltyPoints = 1.25 * Math.max(medianWeight, 1); // |SEVERITY_PENALTY.medium| × weight
-        expect(penaltyPoints).toBeGreaterThanOrEqual(MIN_VISIBLE_DELTA);
+        const totalGoodWeight = AXIS_MAX_GOOD_WEIGHT[axis];
+        const share = (Math.max(medianWeight, 1) / totalGoodWeight) * 100;
+        const deduction = share * 0.75; // medium severity factor
+        expect(deduction).toBeGreaterThanOrEqual(MIN_VISIBLE_DELTA);
       });
     }
   });
@@ -99,17 +99,19 @@ describe("Calibration: Registry Lint", () => {
   });
 
   // ── 1d. Normalization Overflow ─────────────────────────────────
-  // Heavy overflow means individual signal weights become less meaningful
-  // after normalization. Hard limit at 3x to prevent sub-1-point penalties.
+  // In the deductive model, each signal's budget share = weight / totalGoodWeight.
+  // Very dense axes dilute individual signals. Verify the minimum share for a w1
+  // signal is still meaningful (at least 1 point at medium severity).
 
-  describe("Normalization overflow", () => {
-    const HARD_LIMIT = 3.0; // 3x overflow = individual weights 1/3 effective
+  describe("Minimum signal visibility", () => {
+    const MIN_MEDIUM_DEDUCTION = 1.0; // w1 medium deduction must be at least 1 pt
 
     for (const axis of AXES) {
-      it(`${axis}: overflow ratio ≤ ${HARD_LIMIT}x`, () => {
-        const maxRawBonus = AXIS_MAX_GOOD_WEIGHT[axis] * 2;
-        const ratio = maxRawBonus / TARGET_RANGE;
-        expect(ratio).toBeLessThanOrEqual(HARD_LIMIT);
+      it(`${axis}: w1 medium deduction ≥ ${MIN_MEDIUM_DEDUCTION} pt`, () => {
+        const totalGoodWeight = AXIS_MAX_GOOD_WEIGHT[axis];
+        const share = (1 / totalGoodWeight) * 100;
+        const deduction = share * 0.75; // medium severity factor
+        expect(deduction).toBeGreaterThanOrEqual(MIN_MEDIUM_DEDUCTION);
       });
     }
   });
@@ -176,10 +178,10 @@ describe("Calibration: Score Simulation", () => {
     }
   });
 
-  // ── 2b. Empty Score = Baseline ─────────────────────────────────
+  // ── 2b. Empty Score ────────────────────────────────────────────
 
-  it("no findings → baseline (55)", () => {
-    expect(computeAxisScore([])).toBe(BASELINE);
+  it("no findings → 100 (deductive model: nothing to deduct)", () => {
+    expect(computeAxisScore([])).toBe(100);
   });
 
   // ── 2c. Single Penalty Impact ──────────────────────────────────
@@ -188,7 +190,7 @@ describe("Calibration: Score Simulation", () => {
 
   describe("Single penalty impact", () => {
     for (const axis of AXES) {
-      it(`${axis}: high w3 penalty drops perfect score by 5–15 pts`, () => {
+      it(`${axis}: high w3 penalty drops perfect score by 3–15 pts`, () => {
         const findings = perfectFindings(axis);
         findings.push({
           signal: "test_high_penalty",
@@ -199,18 +201,18 @@ describe("Calibration: Score Simulation", () => {
           weight: 3,
         });
         const score = computeAxisScore(findings, axis);
-        expect(score).toBeLessThanOrEqual(95); // at least 5 pt drop from 100
+        expect(score).toBeLessThanOrEqual(97); // at least 3 pt drop from 100
         expect(score).toBeGreaterThanOrEqual(85); // shouldn't crater
       });
     }
   });
 
   // ── 2d. Critical Penalty Impact ────────────────────────────────
-  // A critical-severity w5 finding should heavily impact the score.
+  // A critical-severity w5 finding should noticeably impact the score.
 
   describe("Critical penalty impact", () => {
     for (const axis of AXES) {
-      it(`${axis}: critical w5 penalty drops perfect score below 85`, () => {
+      it(`${axis}: critical w5 penalty drops perfect score below 90`, () => {
         const findings = perfectFindings(axis);
         findings.push({
           signal: "test_critical_penalty",
@@ -221,7 +223,7 @@ describe("Calibration: Score Simulation", () => {
           weight: 5,
         });
         const score = computeAxisScore(findings, axis);
-        expect(score).toBeLessThanOrEqual(85);
+        expect(score).toBeLessThanOrEqual(90);
         expect(score).toBeGreaterThanOrEqual(60); // still above critical range
       });
     }
@@ -410,22 +412,26 @@ describe("Calibration: Diagnostics", () => {
   it("prints axis health summary", () => {
     const rows: string[] = [];
     rows.push("┌──────────────────┬──────┬───────┬────────┬────────────┬──────────────┐");
-    rows.push("│ Axis             │ Sigs │ GoodW │ Ovflow │ Med@median │ canBeGood %  │");
+    rows.push("│ Axis             │ Sigs │ GoodW │ Densty │ Med@share  │ canBeGood %  │");
     rows.push("├──────────────────┼──────┼───────┼────────┼────────────┼──────────────┤");
 
     for (const axis of AXES) {
       const signals = Object.entries(SIGNAL_REGISTRY).filter(([, s]) => s.axis === axis);
       const goodW = AXIS_MAX_GOOD_WEIGHT[axis];
-      const maxRaw = goodW * 2;
-      const overflow = `${(maxRaw / TARGET_RANGE).toFixed(1)}x`;
+      // In deductive model, overflow concept is replaced by budget share.
+      // Show ratio of goodW to smallest axis goodW as a density metric.
+      const minGoodW = Math.min(...AXES.map((a) => AXIS_MAX_GOOD_WEIGHT[a]));
+      const density = `${(goodW / minGoodW).toFixed(1)}x`;
       const penalizable = signals.filter(([, s]) => s.canBeNonGood);
       const penWeights = penalizable.map(([, s]) => s.weightRange[1]).sort((a, b) => a - b);
-      const medPen =
-        penWeights.length > 0 ? (1.25 * Math.max(penWeights[Math.floor(penWeights.length / 2)], 1)).toFixed(1) : "n/a";
+      const medShare =
+        penWeights.length > 0
+          ? ((Math.max(penWeights[Math.floor(penWeights.length / 2)], 1) / goodW) * 100 * 0.75).toFixed(1)
+          : "n/a";
       const goodRatio = `${((signals.filter(([, s]) => s.canBeGood).length / signals.length) * 100).toFixed(0)}%`;
 
       rows.push(
-        `│ ${axis.padEnd(17)}│ ${String(signals.length).padEnd(5)}│ ${String(goodW).padEnd(6)}│ ${overflow.padEnd(7)}│ ${String(medPen).padEnd(11)}│ ${goodRatio.padEnd(13)}│`,
+        `│ ${axis.padEnd(17)}│ ${String(signals.length).padEnd(5)}│ ${String(goodW).padEnd(6)}│ ${density.padEnd(7)}│ ${String(medShare).padEnd(11)}│ ${goodRatio.padEnd(13)}│`,
       );
     }
 

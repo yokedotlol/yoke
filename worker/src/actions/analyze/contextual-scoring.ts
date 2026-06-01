@@ -83,10 +83,26 @@ export interface ArchetypeResult {
   weights: Record<Axis, number>; // single fixed axis weights (all archetypes use the same)
 }
 
+/** Itemized deduction explaining where points were lost in an axis. */
+export interface AxisDeduction {
+  signal: string;
+  label: string;
+  severity: string;
+  weight: number;
+  /** Signal's share of the axis budget (% of 100) */
+  share: number;
+  /** Actual points deducted from the axis score */
+  deduction: number;
+  /** Category for Level-Up grouping */
+  category: "fixable" | "time_dependent" | "infrastructure" | "not_detected";
+}
+
 export interface AxisScore {
   score: number | null;
   weight: number;
   findings: Finding[];
+  /** Itemized deductions explaining the gap from 100 */
+  deductions?: AxisDeduction[];
   not_measured?: boolean;
 }
 
@@ -105,26 +121,24 @@ export interface DomainScoreResult {
 // and the /api/scoring transparency endpoint. NOT used for axis scoring
 // (anchor-and-adjust uses penalty/bonus directly).
 
-// ─── Anchor-and-Adjust Scoring Model ─────────────────────────────────
-// Replaces the old weighted-average model. Each axis starts at BASELINE (55)
-// and earns/loses points based on findings. This prevents sparse axes from
-// inflating (the old "absence of bad = high score" problem).
+// ─── Budget-Based Deductive Scoring Model ────────────────────────────
+// Each axis starts at 100 and loses points for issues. Every applicable
+// signal has a "budget share" proportional to its weight. Severity
+// determines what fraction of that share is deducted. The gap from 100
+// is always exactly the sum of visible deductions — no phantom points.
 
-const BASELINE = 55;
-
-const SEVERITY_PENALTY: Record<Severity, number> = {
-  critical: -4,
-  high: -2.5,
-  medium: -1.25,
-  low: -0.5,
-  info: 0,
-  good: 0, // good findings use goodBonus() instead
+/** Fraction of a signal's budget share deducted per severity level. */
+const SEVERITY_DEDUCTION_FACTOR: Record<Severity, number> = {
+  critical: 1.5, // punitive — deduct more than the signal's share
+  high: 1.0, // lose full share
+  medium: 0.75, // moderate issue
+  low: 0.5, // minor issue
+  info: 0, // neutral observation
+  good: 0, // passed — keep your points
 };
 
-/** Bonus points for a "good" finding, scaled by weight. */
-function goodBonus(weight: number): number {
-  return 2 * weight; // w1→+2, w2→+4, w3→+6, w4→+8, w5→+10
-}
+/** Deduction factor for applicable "canBeGood" signals that didn't fire at all. */
+const ABSENT_DEDUCTION_FACTOR = 0.25;
 
 // ─── Expected Baselines (Absence Penalties) ──────────────────────────
 // Each category defines signals that a competent site should produce.
@@ -226,37 +240,141 @@ export function applyAbsencePenalties(score: number, axis: Axis, findings: Findi
 // ─── Exported Scoring Helpers ────────────────────────────────────────
 // Pure functions extracted for testability. Used by calculateDomainScore below.
 
+/** Signals whose deductions are time-dependent (user can't fix, must wait). */
+const TIME_DEPENDENT_SIGNALS = new Set([
+  "domain_age_trust",
+  "tranco_rank",
+  "wayback_history",
+  "breach_found",
+  "breach_severity",
+]);
+
+/** Classify a deduction for Level-Up grouping. */
+function classifyDeduction(signal: string, severity: string): AxisDeduction["category"] {
+  if (TIME_DEPENDENT_SIGNALS.has(signal)) return "time_dependent";
+  if (severity === "good" || severity === "info") return "not_detected"; // shouldn't happen for real deductions
+  return "fixable";
+}
+
+/**
+ * Budget-based deductive axis scoring.
+ *
+ * Each axis starts at 100. Every applicable signal gets a proportional
+ * "share" of the budget. Issues deduct a fraction of that share based
+ * on severity. The gap from 100 is always exactly the sum of deductions.
+ *
+ * When called WITHOUT an axis (standalone), operates in legacy-compatible
+ * mode: raw deductions without normalization to 100 budget.
+ */
 export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: ScoringContext): number {
-  if (findings.length === 0) return BASELINE;
+  if (findings.length === 0) return 100; // no findings = perfect by default
 
-  const TARGET_RANGE = 100 - BASELINE; // 45
+  // Without axis context, fall back to simple deduction from 100
+  if (!axis) {
+    let deductions = 0;
+    for (const f of findings) {
+      const factor = SEVERITY_DEDUCTION_FACTOR[f.severity];
+      deductions += factor * Math.max(f.weight, 1) * 2; // scale factor for standalone mode
+    }
+    return Math.max(0, Math.min(100, Math.round(100 - deductions)));
+  }
 
-  // Get max possible good bonus for this axis (only when axis explicitly provided)
-  // When scoringCtx is provided, exclude inapplicable signals (e.g., cookie_security on cookieless sites)
+  // Get total applicable good weight for this axis (denominator)
   const effectiveMaxGoodWeight = scoringCtx ? computeEffectiveMaxGoodWeight(scoringCtx) : AXIS_MAX_GOOD_WEIGHT;
-  const maxGoodWeight = axis ? effectiveMaxGoodWeight[axis] : 0;
-  const maxRawBonus = maxGoodWeight > 0 ? maxGoodWeight * 2 : 0;
+  const totalGoodWeight = effectiveMaxGoodWeight[axis];
 
-  // Compute raw bonus and penalty separately
-  let rawBonus = 0;
-  let penalty = 0;
+  if (totalGoodWeight <= 0) return 100; // no signals = nothing to deduct
+
+  // Compute deductions from findings that fired
+  let totalDeduction = 0;
+  let earnedGoodWeight = 0;
+
   for (const f of findings) {
+    const share = (Math.max(f.weight, 1) / totalGoodWeight) * 100;
+    const factor = SEVERITY_DEDUCTION_FACTOR[f.severity];
+    totalDeduction += share * factor;
+
     if (f.severity === "good") {
-      rawBonus += goodBonus(f.weight);
-    } else {
-      penalty += SEVERITY_PENALTY[f.severity] * Math.max(f.weight, 1);
+      earnedGoodWeight += f.weight;
     }
   }
 
-  // Normalize bonus so max possible = TARGET_RANGE for EVERY axis.
-  // Without this, dense axes (security: 27 signals, 144% overflow) accumulate
-  // so much surplus bonus that penalties become invisible — e.g. weak ciphers
-  // barely dent a 97 score.  Normalizing all axes equally means penalties have
-  // proportional impact regardless of how many signal definitions an axis has.
-  const normalizedBonus = maxRawBonus > 0 ? (rawBonus / maxRawBonus) * TARGET_RANGE : rawBonus;
+  // Absent signals: canBeGood signals that didn't fire as "good".
+  // The gap between total applicable good weight and earned good weight
+  // represents signals that could improve the score.
+  const absentWeight = Math.max(0, totalGoodWeight - earnedGoodWeight);
+  if (absentWeight > 0) {
+    const absentShare = (absentWeight / totalGoodWeight) * 100;
+    totalDeduction += absentShare * ABSENT_DEDUCTION_FACTOR;
+  }
 
-  const score = BASELINE + normalizedBonus + penalty;
-  return Math.max(0, Math.min(100, Math.round(score)));
+  return Math.max(0, Math.min(100, Math.round(100 - totalDeduction)));
+}
+
+/**
+ * Compute itemized deductions for an axis (for API response / Level-Up).
+ * Returns the same score as computeAxisScore plus a breakdown of each deduction.
+ */
+export function computeAxisScoreWithDeductions(
+  findings: Finding[],
+  axis: Axis,
+  scoringCtx?: ScoringContext,
+): { score: number; deductions: AxisDeduction[] } {
+  const effectiveMaxGoodWeight = scoringCtx ? computeEffectiveMaxGoodWeight(scoringCtx) : AXIS_MAX_GOOD_WEIGHT;
+  const totalGoodWeight = effectiveMaxGoodWeight[axis];
+
+  if (totalGoodWeight <= 0 || findings.length === 0) {
+    return { score: findings.length === 0 ? 100 : computeAxisScore(findings, axis, scoringCtx), deductions: [] };
+  }
+
+  const deductions: AxisDeduction[] = [];
+  let totalDeduction = 0;
+  let earnedGoodWeight = 0;
+
+  for (const f of findings) {
+    const share = (Math.max(f.weight, 1) / totalGoodWeight) * 100;
+    const factor = SEVERITY_DEDUCTION_FACTOR[f.severity];
+    const deduction = share * factor;
+
+    if (deduction > 0) {
+      deductions.push({
+        signal: f.signal,
+        label: f.label,
+        severity: f.severity,
+        weight: f.weight,
+        share: Math.round(share * 10) / 10,
+        deduction: Math.round(deduction * 10) / 10,
+        category: classifyDeduction(f.signal, f.severity),
+      });
+    }
+    totalDeduction += deduction;
+
+    if (f.severity === "good") {
+      earnedGoodWeight += f.weight;
+    }
+  }
+
+  // Absent signals deduction
+  const absentWeight = Math.max(0, totalGoodWeight - earnedGoodWeight);
+  if (absentWeight > 0) {
+    const absentShare = (absentWeight / totalGoodWeight) * 100;
+    const absentDeduction = absentShare * ABSENT_DEDUCTION_FACTOR;
+    if (absentDeduction > 0) {
+      deductions.push({
+        signal: "_absent",
+        label: `${Math.round(absentWeight)} weight of applicable signals not detected`,
+        severity: "absent",
+        weight: absentWeight,
+        share: Math.round(absentShare * 10) / 10,
+        deduction: Math.round(absentDeduction * 10) / 10,
+        category: "not_detected",
+      });
+      totalDeduction += absentDeduction;
+    }
+  }
+
+  const score = Math.max(0, Math.min(100, Math.round(100 - totalDeduction)));
+  return { score, deductions };
 }
 
 export function computeComposite(axisScores: Record<Axis, number>, _archetype: ArchetypeName): number {
@@ -1288,8 +1406,30 @@ export function calculateDomainScore(opts: {
           const issuerOrg = orgMatch ? orgMatch[1].trim().toLowerCase() : cert.issuer.toLowerCase();
           // Check if any authorized CA domain appears in the issuer org name
           const isAuthorized = [...authorizedCAs].some((ca) => {
-            const caDomain = ca.replace(/\.$/, ""); // strip trailing dot
+            const caDomain = ca.replace(/\.$/, "").toLowerCase(); // strip trailing dot
             const caName = caDomain.split(".")[0]; // e.g., "letsencrypt" from "letsencrypt.org"
+
+            // Known CA domain → issuer org name mappings (CAA domains often don't match CT issuer names)
+            const CA_ALIASES: Record<string, string[]> = {
+              "letsencrypt.org": ["let's encrypt", "lets encrypt", "isrg", "r3", "r4", "e1", "e2"],
+              "pki.goog": ["google trust services", "google internet authority", "gts ca"],
+              "comodoca.com": ["comodo", "sectigo"],
+              "sectigo.com": ["sectigo", "comodo"],
+              "digicert.com": ["digicert", "geotrust", "rapidssl", "thawte", "encryption everywhere"],
+              "godaddy.com": ["godaddy", "go daddy", "starfield"],
+              "amazontrust.com": ["amazon", "starfield services"],
+              "globalsign.com": ["globalsign"],
+              "entrust.net": ["entrust"],
+              "buypass.com": ["buypass"],
+              "ssl.com": ["ssl.com"],
+              "zerossl.com": ["zerossl"],
+            };
+
+            // Check aliases first (most reliable)
+            const aliases = CA_ALIASES[caDomain];
+            if (aliases?.some((alias) => issuerOrg.includes(alias))) return true;
+
+            // Fallback: simple substring matching
             return issuerOrg.includes(caName) || issuerOrg.includes(caDomain);
           });
           if (!isAuthorized) {
@@ -4100,13 +4240,13 @@ export function calculateDomainScore(opts: {
       axisScores[axis] = { score: null, weight: AXIS_WEIGHTS[axis], findings: axisFindings, not_measured: true };
       continue;
     }
-    let score = computeAxisScore(axisFindings, axis, scoringCtx);
 
-    // Apply absence penalties — expected-but-missing signals get mild deductions.
-    // Pass all findings so absence detection can check if HTTP/SSL ran.
-    score = applyAbsencePenalties(score, axis, axisFindings, findings);
+    // Budget-based deductive scoring with itemized deductions.
+    // Absence penalties are integrated into the model via the "absent" deduction
+    // (canBeGood signals that didn't fire), so applyAbsencePenalties is no longer needed.
+    const { score, deductions } = computeAxisScoreWithDeductions(axisFindings, axis, scoringCtx);
 
-    axisScores[axis] = { score, weight: AXIS_WEIGHTS[axis], findings: axisFindings };
+    axisScores[axis] = { score, weight: AXIS_WEIGHTS[axis], findings: axisFindings, deductions };
   }
 
   // ─── Compute Composite Score ─────────────────────────────────────
