@@ -805,10 +805,11 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     axis: "security",
     label: "HTTP Blocked (Security)",
     actionable: false,
-    canBeNonGood: true,
+    canBeNonGood: false,
     canBeGood: false,
-    weightRange: [3, 3],
-    promptGuidance: "Cannot audit security headers when HTTP blocked. Don't make claims about header security.",
+    weightRange: [0, 0],
+    promptGuidance:
+      "Scanner limitation — site blocks automated HTTP probes. Not a site defect. Don't penalize; note that header-based signals couldn't be assessed.",
   },
   vulnerable_js_libraries: {
     axis: "security",
@@ -1167,10 +1168,11 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     axis: "speed",
     label: "HTTP Blocked (Performance)",
     actionable: false,
-    canBeNonGood: true,
+    canBeNonGood: false,
     canBeGood: false,
-    weightRange: [4, 4],
-    promptGuidance: "Cannot measure performance when HTTP blocked. Don't speculate.",
+    weightRange: [0, 0],
+    promptGuidance:
+      "Scanner limitation — site blocks automated HTTP probes. Not a site defect. Don't penalize; note that performance metrics are limited to PageSpeed data.",
   },
   site_unreachable_performance: {
     axis: "speed",
@@ -1303,10 +1305,11 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     axis: "foundations",
     label: "HTTP Blocked (Infrastructure)",
     actionable: false,
-    canBeNonGood: true,
+    canBeNonGood: false,
     canBeGood: false,
-    weightRange: [3, 3],
-    promptGuidance: "Site blocks automated analysis. Scoring limited to DNS/WHOIS/SSL.",
+    weightRange: [0, 0],
+    promptGuidance:
+      "Scanner limitation — site blocks automated HTTP probes. Not a site defect. Don't penalize; scoring limited to DNS/WHOIS/SSL.",
   },
   http_error_response: {
     axis: "foundations",
@@ -1314,8 +1317,9 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     actionable: false,
     canBeNonGood: true,
     canBeGood: false,
-    weightRange: [3, 4],
-    promptGuidance: "4xx to automated probes is common. 5xx more concerning. WAF blocks excluded.",
+    weightRange: [1, 2],
+    promptGuidance:
+      "4xx to automated probes is common and low-severity. 5xx is more concerning. WAF blocks excluded. Weight reduced — probe blocking is a scanner limitation.",
   },
   dns_inconsistent: {
     axis: "foundations",
