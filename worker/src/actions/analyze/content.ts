@@ -458,7 +458,7 @@ export async function checkEmailAuth(domain: string, dnsRecords: DnsRecord[], en
     }
 
     // If direct fetch failed or returned non-OK, try Fly probe
-    if ((!policyRes || !policyRes.ok) && env) {
+    if (!policyRes?.ok && env) {
       try {
         const probeUrl = `${getFlyProbeUrl(env)}/probe-fetch?url=${encodeURIComponent(policyUrl)}`;
         const raw = await fetchWithTimeout(probeUrl, {
