@@ -2,7 +2,7 @@
 // Evaluates trust hallmarks from already-captured analysis data.
 // Probes common operational-transparency paths via HEAD when HTML scanning misses them.
 
-import { fetchWithTimeout } from "../../helpers";
+import { type Env, probeHeadWithFallback } from "../../helpers";
 
 export interface TrustSignal {
   name: string;
@@ -40,6 +40,7 @@ interface TrustInput {
   html: string;
   hosting: { provider: string | null; cdn: string | null } | null;
   domain: string;
+  env: Env;
 }
 
 export async function checkTrustSignals(input: TrustInput): Promise<TrustSignals> {
@@ -527,12 +528,12 @@ export async function checkTrustSignals(input: TrustInput): Promise<TrustSignals
         for (const path of probe.paths) {
           try {
             const url = `https://${input.domain}${path}`;
-            const resp = await fetchWithTimeout(url, { method: "HEAD", redirect: "follow", timeout: 5_000 });
-            if (resp.ok && resp.status === 200) {
-              const ct = resp.headers.get("content-type") ?? "";
-              if (ct.includes("text/html") || ct.includes("application/json")) {
-                return probe; // Found
-              }
+            const result = await probeHeadWithFallback(url, input.env, { timeout: 5_000 });
+            if (
+              result.ok &&
+              (result.contentType.includes("text/html") || result.contentType.includes("application/json"))
+            ) {
+              return probe; // Found
             }
           } catch {
             /* timeout or network error — skip */

@@ -83,6 +83,70 @@ export async function fetchWithTimeout(url: string, opts: RequestInit & { timeou
   }
 }
 
+// ─── Self-Domain Detection ───────────────────────────────────────────
+
+const SELF_DOMAINS = ["yoke.lol", "www.yoke.lol"];
+
+/** True when the domain being analyzed is Yoke itself (CF Workers can't subrequest own routes). */
+export function isSelfDomain(domain: string): boolean {
+  return SELF_DOMAINS.includes(domain.toLowerCase());
+}
+
+// ─── Proxy-Aware HEAD Probe ──────────────────────────────────────────
+
+export interface HeadProbeResult {
+  ok: boolean;
+  status: number;
+  contentType: string;
+}
+
+/**
+ * HEAD-probe a URL with automatic Fly proxy fallback.
+ * - Self-domain: always routes through Fly (CF Workers can't self-fetch).
+ * - Other domains: tries direct first, falls back to Fly on failure
+ *   (catches sites that block CF Workers, e.g. GoDaddy).
+ */
+export async function probeHeadWithFallback(
+  url: string,
+  env: Env,
+  opts?: { timeout?: number },
+): Promise<HeadProbeResult> {
+  const timeout = opts?.timeout ?? 10_000;
+  const parsedUrl = new URL(url);
+  const forceFly = isSelfDomain(parsedUrl.hostname);
+
+  // Try direct HEAD first (unless self-domain)
+  if (!forceFly) {
+    try {
+      const resp = await fetchWithTimeout(url, { method: "HEAD", redirect: "follow", timeout });
+      return {
+        ok: resp.ok && resp.status === 200,
+        status: resp.status,
+        contentType: resp.headers.get("content-type") ?? "",
+      };
+    } catch {
+      // Direct fetch failed (timeout, network error, CF block) — fall through to Fly
+    }
+  }
+
+  // Route through Fly proxy
+  try {
+    const flyUrl = getFlyProbeUrl(env);
+    const resp = await fetchWithTimeout(`${flyUrl}/probe-fetch?url=${encodeURIComponent(url)}`, {
+      timeout,
+      ...(getFlyAuthHeaders(env) ? { headers: getFlyAuthHeaders(env) } : {}),
+    });
+    const data = (await resp.json()) as { status?: number; headers?: Record<string, string[]>; error?: string };
+    if (data.error || !data.status) {
+      return { ok: false, status: data.status ?? 0, contentType: "" };
+    }
+    const ct = data.headers?.["Content-Type"]?.[0] ?? "";
+    return { ok: data.status >= 200 && data.status < 300, status: data.status, contentType: ct };
+  } catch {
+    return { ok: false, status: 0, contentType: "" };
+  }
+}
+
 // ─── Version ─────────────────────────────────────────────────────────
 
 export const YOKE_VERSION = "2.0.0";

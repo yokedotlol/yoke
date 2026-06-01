@@ -827,7 +827,7 @@ async function runAnalysisCore(
   }
 
   const socialMeta = extractSocialMeta(html);
-  const legal = await detectLegalPages(html, domain);
+  const legal = await detectLegalPages(html, domain, env);
   const resourceHints = detectResourceHints(html);
   const cookieSecurity = auditCookies(effectiveHeaders);
   const compression = detectCompression(effectiveHeaders);
@@ -869,6 +869,7 @@ async function runAnalysisCore(
         html,
         hosting,
         domain,
+        env,
       })
     : null;
 

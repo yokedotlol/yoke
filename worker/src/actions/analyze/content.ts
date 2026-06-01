@@ -1,5 +1,12 @@
 import { logApiError } from "../../api-errors";
-import { boundedText, type Env, fetchWithTimeout, getFlyAuthHeaders, getFlyProbeUrl } from "../../helpers";
+import {
+  boundedText,
+  type Env,
+  fetchWithTimeout,
+  getFlyAuthHeaders,
+  getFlyProbeUrl,
+  probeHeadWithFallback,
+} from "../../helpers";
 import type {
   AiReadinessResult,
   BimiResult,
@@ -748,7 +755,7 @@ const PROBE_PATHS: Record<string, string[]> = {
   "Terms of Service": ["/terms", "/tos", "/terms-of-service"],
 };
 
-export async function detectLegalPages(html: string, domain: string): Promise<LegalResult> {
+export async function detectLegalPages(html: string, domain: string, env: Env): Promise<LegalResult> {
   const pagesFound: Array<{ name: string; url: string }> = [];
   const seen = new Set<string>();
 
@@ -792,14 +799,11 @@ export async function detectLegalPages(html: string, domain: string): Promise<Le
           if (seen.has(name)) break; // Another probe already found it
           try {
             const url = `https://${domain}${path}`;
-            const resp = await fetchWithTimeout(url, { method: "HEAD", redirect: "follow", timeout: 10_000 });
-            if (resp.ok && resp.status === 200) {
-              const ct = resp.headers.get("content-type") ?? "";
-              if (ct.includes("text/html")) {
-                pagesFound.push({ name, url });
-                seen.add(name);
-                break;
-              }
+            const result = await probeHeadWithFallback(url, env, { timeout: 10_000 });
+            if (result.ok && result.contentType.includes("text/html")) {
+              pagesFound.push({ name, url });
+              seen.add(name);
+              break;
             }
           } catch {
             /* timeout or network error — skip this path */
