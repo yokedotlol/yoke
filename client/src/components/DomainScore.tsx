@@ -87,6 +87,7 @@ function AnimatedAxisBars({ axes, animKey }: { axes: Record<Axis, AxisScoreData>
   const [showScores, setShowScores] = useState<boolean[]>(AXES.map(() => false));
   const rafRef = useRef<number>(0);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: animKey is intentionally used to trigger animation replay
   useEffect(() => {
     setProgress(AXES.map(() => 0));
     setShowScores(AXES.map(() => false));
