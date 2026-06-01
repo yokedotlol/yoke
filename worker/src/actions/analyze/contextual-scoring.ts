@@ -242,11 +242,12 @@ export function computeAxisScore(findings: Finding[], axis?: Axis): number {
     }
   }
 
-  // Normalize bonus so max possible = TARGET_RANGE when the axis's raw pool
-  // can't reach TARGET_RANGE naturally.  For axes where maxRawBonus ≥ TARGET_RANGE,
-  // the clamp at 100 already handles the ceiling, so use raw bonus.
-  const normalizedBonus =
-    maxRawBonus > 0 && maxRawBonus < TARGET_RANGE ? (rawBonus / maxRawBonus) * TARGET_RANGE : rawBonus;
+  // Normalize bonus so max possible = TARGET_RANGE for EVERY axis.
+  // Without this, dense axes (security: 27 signals, 144% overflow) accumulate
+  // so much surplus bonus that penalties become invisible — e.g. weak ciphers
+  // barely dent a 97 score.  Normalizing all axes equally means penalties have
+  // proportional impact regardless of how many signal definitions an axis has.
+  const normalizedBonus = maxRawBonus > 0 ? (rawBonus / maxRawBonus) * TARGET_RANGE : rawBonus;
 
   const score = BASELINE + normalizedBonus + penalty;
   return Math.max(0, Math.min(100, Math.round(score)));
