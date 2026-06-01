@@ -353,6 +353,8 @@ function jsonResponse(data: unknown, status = 200): Response {
 
 export async function serveAssetOrFallback(request: Request, env: Env): Promise<Response> {
   const baseUrl = getBaseUrl(request, env);
+  const url = new URL(request.url);
+  const path = url.pathname;
 
   // Try serving the exact asset
   const assetResp = await env.ASSETS.fetch(request);
@@ -360,6 +362,20 @@ export async function serveAssetOrFallback(request: Request, env: Env): Promise<
   // If we got a valid asset response, return it (with security headers for HTML)
   if (assetResp.ok) {
     const ct = assetResp.headers.get("content-type") || "";
+
+    // BIMI logo needs cross-origin access for email clients
+    if (path === "/bimi-logo.svg") {
+      return new Response(assetResp.body, {
+        status: assetResp.status,
+        headers: {
+          ...Object.fromEntries(assetResp.headers.entries()),
+          "Access-Control-Allow-Origin": "*",
+          "Cross-Origin-Resource-Policy": "cross-origin",
+          "Cache-Control": "public, max-age=86400",
+        },
+      });
+    }
+
     if (ct.includes("text/html")) {
       // Clone and add security headers + consistent cache policy
       return new Response(assetResp.body, {
@@ -373,8 +389,6 @@ export async function serveAssetOrFallback(request: Request, env: Env): Promise<
     }
 
     // Apply aggressive caching for content-hashed assets and fonts
-    const url = new URL(request.url);
-    const path = url.pathname;
     const isHashedAsset = /\/assets\/[^/]+-[a-z0-9]{8,}\.\w+$/.test(path);
     const isFont = path.startsWith("/fonts/") && path.endsWith(".woff2");
     if (isHashedAsset || isFont) {

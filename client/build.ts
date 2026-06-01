@@ -234,6 +234,9 @@ copyFileSync(join(import.meta.dir, "public", "apple-touch-icon.png"), join(outdi
 // Copy _headers for CF Workers static assets cache control
 copyFileSync(join(import.meta.dir, "public", "_headers"), join(outdir, "_headers"));
 
+// Copy BIMI logo for email brand verification (must be publicly accessible with CORS)
+copyFileSync(join(import.meta.dir, "public", "bimi-logo.svg"), join(outdir, "bimi-logo.svg"));
+
 console.log("✓ Client build complete");
 console.log(`  JS:   ${jsPath}`);
 if (cssPath) console.log(`  CSS:  ${cssPath}`);
