@@ -40,12 +40,21 @@ release:
   draft: false
   prerelease: auto
 
-homebrew_casks:
+# NB: GoReleaser v2.10+ deprecated `brews` in favor of `homebrew_casks`, but
+# casks are macOS-only. We build for Linux too, so we keep `brews` (still works,
+# just emits a deprecation warning). Revisit if GoReleaser drops `brews` entirely
+# or if Homebrew casks gain Linux support.
+brews:
   - name: yoke
     repository:
       owner: yokedotlol
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
     homepage: https://yoke.lol
     description: "Domain intelligence in one pass — DNS, WHOIS, SSL, security, tech stack, performance, breaches, and AI analysis"
     license: MIT
+    install: |
+      bin.install "yoke"
+    test: |
+      assert_match version.to_s, shell_output("#{bin}/yoke --version")
