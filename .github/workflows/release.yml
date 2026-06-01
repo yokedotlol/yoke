@@ -25,6 +25,9 @@ jobs:
         id: version
         run: echo "tag=${GITHUB_REF_NAME#cli/}" >> "$GITHUB_OUTPUT"
 
+      - name: Create semver tag for GoReleaser
+        run: git tag "${{ steps.version.outputs.tag }}"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
