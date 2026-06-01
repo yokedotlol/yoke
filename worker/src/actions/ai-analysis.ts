@@ -18,7 +18,6 @@ async function hashAnalysisInput(data: unknown): Promise<string> {
 const SSE_HEADERS: Record<string, string> = {
   "Content-Type": "text/event-stream",
   "Cache-Control": "no-cache",
-  Connection: "keep-alive",
   ...CORS_HEADERS,
 };
 

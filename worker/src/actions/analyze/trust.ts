@@ -269,7 +269,7 @@ export async function checkTrustSignals(input: TrustInput): Promise<TrustSignals
         /2\.5\.4\.15/.test(sslSubject) ||
         /1\.3\.6\.1\.4\.1\.311\.60\.2\.1/.test(sslSubject));
     const orgMatch = sslSubject.match(/,?\s*O\s*=\s*([^,]+)/);
-    const orgName = orgMatch ? orgMatch[1].replace(/\\\\/g, "").trim() : null;
+    const orgName = orgMatch ? orgMatch[1].replace(/\\+/g, "").trim() : null;
 
     if (isEV && orgName) {
       signals.push({

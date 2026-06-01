@@ -4,6 +4,18 @@ import { useEffect, useRef } from "react";
 import type { AnalysisResult } from "../utils/types";
 import { Panel } from "./Panel";
 
+// Lazy-load Leaflet CSS on first mount (avoids ~15KB in critical CSS path)
+let leafletCssLoaded = false;
+function ensureLeafletCss() {
+  if (leafletCssLoaded) return;
+  leafletCssLoaded = true;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+  link.crossOrigin = "anonymous";
+  document.head.appendChild(link);
+}
+
 /** Detect CDN/anycast generic coordinates and return zoom + center override */
 function detectGenericLocation(lat: number, lon: number, city: string | undefined) {
   if (city) return null;
@@ -36,6 +48,8 @@ export function IpMap({ data }: { data: AnalysisResult }) {
 
   useEffect(() => {
     if (!mapRef.current || lat == null || lon == null) return;
+
+    ensureLeafletCss();
 
     // Destroy previous map instance
     if (mapInstanceRef.current) {

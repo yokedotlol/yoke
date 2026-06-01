@@ -700,31 +700,29 @@ function getNextTier(currentTier: string): { tier: string; min: number } | null 
   return TIER_THRESHOLDS[idx - 1];
 }
 
-// Anchor-and-adjust scoring — mirrors worker/src/actions/analyze/contextual-scoring.ts
-const SCORING_BASELINE = 55;
-const SEVERITY_PENALTY: Record<string, number> = {
-  critical: -4,
-  high: -2.5,
-  medium: -1.25,
-  low: -0.5,
-  info: 0,
-  good: 0,
-};
-function goodBonus(weight: number): number {
-  return 2 * weight;
-}
+// ─── Server-aligned scoring ──────────────────────────────────────────
+// The server uses budget-based deductive scoring (start at 100, subtract).
+// The client uses server-returned deductions[] per axis for Level-Up
+// simulations, eliminating any client-side scoring divergence.
 
-function computeAxisScore(findings: ScoreFinding[]): number {
-  if (findings.length === 0) return SCORING_BASELINE;
-  let score = SCORING_BASELINE;
-  for (const f of findings) {
-    if (f.severity === "good") {
-      score += goodBonus(f.weight);
-    } else {
-      score += (SEVERITY_PENALTY[f.severity] ?? -1) * Math.max(f.weight, 1);
-    }
-  }
-  return Math.max(0, Math.min(100, Math.round(score)));
+// Estimate axis score improvement from fixing a signal, using server deductions.
+// For an existing finding with a known deduction, gain = that deduction.
+// For absent signals becoming "good", estimate from the absent pool share reduction.
+function estimateSignalGain(
+  axisData: {
+    score: number | null;
+    deductions?: Array<{
+      signal: string;
+      deduction: number;
+      share: number;
+      weight: number;
+    }>;
+  },
+  signalId: string,
+): number {
+  if (!axisData.deductions) return 0;
+  const ded = axisData.deductions.find((d) => d.signal === signalId);
+  return ded ? ded.deduction : 0;
 }
 
 function generateLevelUpPlan(data: AnalysisResult): {
@@ -763,11 +761,11 @@ function generateLevelUpPlan(data: AnalysisResult): {
   const currentAxisScores: Record<string, number> = {};
   // Track which axes are assessed (not not_measured) for weight renormalization
   const assessedAxes: string[] = [];
-  // Compute absence penalty adjustments per axis: the difference between server's
-  // actual score and client-side computeAxisScore (which lacks absence penalties).
-  // This delta captures the server's applyAbsencePenalties() effect without
-  // needing to replicate EXPECTED_BASELINES on the client.
-  const absenceAdjustment: Record<string, number> = {};
+  // Build deduction lookup per axis for signal gain estimation
+  const axisDeductions: Record<
+    string,
+    Array<{ signal: string; deduction: number; share: number; weight: number }>
+  > = {};
   for (const [axisName, axisData] of Object.entries(score.axes) as [Axis, (typeof score.axes)[Axis]][]) {
     if (axisData.not_measured || axisData.score == null) {
       // Exclude not_measured axes from composite calculation (matches server)
@@ -775,9 +773,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
     }
     assessedAxes.push(axisName);
     currentAxisScores[axisName] = axisData.score;
-    // Compute what the client's computeAxisScore gives without absence penalties
-    const rawClientScore = axisData.findings ? computeAxisScore(axisData.findings) : SCORING_BASELINE;
-    absenceAdjustment[axisName] = axisData.score - rawClientScore;
+    axisDeductions[axisName] = (axisData as any).deductions ?? [];
   }
 
   // Helper: compute weighted arithmetic mean from axis scores with outlier floor cap.
@@ -809,11 +805,12 @@ function generateLevelUpPlan(data: AnalysisResult): {
       // Skip non-actionable signals — derived from signal-registry (single source of truth)
       if (NON_ACTIONABLE_SIGNALS.includes(finding.signal)) continue;
 
-      // Simulate fixing this finding: change its severity to "good" and recalculate
-      const fixedFindings = axisData.findings.map((f) => (f === finding ? { ...f, severity: "good" as Severity } : f));
-      // Apply absence adjustment so simulated score accounts for server-side absence penalties
-      const rawNewAxisScore = computeAxisScore(fixedFindings);
-      const newAxisScore = Math.max(0, Math.min(100, Math.round(rawNewAxisScore + (absenceAdjustment[axisName] ?? 0))));
+      // Use server-returned deductions to determine score gain from fixing this signal
+      const signalGain = estimateSignalGain(
+        { score: axisData.score, deductions: axisDeductions[axisName] },
+        finding.signal,
+      );
+      const newAxisScore = Math.max(0, Math.min(100, Math.round((axisData.score ?? 0) + signalGain)));
 
       // Compute composite delta using weighted arithmetic mean
       const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
@@ -873,19 +870,15 @@ function generateLevelUpPlan(data: AnalysisResult): {
       const axisData = score.axes[axisName];
       if (!axisData || axisData.not_measured) continue;
 
-      const augmentedFindings = [
-        ...(axisData.findings || []),
-        {
-          signal: signalId,
-          axis: axisName,
-          severity: "good" as Severity,
-          weight: def.weightRange[1],
-          label: def.label,
-          tradeoff: null,
-        },
-      ];
-      const rawNewAxisScore = computeAxisScore(augmentedFindings);
-      const newAxisScore = Math.max(0, Math.min(100, Math.round(rawNewAxisScore + (absenceAdjustment[axisName] ?? 0))));
+      // Estimate gain: adding a new good signal reduces the _absent deduction pool
+      // proportional to this signal's weight / total absent weight
+      const deds = axisDeductions[axisName] || [];
+      const absentDed = deds.find((d) => d.signal === "_absent");
+      let signalGain = 0;
+      if (absentDed && absentDed.weight > 0) {
+        signalGain = (def.weightRange[1] / absentDed.weight) * absentDed.deduction;
+      }
+      const newAxisScore = Math.max(0, Math.min(100, Math.round((axisData.score ?? 0) + signalGain)));
       const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
       const newComposite = compositeFromAxes(simScores);
       const compositeDelta = Math.round((newComposite - currentScore) * 10) / 10;
@@ -915,13 +908,12 @@ function generateLevelUpPlan(data: AnalysisResult): {
       if (finding.severity === "good" || finding.severity === "info") continue;
       if (!SCORE_DRAG_SIGNALS.includes(finding.signal)) continue;
 
-      // Simulate removing this drag
-      const withoutDrag = axisData.findings.map((f) => (f === finding ? { ...f, severity: "good" as Severity } : f));
-      const rawDragAxisScore = computeAxisScore(withoutDrag);
-      const newAxisScore = Math.max(
-        0,
-        Math.min(100, Math.round(rawDragAxisScore + (absenceAdjustment[axisName] ?? 0))),
+      // Use server deductions to determine the score cost of this drag
+      const signalGain = estimateSignalGain(
+        { score: axisData.score, deductions: axisDeductions[axisName] },
+        finding.signal,
       );
+      const newAxisScore = Math.max(0, Math.min(100, Math.round((axisData.score ?? 0) + signalGain)));
       const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
       const newComposite = compositeFromAxes(simScores);
       const costDelta = Math.round((newComposite - currentScore) * 10) / 10;
@@ -947,34 +939,30 @@ function generateLevelUpPlan(data: AnalysisResult): {
   // Compute projected composite by simulating ALL fixes at once via compositeFromAxes.
   // Individual pointGain values are computed independently (each assumes only that
   // one fix), so summing them double-counts the interaction effect.
-  // Instead: for each axis, re-score with ALL that axis's actionable findings
-  // flipped to "good" AND all opportunities added, then run compositeFromAxes.
+  // Instead: for each axis, sum the deductions for all actionable findings
+  // plus the proportion of the absent pool that would be recovered by opportunities.
   const allFixedAxisScores = { ...currentAxisScores };
   for (const [axisName, axisData] of Object.entries(score.axes) as [Axis, (typeof score.axes)[Axis]][]) {
-    if (axisData.not_measured || !axisData.findings) continue;
+    if (axisData.not_measured || axisData.score == null) continue;
     const actionableSignals = new Set(items.filter((i) => i.axis === axisName).map((i) => i.signal));
     const axisOpportunities = opportunities.filter((o) => o.axis === axisName);
     if (actionableSignals.size === 0 && axisOpportunities.length === 0) continue;
-    // Start with findings, flip actionable penalties to good
-    const fixedFindings: ScoreFinding[] = axisData.findings.map((f) =>
-      actionableSignals.has(f.signal) ? { ...f, severity: "good" as Severity } : f,
-    );
-    // Add opportunity signals as good findings
-    for (const opp of axisOpportunities) {
-      fixedFindings.push({
-        signal: opp.signal,
-        axis: opp.axis,
-        severity: "good" as Severity,
-        weight: opp.weight,
-        label: opp.label,
-        tradeoff: null,
-      });
+
+    // Sum deductions for all actionable signals being fixed
+    const deds = axisDeductions[axisName] || [];
+    let totalGain = 0;
+    for (const ded of deds) {
+      if (actionableSignals.has(ded.signal)) {
+        totalGain += ded.deduction;
+      }
     }
-    const rawFixed = computeAxisScore(fixedFindings);
-    allFixedAxisScores[axisName] = Math.max(
-      0,
-      Math.min(100, Math.round(rawFixed + (absenceAdjustment[axisName] ?? 0))),
-    );
+    // Add opportunity gains from reducing absent pool
+    const absentDed = deds.find((d) => d.signal === "_absent");
+    if (absentDed && absentDed.weight > 0) {
+      const oppWeightSum = axisOpportunities.reduce((sum, o) => sum + o.weight, 0);
+      totalGain += (Math.min(oppWeightSum, absentDed.weight) / absentDed.weight) * absentDed.deduction;
+    }
+    allFixedAxisScores[axisName] = Math.max(0, Math.min(100, Math.round(axisData.score + totalGain)));
   }
   const projectedComposite = compositeFromAxes(allFixedAxisScores);
 

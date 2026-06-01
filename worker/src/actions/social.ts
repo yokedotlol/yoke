@@ -202,7 +202,7 @@ export async function getSocialAccounts(kv: KVNamespace, rawDomain: string, env?
       const res = await safeFetchWithRedirects(`https://${domain}`, {
         timeout: 8000,
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+          "User-Agent": "YokeBot/1.0 (+https://yoke.lol)",
         },
       });
       if (res.ok) {
@@ -305,7 +305,7 @@ export async function getSocialAccounts(kv: KVNamespace, rawDomain: string, env?
               timeout: 5000,
               method: "HEAD",
               redirect: "follow",
-              headers: { "User-Agent": "Mozilla/5.0" },
+              headers: { "User-Agent": "YokeBot/1.0 (+https://yoke.lol)" },
             });
             if (res.ok || res.status === 200) {
               addAccount(probe.platform, probe.url, probe.username, "probe");

@@ -1,7 +1,6 @@
 import {
   type ArchetypeName,
   AXIS_WEIGHTS,
-  applyAbsencePenalties,
   applyHardCaps,
   computeAxisScore,
   computeComposite,
@@ -352,92 +351,6 @@ describe("Managed Platform Detection", () => {
 });
 
 // ─── Absence Penalties ───────────────────────────────────────────────
-
-describe("Absence Penalties", () => {
-  it("should penalize missing expected signals", () => {
-    // Foundations expects cdn, http2, ipv6. If cdn is absent, penalty applies.
-    const findings: Finding[] = [
-      { signal: "http2", axis: "foundations", severity: "good", label: "HTTP/2", tradeoff: null, weight: 2 },
-      { signal: "ipv6", axis: "foundations", severity: "good", label: "IPv6", tradeoff: null, weight: 1 },
-    ];
-    // Create allFindings that show HTTP ran (so absence penalty applies)
-    const allFindings: Finding[] = [
-      ...findings,
-      { signal: "ssl_grade", axis: "security", severity: "good", label: "SSL A+", tradeoff: null, weight: 3 },
-      { signal: "hsts", axis: "security", severity: "good", label: "HSTS", tradeoff: null, weight: 4 },
-    ];
-
-    const baseScore = computeAxisScore(findings);
-    const penalizedScore = applyAbsencePenalties(baseScore, "foundations", findings, allFindings);
-    // cdn absent → -4 penalty
-    expect(penalizedScore).toBe(baseScore - 4);
-  });
-
-  it("should not penalize when signal is present", () => {
-    const findings: Finding[] = [
-      { signal: "cdn", axis: "foundations", severity: "good", label: "CDN", tradeoff: null, weight: 2 },
-      { signal: "http2", axis: "foundations", severity: "good", label: "HTTP/2", tradeoff: null, weight: 2 },
-      { signal: "ipv6", axis: "foundations", severity: "good", label: "IPv6", tradeoff: null, weight: 1 },
-    ];
-    const allFindings: Finding[] = [
-      ...findings,
-      { signal: "ssl_grade", axis: "security", severity: "good", label: "SSL", tradeoff: null, weight: 3 },
-    ];
-
-    const baseScore = computeAxisScore(findings);
-    const result = applyAbsencePenalties(baseScore, "foundations", findings, allFindings);
-    expect(result).toBe(baseScore); // no penalties — all expected signals present
-  });
-
-  it("should accept http3 as alternative to http2", () => {
-    const findings: Finding[] = [
-      { signal: "cdn", axis: "foundations", severity: "good", label: "CDN", tradeoff: null, weight: 2 },
-      { signal: "http3", axis: "foundations", severity: "good", label: "HTTP/3", tradeoff: null, weight: 2 },
-      { signal: "ipv6", axis: "foundations", severity: "good", label: "IPv6", tradeoff: null, weight: 1 },
-    ];
-    const allFindings: Finding[] = [
-      ...findings,
-      { signal: "ssl_grade", axis: "security", severity: "good", label: "SSL", tradeoff: null, weight: 3 },
-    ];
-
-    const baseScore = computeAxisScore(findings);
-    const result = applyAbsencePenalties(baseScore, "foundations", findings, allFindings);
-    expect(result).toBe(baseScore); // http3 satisfies http2 requirement
-  });
-
-  it("should skip HTTP-dependent penalties when HTTP is blocked", () => {
-    const findings: Finding[] = [
-      { signal: "ipv6", axis: "foundations", severity: "good", label: "IPv6", tradeoff: null, weight: 1 },
-    ];
-    // Site unreachable → HTTP didn't run
-    const allFindings: Finding[] = [
-      ...findings,
-      {
-        signal: "site_unreachable",
-        axis: "foundations",
-        severity: "high",
-        label: "Unreachable",
-        tradeoff: null,
-        weight: 3,
-      },
-    ];
-
-    const baseScore = computeAxisScore(findings);
-    const result = applyAbsencePenalties(baseScore, "foundations", findings, allFindings);
-    // cdn and http2 penalties should be skipped (requiresHttp), only ipv6 might apply
-    // but ipv6 is present, so no penalty at all
-    expect(result).toBe(baseScore);
-  });
-
-  it("should return score for categories with no expected baselines", () => {
-    const findings: Finding[] = [
-      { signal: "perf_score", axis: "speed", severity: "good", label: "Perf", tradeoff: null, weight: 5 },
-    ];
-    const baseScore = computeAxisScore(findings);
-    const result = applyAbsencePenalties(baseScore, "speed", findings, findings);
-    expect(result).toBe(baseScore); // speed has no expected baselines
-  });
-});
 
 // ─── Hard Caps (removed — now pass-through) ─────────────────────────
 

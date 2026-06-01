@@ -46,7 +46,7 @@ import {
   matchOgImagePath,
   matchSharePath,
 } from "./share";
-import { getHtmlSecurityHeaders, handleSPARoute, serveAssetOrFallback, wantsJSON } from "./spa";
+import { getHtmlSecurityHeaders, handleSPARoute, matchDomainPath, serveAssetOrFallback, wantsJSON } from "./spa";
 import { renderStatusPage } from "./status-page";
 import { renderUsagePage } from "./usage-page";
 import { getUsageStats, trackUsage } from "./usage-tracking";
@@ -65,6 +65,9 @@ function getRateLimits(env: Env): Record<string, { limit: number; windowSecs: nu
     "/api/reverse-ip": { limit: 50, windowSecs: 3600 },
     "/api/availability": { limit: parseInt(env.RATE_LIMIT_AVAILABILITY || "60", 10), windowSecs: 3600 },
     "/api/js-audit": { limit: 20, windowSecs: 3600 },
+    "/api/track-tab": { limit: 100, windowSecs: 3600 },
+    "/api/suggestions": { limit: 20, windowSecs: 3600 },
+    "/api/ai-prompt": { limit: 20, windowSecs: 3600 },
   };
 }
 
@@ -425,6 +428,11 @@ export default {
       return handleCompareOgImage(request, env, compareOgMatch);
     }
 
+    // ── Method guard: reject DELETE/PUT/PATCH on domain paths ──
+    if ((method === "DELETE" || method === "PUT" || method === "PATCH") && matchDomainPath(path)) {
+      return json({ error: "Method not allowed", code: "METHOD_NOT_ALLOWED" }, 405);
+    }
+
     // ── SPA routes: static pages, domain paths with content negotiation, compare paths ──
     const spaResponse = await handleSPARoute(request, env, path);
     if (spaResponse) return spaResponse;
@@ -685,12 +693,15 @@ export default {
 
         // POST /api/suggestions
         if (method === "POST" && path === "/api/suggestions") {
+          const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/suggestions", env);
+          if (rl.blocked) return rl.blocked;
           const body = await parseBody<{ domain?: string }>(request);
           if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
           const result = await getDomainSuggestions(body.domain, env);
+          await rl.record();
           await trackUsage(env.STATS_DB, "suggestions");
           _track("suggestions", 200, body.domain);
-          return json(result);
+          return addHeaders(json(result), rl.headers);
         }
 
         // POST /api/ai-analysis — AI-powered domain analysis (10/hr per IP)
@@ -710,6 +721,8 @@ export default {
 
         // POST /api/ai-prompt — returns the assembled prompt for the prompt editor (no LLM call)
         if (method === "POST" && path === "/api/ai-prompt") {
+          const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/ai-prompt", env);
+          if (rl.blocked) return rl.blocked;
           const body = await parseBody<{ domain?: string }>(request);
           if (!body.domain || typeof body.domain !== "string")
             return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
@@ -726,7 +739,8 @@ export default {
             return json({ error: "Domain not yet analyzed. Run a standard analysis first." }, 400);
           }
           const prompt = buildAIPrompt(analysisCache);
-          return json(prompt);
+          await rl.record();
+          return addHeaders(json(prompt), rl.headers);
         }
 
         // GET /api/health — basic health always public; detailed errors require admin auth
@@ -752,6 +766,8 @@ export default {
 
         // POST /api/track-tab — anonymous tab view analytics
         if (method === "POST" && path === "/api/track-tab") {
+          const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/track-tab", env);
+          if (rl.blocked) return rl.blocked;
           const body = await parseBody<{ domain?: string; tab?: string }>(request);
           if (!body.tab) return json({ error: "tab required" }, 400);
           try {
@@ -870,7 +886,7 @@ export default {
               fix_desc_map: FIX_DESC_MAP,
               thresholds: ALL_THRESHOLDS,
               archetype_note:
-                "Budget-based deductive scoring: each axis starts at 100 and loses points for issues. Signal share = signal_weight / total_good_weight × 100. Severity multipliers: good=0, info=0, low=0.5×share, medium=0.75×share, high=1.0×share, critical=1.5×share. Absent canBeGood signals deduct 0.25×share. Composite = weighted arithmetic mean. Floor cap: any axis below 40 caps composite at 74 (Moderate). Cache hits do not count against rate limits. Categories: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12).",
+                "Budget-based deductive scoring: each axis starts at 100 and loses points for issues. Signal share = signal_weight / total_good_weight × 100. Severity multipliers: good=0, info=0, low=0.5×share, medium=0.75×share, high=1.0×share, critical=1.5×share. Absent canBeGood signals deduct 0.15×share. Composite = weighted arithmetic mean. Floor cap: any axis below 40 caps composite at 74 (Moderate). Cache hits do not count against rate limits. Categories: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12).",
             },
             200,
           );
@@ -1037,7 +1053,7 @@ export default {
               "POST /api/suggestions": {
                 description: "Domain suggestions based on analysis",
                 body: '{"domain": "example.com"}',
-                rate_limit: "none",
+                rate_limit: "20 req/hr",
               },
               "POST /api/availability": {
                 description: "Global availability check from multiple regions",
@@ -1062,6 +1078,10 @@ export default {
                 rate_limit: "none",
                 note: "Cache hits do not count against rate limits.",
               },
+            },
+            rate_limiting: {
+              note: "Rate limits are per-IP, per-endpoint. Cached responses (analysis results served from cache) do not count against rate limits — only requests that trigger fresh computation are counted. Self-hosted instances have no rate limits.",
+              headers: ["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
             },
             examples: {
               curl_simple: `curl ${host}/stripe.com`,

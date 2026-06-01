@@ -139,105 +139,9 @@ const SEVERITY_DEDUCTION_FACTOR: Record<Severity, number> = {
 };
 
 /** Deduction factor for applicable "canBeGood" signals that didn't fire at all. */
-const ABSENT_DEDUCTION_FACTOR = 0.25;
+const ABSENT_DEDUCTION_FACTOR = 0.15;
 
 // ─── Expected Baselines (Absence Penalties) ──────────────────────────
-// Each category defines signals that a competent site should produce.
-// If none of the listed signals fired, a mild penalty applies.
-// "check_signals" are alternative signal keys that also satisfy the requirement
-// (e.g., http3 satisfies the http2 requirement).
-
-interface BaselineExpectation {
-  /** Primary signal key expected. */
-  signal: string;
-  /** Penalty applied if signal is absent (negative number). */
-  penalty: number;
-  /** Alternative signal keys that also satisfy this expectation. */
-  alsoSatisfiedBy?: string[];
-  /** If true, only penalize when HTTP-based checks could run (site reachable). */
-  requiresHttp?: boolean;
-  /** If true, only penalize when SSL data was collected. */
-  requiresSsl?: boolean;
-}
-
-export const EXPECTED_BASELINES: Partial<Record<Axis, BaselineExpectation[]>> = {
-  security: [
-    { signal: "hsts", penalty: -3, requiresHttp: true },
-    { signal: "http_to_https_redirect", penalty: -3, requiresHttp: true },
-  ],
-  email: [
-    { signal: "email_auth", penalty: -4 },
-    { signal: "dmarc_reject", penalty: -3 },
-  ],
-  foundations: [
-    { signal: "cdn", penalty: -4, requiresHttp: true },
-    { signal: "http2", penalty: -3, alsoSatisfiedBy: ["http3"], requiresHttp: true },
-    { signal: "ipv6", penalty: -2 },
-  ],
-  discoverability: [
-    // These are "good" signals — title_tag_missing FIRES when title is missing,
-    // but we want to penalize absence of a title. We check if the positive scenario
-    // exists: no title_tag_missing finding means the title IS present (no penalty).
-    // So we actually don't penalize here — the title_tag_missing signal already
-    // handles it. Skip absence-based penalties for discoverability for now.
-  ],
-  reputation: [{ signal: "organizational_identity", penalty: -2, requiresHttp: true }],
-};
-
-/**
- * Apply absence penalties: for each expected baseline signal, if it never
- * fired AND the relevant checks ran, apply a mild score deduction.
- */
-export function applyAbsencePenalties(score: number, axis: Axis, findings: Finding[], allFindings: Finding[]): number {
-  const baselines = EXPECTED_BASELINES[axis];
-  if (!baselines || baselines.length === 0) return score;
-
-  const signalKeys = new Set(findings.map((f) => f.signal));
-  const allSignalKeys = new Set(allFindings.map((f) => f.signal));
-
-  // Determine if HTTP-based checks ran (site was reachable and not blocked)
-  const httpBlocked =
-    allSignalKeys.has("site_unreachable") ||
-    allSignalKeys.has("http_blocked_security") ||
-    allSignalKeys.has("http_blocked_infrastructure") ||
-    allSignalKeys.has("http_blocked_performance");
-  // If no HTTP-based findings fired at all across ANY axis, HTTP probably didn't run
-  const hasAnyHttpFindings = allFindings.some(
-    (f) =>
-      f.signal === "ssl_grade" ||
-      f.signal === "hsts" ||
-      f.signal === "hsts_missing" ||
-      f.signal === "csp" ||
-      f.signal === "csp_missing" ||
-      f.signal === "http2" ||
-      f.signal === "http3" ||
-      f.signal === "http1_only" ||
-      f.signal === "cdn",
-  );
-  const httpRan = !httpBlocked && hasAnyHttpFindings;
-
-  // Check if SSL data was collected
-  const sslRan =
-    allSignalKeys.has("ssl_grade") || allSignalKeys.has("tls_version") || allSignalKeys.has("cert_expiry_proximity");
-
-  let adjusted = score;
-
-  for (const baseline of baselines) {
-    // Skip if the required check type didn't run
-    if (baseline.requiresHttp && !httpRan) continue;
-    if (baseline.requiresSsl && !sslRan) continue;
-
-    // Check if the primary signal or any alternative fired
-    if (signalKeys.has(baseline.signal)) continue;
-    if (baseline.alsoSatisfiedBy?.some((alt) => signalKeys.has(alt))) continue;
-
-    // Signal expected but absent — apply penalty
-    adjusted += baseline.penalty;
-  }
-
-  return Math.max(0, Math.min(100, adjusted));
-}
-
 // ─── Exported Scoring Helpers ────────────────────────────────────────
 // Pure functions extracted for testability. Used by calculateDomainScore below.
 
@@ -676,6 +580,9 @@ export function calculateDomainScore(opts: {
   statusResult: { is_up: boolean; status_code: number | null; http_blocked?: boolean; status_label?: string } | null;
   robotsParsed: RobotsParsed | null;
   wordpress: WordPressDetails | null;
+  /** Internal: set during breach analysis for grade cap logic */
+  _recentBreachCount?: number;
+  _weightedPwned?: number;
 }): DomainScoreResult {
   // Step 1: Detect archetype
   const archetype = detectArchetype({
@@ -1241,17 +1148,7 @@ export function calculateDomainScore(opts: {
       });
     }
 
-    // ── BIMI ────────────────────────────────────────────────────────
-    if (opts.emailAuth.bimi?.found) {
-      findings.push({
-        signal: "bimi_record",
-        axis: "email",
-        severity: "good",
-        label: "BIMI record found — brand logo in email clients",
-        tradeoff: null,
-        weight: 2,
-      });
-    }
+    // BIMI: handled in Phase 3 below (distinguishes VMC)
   }
 
   // WAF detection
@@ -1823,29 +1720,7 @@ export function calculateDomainScore(opts: {
 
   // CSP report-only removed — only 6 domains, zero discrimination
 
-  // ─── Phase 3: MTA-STS (email transport security) ────────────────
-  if (opts.emailAuth?.mta_sts) {
-    const mta = opts.emailAuth.mta_sts;
-    if (mta.policy_found && mta.mode === "enforce") {
-      findings.push({
-        signal: "mta_sts",
-        axis: "email",
-        severity: "good",
-        label: "MTA-STS enforced — email transport protected from downgrade attacks",
-        tradeoff: null,
-        weight: 2,
-      });
-    } else if (mta.policy_found && mta.mode === "testing") {
-      findings.push({
-        signal: "mta_sts",
-        axis: "email",
-        severity: "info",
-        label: "MTA-STS in testing mode",
-        tradeoff: null,
-        weight: 2,
-      });
-    }
-  }
+  // MTA-STS: handled in email auth section above (more complete, covers all states)
 
   // ─── Security Headers Completeness (meta-signal) ────────────────
   if (!opts.httpBlocked && opts.headers) {
@@ -3181,8 +3056,8 @@ export function calculateDomainScore(opts: {
     }
 
     // Store recentBreachCount for grade cap logic below
-    (opts as any)._recentBreachCount = recentBreachCount;
-    (opts as any)._weightedPwned = weightedPwned;
+    opts._recentBreachCount = recentBreachCount;
+    opts._weightedPwned = weightedPwned;
   }
 
   // Tranco web ranking — popularity/reputation signal
@@ -3334,7 +3209,7 @@ export function calculateDomainScore(opts: {
         /2\.5\.4\.15/.test(sslSubject) ||
         /1\.3\.6\.1\.4\.1\.311\.60\.2\.1/.test(sslSubject));
     const orgMatch = sslSubject.match(/,?\s*O\s*=\s*([^,]+)/);
-    const orgName = orgMatch ? orgMatch[1].replace(/\\\\/g, "").trim() : null;
+    const orgName = orgMatch ? orgMatch[1].replace(/\\+/g, "").trim() : null;
     if (isEV && orgName) {
       findings.push({
         signal: "cert_validation_type",
@@ -4302,8 +4177,8 @@ export function calculateDomainScore(opts: {
   // Domains with catastrophic RECENT data breaches should not earn top tiers.
   // Breaches > 3 years old no longer trigger the cap (time decay).
   if (opts.breaches?.found && !opts.breaches.check_failed) {
-    const recentBreachCount = (opts as any)._recentBreachCount ?? 0;
-    const weightedPwned = (opts as any)._weightedPwned ?? 0;
+    const recentBreachCount = opts._recentBreachCount ?? 0;
+    const weightedPwned = opts._weightedPwned ?? 0;
     if (recentBreachCount > 0) {
       if (weightedPwned > 100_000_000 && tier === "Excellent") {
         tier = "Strong";

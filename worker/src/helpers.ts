@@ -41,6 +41,8 @@ export { getAnalysisCacheTtlMs };
 const DOMAIN_RE = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
 export function isValidDomain(domain: string): boolean {
+  // Reject obvious injection chars early (DOMAIN_RE also rejects, but be explicit)
+  if (/[<>'"]/.test(domain)) return false;
   return DOMAIN_RE.test(domain) && domain.includes(".");
 }
 

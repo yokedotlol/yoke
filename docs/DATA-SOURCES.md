@@ -26,8 +26,6 @@ Yoke pulls data from a variety of third-party services to build its domain intel
 | **Website Carbon** | Estimated carbon footprint per page load | [websitecarbon.com](https://www.websitecarbon.com) |
 | **Wayback Machine** | Historical snapshot availability via the Internet Archive | [web.archive.org](https://web.archive.org) |
 | **HackerTarget** | Supplementary reconnaissance lookups | [hackertarget.com](https://hackertarget.com) |
-| **Yahoo Finance** | Basic financial/ticker data for publicly traded companies | [finance.yahoo.com](https://finance.yahoo.com) |
-| **ip-api.com** | IP geolocation (last-resort fallback in Fly proxy when MaxMind is unavailable; HTTP-only free tier) | [ip-api.com](https://ip-api.com) |
 | **ipwho.is** | IP geolocation (HTTPS fallback, used by both Worker and Fly proxy) | [ipwho.is](https://ipwho.is) |
 | **OpenRouter** | LLM inference proxy (powers AI-generated analysis) | [openrouter.ai](https://openrouter.ai) |
 | **check-host.net** | Global HTTP availability probes from 20+ worldwide locations (relayed via Fly proxy) | [check-host.net](https://check-host.net) |

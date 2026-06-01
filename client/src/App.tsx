@@ -1,7 +1,7 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftRight, CheckCircle2, Circle, Loader2, RotateCcw, Search, XCircle, Zap } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { analyzeStream, api, type RateLimitInfo, type StreamEvent } from "./api";
+import { analyzeStream, type RateLimitInfo, type StreamEvent } from "./api";
 import CliPage from "./components/CliPage";
 import { ApiTeaser, CurlBar } from "./components/CurlShowcase";
 import { DomainScore } from "./components/DomainScore";
@@ -9,7 +9,6 @@ import { DomainSignals, ExternalTools } from "./components/DomainSignals";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SkeletonPanel } from "./components/Panel";
 import { type PanelDef, PanelGrid, ResetLayoutButton } from "./components/PanelLayout";
-import { RecentLookups } from "./components/RecentLookups";
 import { ScreenshotPanel, TrancoPanel } from "./components/ReputationPanels";
 import { ShareBar } from "./components/ShareBar";
 // Eagerly loaded components (needed for Overview tab and landing page)
@@ -710,19 +709,13 @@ export function App() {
     [domain],
   );
 
-  const recentLookups = useQuery({
-    queryKey: ["recentLookups"],
-    queryFn: () => api.getRecentLookups({ limit: 8 }),
-  });
-
   const analyze = useStreamingAnalysis();
 
-  // Sync URL and recent lookups on analysis complete
+  // Sync URL on analysis complete
   const prevDataRef = useRef<AnalysisResult | null>(null);
   useEffect(() => {
     if (analyze.data && analyze.data !== prevDataRef.current) {
       prevDataRef.current = analyze.data;
-      queryClient.invalidateQueries({ queryKey: ["recentLookups"] });
       const clean = analyze.data.domain;
       if (clean && window.location.pathname !== `/${clean}`) {
         window.history.pushState(null, "", `/${clean}`);
@@ -952,13 +945,6 @@ export function App() {
                 <nav aria-label="Analysis tabs">
                   <TabBar active={activeTab} onChange={handleTabChange} />
                 </nav>
-              </div>
-            )}
-
-            {/* Recent lookups */}
-            {recentLookups.data && recentLookups.data.lookups.length > 0 && !analyze.data && !analyze.isPending && (
-              <div className="mt-5 mb-6">
-                <RecentLookups lookups={recentLookups.data.lookups} onSelect={handleNavigate} />
               </div>
             )}
 

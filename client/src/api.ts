@@ -129,8 +129,6 @@ export const api = {
   analyzeDomain: (args: { domain: string }) =>
     apiFetch<AnalysisResult>("/api/analyze", { method: "POST", body: JSON.stringify(args) }),
 
-  getRecentLookups: (args: { limit: number }) => apiFetch<RecentLookupsResult>(`/api/recent?limit=${args.limit}`),
-
   getSubdomains: (args: { domain: string }) =>
     apiFetch<SubdomainsResult>("/api/subdomains", { method: "POST", body: JSON.stringify(args) }),
 
@@ -444,17 +442,6 @@ export interface JsonLdItem {
   url: string | null;
 }
 
-export interface RecentLookupsResult {
-  lookups: Array<{
-    id: number;
-    domain: string;
-    analyzed_at: string;
-    is_up: boolean | null;
-    ssl_grade: string | null;
-    score: number | null;
-    tier: string | null;
-  }>;
-}
 export interface SubdomainsResult {
   subdomains: string[];
   cached: boolean;

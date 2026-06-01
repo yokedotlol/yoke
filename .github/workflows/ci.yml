@@ -205,16 +205,19 @@ jobs:
 
       - name: Smoke test — Deployed version
         run: |
-          echo "Checking X-Yoke-Version header matches commit..."
+          echo "Checking X-Yoke-Version header is present..."
           VERSION=$(curl -sI --max-time 10 https://yoke.lol/api/docs | grep -i 'x-yoke-version' | awk '{print $2}' | tr -d '\r')
-          COMMIT_SHA="${{ github.sha }}"
-          SHORT_SHA="${COMMIT_SHA:0:7}"
           echo "Deployed version: $VERSION"
-          echo "Expected commit prefix: $SHORT_SHA"
-          if echo "$VERSION" | grep -q "$SHORT_SHA"; then
-            echo "✓ Version matches commit"
+          if [ -z "$VERSION" ]; then
+            echo "::error::X-Yoke-Version header missing"
+            exit 1
+          fi
+          # Version should be semver-like (e.g., "2.0.0" or "2.0.0-abc1234")
+          if echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "✓ Valid version header: $VERSION"
           else
-            echo "::warning::Version header ($VERSION) doesn't contain commit SHA ($SHORT_SHA) — may still be propagating"
+            echo "::error::X-Yoke-Version header has unexpected format: $VERSION"
+            exit 1
           fi
 
       - name: Smoke test — API docs

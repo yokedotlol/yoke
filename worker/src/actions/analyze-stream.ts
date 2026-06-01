@@ -87,7 +87,6 @@ export async function analyzeDomainStream(
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      Connection: "keep-alive",
       ...CORS_HEADERS,
       ...(extraHeaders || {}),
     },

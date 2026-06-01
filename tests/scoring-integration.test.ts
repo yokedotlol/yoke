@@ -171,10 +171,10 @@ describe("calculateDomainScore integration", () => {
     opts.statusResult = { is_up: true, status_code: 200 };
 
     const result = calculateDomainScore(opts);
-    // Mixed signals with anchor-and-adjust — sparse findings stay near baseline.
-    // Geometric mean pulls composite lower when some categories are weak.
+    // Mixed signals with deductive model — sparse findings produce moderate scores.
+    // Softened absent penalty (0.15) keeps composite in moderate range.
     expect(result.composite).toBeGreaterThanOrEqual(1);
-    expect(result.composite).toBeLessThanOrEqual(70);
+    expect(result.composite).toBeLessThanOrEqual(75);
   });
 
   it("handles httpBlocked=true gracefully", () => {

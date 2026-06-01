@@ -58,7 +58,7 @@ yoke/
 ├── extension/               # Chrome extension (Manifest V3, side panel)
 ├── cli/                     # Go CLI (goreleaser, Homebrew tap)
 ├── prompts/                 # AI analysis prompt (.txt, imported by worker)
-└── tests/                   # Vitest test suite (192 tests)
+└── tests/                   # Vitest test suite (508+ tests)
 ```
 
 ### Storage
@@ -108,7 +108,7 @@ If your check produces a scoring signal, add it to `worker/src/config/signal-reg
 
 ```typescript
 my_signal: {
-  axis: 'security',       // security | infrastructure | trust | performance | visibility
+  axis: 'security',       // security | speed | foundations | reputation | discoverability | email
   actionable: true,
   effort: 'low',          // low | medium | high
   fix: 'Enable the thing to improve security.',
@@ -172,7 +172,7 @@ The Go CLI at `cli/` is distributed via goreleaser and Homebrew (`yokedotlol/hom
 Tests use [Vitest](https://vitest.dev/) and live in `tests/`:
 
 ```bash
-npx vitest run              # Run all tests (192 tests)
+npx vitest run              # Run all tests (508+ tests)
 npx vitest run --watch      # Watch mode
 npx vitest run scoring      # Run specific test file
 ```
@@ -203,7 +203,7 @@ If you need to bypass the hook for a WIP commit: `git commit --no-verify`.
 
 ## Pull Request Checklist
 
-- [ ] `npx vitest run` passes (all 192 tests)
+- [ ] `npx vitest run` passes (all 508+ tests)
 - [ ] `cd worker && bun run typecheck` passes with zero errors
 - [ ] `npx @biomejs/biome check .` passes with zero errors (warnings are OK)
 - [ ] New checks include a test for the expected output shape

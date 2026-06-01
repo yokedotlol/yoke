@@ -57,11 +57,10 @@ curl yoke.lol/stripe.com | jq
 ### 📊 Performance & Business
 - **PageSpeed** — Lighthouse scores (mobile-first 60/40 blend), Core Web Vitals (FCP, LCP, TBT, CLS), CrUX field data, cache analysis
 - **Company Intel** — Wikidata + Brandfetch + Crunchbase enrichment
-- **Stock Data** — Live ticker, price, market cap, sparkline for public companies
 - **News & Social** — Bing News, Hacker News, social account discovery with rel="me" verification badges across 12+ platforms
 
 ### 🤖 AI Analysis
-**Grade-Up Simulator** (deterministic, no LLM) — calculates the exact score impact of fixing each finding, prioritized by effort vs. gain. Shows projected grade and score after fixes.
+**Level-Up Plan** (deterministic, no LLM) — calculates the exact score impact of fixing each finding, prioritized by effort vs. gain. Shows projected grade and score after fixes.
 
 **Cross-Signal Insights** (LLM) — AI-powered analysis that finds correlations across findings, explains their combined impact, and provides strategic recommendations. Powered by DeepSeek V3 via OpenRouter. BYO API key to bypass rate limits — your key is passed through to OpenRouter and never logged or stored. Includes model picker and prompt editor.
 
@@ -133,7 +132,6 @@ All limits use a rolling 1-hour window. Self-hosted instances can override or di
 | `POST` | `/api/suggestions` | Related domain suggestions |
 | `POST` | `/api/reverse-ip` | Reverse IP lookup |
 | `POST` | `/api/ai-analysis` | AI deep analysis (Cross-Signal Insights) |
-| `GET` | `/api/recent` | Recent lookups |
 | `GET` | `/api/health` | Service health |
 | `GET` | `/api/scoring` | Scoring methodology + signal registry |
 | `GET` | `/api/docs` | API documentation (JSON) |

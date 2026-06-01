@@ -1174,27 +1174,6 @@ async function runAnalysisCore(
       } else {
         // Skip cache write for unreachable sites silently
       }
-
-      // Recent lookups: maintain a JSON array in KV, prepend new entry, trim to 500
-      try {
-        const summaryJson = {
-          domain,
-          analyzed_at: new Date().toISOString(),
-          is_up: result.status?.is_up ?? null,
-          ssl_grade: result.ssl?.grade ?? null,
-          score: domainScore?.composite ?? null,
-          tier: domainScore?.tier ?? null,
-          archetype: domainScore?.archetype?.detected ?? null,
-        };
-        const existingRaw = await env.REFERENCE_DATA.get("recent:index", "text");
-        const existing: unknown[] = existingRaw ? JSON.parse(existingRaw) : [];
-        existing.unshift(summaryJson);
-        // Trim to 500 entries
-        if (existing.length > 500) existing.length = 500;
-        await env.REFERENCE_DATA.put("recent:index", JSON.stringify(existing));
-      } catch (e) {
-        console.warn(`[yoke:lookups] KV write failed for ${domain}:`, e instanceof Error ? e.message : e);
-      }
     })(),
   );
 

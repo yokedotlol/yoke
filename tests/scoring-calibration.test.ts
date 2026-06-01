@@ -709,3 +709,63 @@ describe("Calibration: Diagnostics", () => {
     expect(true).toBe(true);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// LAYER 5: Signal Uniqueness Guard
+// ═════════════════════════════════════════════════════════════════════
+
+describe("Signal Uniqueness", () => {
+  it("no signal ID appears more than once in a synthetic findings array", () => {
+    // Build a comprehensive findings array with one entry per registered signal
+    const findings: Array<{ signal: string; axis: string; severity: string }> = [];
+    for (const [signalId, def] of Object.entries(SIGNAL_REGISTRY)) {
+      findings.push({
+        signal: signalId,
+        axis: def.axis,
+        severity: def.canBeGood ? "good" : "medium",
+      });
+    }
+
+    // Verify uniqueness
+    const signalIds = findings.map((f) => f.signal);
+    const seen = new Set<string>();
+    const duplicates: string[] = [];
+    for (const id of signalIds) {
+      if (seen.has(id)) {
+        duplicates.push(id);
+      }
+      seen.add(id);
+    }
+
+    expect(duplicates).toEqual([]);
+  });
+
+  it("contextual-scoring.ts has no duplicate signal emission patterns", () => {
+    // Read the source file and check for signals emitted more than once
+    const fs = require("fs");
+    const source = fs.readFileSync("worker/src/actions/analyze/contextual-scoring.ts", "utf-8");
+
+    // Match all signal: "xxx" patterns in findings.push calls
+    const signalPattern = /signal:\s*"([^"]+)"/g;
+    const emissions = new Map<string, number>();
+    let match: RegExpExecArray | null;
+    while ((match = signalPattern.exec(source)) !== null) {
+      const sig = match[1];
+      // Skip _absent (synthetic entry) and signals in test/comment contexts
+      if (sig === "_absent") continue;
+      emissions.set(sig, (emissions.get(sig) || 0) + 1);
+    }
+
+    // Signals can appear many times legitimately in a ~4500-line scoring file:
+    // good/bad/info branches, archetype-specific variants, SSL fallback paths, etc.
+    // But appearing 8+ times strongly suggests a copy-paste duplicate emission bug
+    const suspiciousDuplicates: string[] = [];
+    for (const [sig, count] of emissions) {
+      if (count > 7) {
+        suspiciousDuplicates.push(`${sig} (${count} emissions)`);
+      }
+    }
+
+    expect(suspiciousDuplicates).toEqual([]);
+  });
+});
