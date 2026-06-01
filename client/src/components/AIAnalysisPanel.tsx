@@ -26,7 +26,7 @@ import {
   SIGNAL_REGISTRY,
   TIER_THRESHOLDS,
 } from "../../../worker/src/config/signal-registry";
-import type { Axis, ScoreFinding, Severity } from "../api";
+import type { AbsentSignalDetailData, Axis, ScoreFinding, Severity } from "../api";
 import { severityBg, severityColor, severityIcon } from "../utils/severity";
 import type { AnalysisResult } from "../utils/types";
 import { findReferenceLink } from "./DomainSignals";
@@ -694,6 +694,26 @@ interface ScoreDragItem {
   pointCost: number; // how much this drags composite score down
 }
 
+/** Residual score factor that explains an unexplained gap in an axis score. */
+interface ScoreFactorItem {
+  axis: Axis;
+  /** Points of the axis score accounted for by this factor */
+  axisDeduction: number;
+  /** Composite impact (axis deduction × axis weight / total weight) */
+  compositeImpact: number;
+  /** Human-readable reason */
+  reason: string;
+  /** Absent signals that make up this factor */
+  signals: Array<{
+    signal: string;
+    label: string;
+    weight: number;
+    fixDescription?: string;
+    effort?: string;
+    actionable: boolean;
+  }>;
+}
+
 function getNextTier(currentTier: string): { tier: string; min: number } | null {
   const idx = TIER_THRESHOLDS.findIndex((t) => t.tier === currentTier);
   if (idx <= 0) return null; // already Excellent or unknown
@@ -729,6 +749,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
   items: LevelUpItem[];
   opportunities: LevelUpOpportunity[];
   drags: ScoreDragItem[];
+  scoreFactors: ScoreFactorItem[];
   currentScore: number;
   currentTier: string;
   targetTier: string;
@@ -764,7 +785,13 @@ function generateLevelUpPlan(data: AnalysisResult): {
   // Build deduction lookup per axis for signal gain estimation
   const axisDeductions: Record<
     string,
-    Array<{ signal: string; deduction: number; share: number; weight: number }>
+    Array<{
+      signal: string;
+      deduction: number;
+      share: number;
+      weight: number;
+      absentSignals?: AbsentSignalDetailData[];
+    }>
   > = {};
   for (const [axisName, axisData] of Object.entries(score.axes) as [Axis, (typeof score.axes)[Axis]][]) {
     if (axisData.not_measured || axisData.score == null) {
@@ -933,8 +960,87 @@ function generateLevelUpPlan(data: AnalysisResult): {
 
   drags.sort((a, b) => b.pointCost - a.pointCost);
 
-  // If Excellent and no actionable items found, return null
-  if (isExcellent && items.length === 0 && opportunities.length === 0 && drags.length === 0) return null;
+  // ── Score Factors: account for 100% of the gap ─────────────────
+  // For every axis, compute how much of the (100 − score) gap is
+  // already explained by items + opportunities + drags. Any residual
+  // comes from absent-signal deductions that individually fell below
+  // the composite threshold. Surface those as grouped "score factor" entries
+  // so no axis has an unexplained deficit.
+  const scoreFactors: ScoreFactorItem[] = [];
+  {
+    // Build lookup of explained deduction per axis
+    const explainedPerAxis: Record<string, number> = {};
+    for (const item of items) {
+      const deds = axisDeductions[item.axis] || [];
+      const ded = deds.find((d) => d.signal === item.signal);
+      explainedPerAxis[item.axis] = (explainedPerAxis[item.axis] ?? 0) + (ded?.deduction ?? 0);
+    }
+    for (const opp of opportunities) {
+      const deds = axisDeductions[opp.axis] || [];
+      const absentDed = deds.find((d) => d.signal === "_absent");
+      if (absentDed && absentDed.weight > 0) {
+        const oppGain = (opp.weight / absentDed.weight) * absentDed.deduction;
+        explainedPerAxis[opp.axis] = (explainedPerAxis[opp.axis] ?? 0) + oppGain;
+      }
+    }
+    for (const drag of drags) {
+      const deds = axisDeductions[drag.axis] || [];
+      const ded = deds.find((d) => d.signal === drag.signal);
+      explainedPerAxis[drag.axis] = (explainedPerAxis[drag.axis] ?? 0) + (ded?.deduction ?? 0);
+    }
+
+    // Compute total axis weight for composite impact estimation
+    const totalAssessedWeight = assessedAxes.reduce((sum, a) => sum + (AXIS_WEIGHTS[a as Axis] ?? 0), 0);
+
+    for (const axisName of assessedAxes) {
+      const axisData = score.axes[axisName as Axis];
+      if (!axisData || axisData.not_measured || axisData.score == null) continue;
+      const axisGap = 100 - axisData.score;
+      if (axisGap <= 0) continue;
+
+      const explained = explainedPerAxis[axisName] ?? 0;
+      const residual = axisGap - explained;
+      if (residual < 0.5) continue; // close enough
+
+      // Pull absent signal details from the _absent deduction
+      const deds = axisDeductions[axisName] || [];
+      const absentDed = deds.find((d) => d.signal === "_absent");
+      const absentSignalDetails = absentDed?.absentSignals;
+
+      // Filter out signals already surfaced as opportunities
+      const opportunitySignals = new Set(opportunities.filter((o) => o.axis === axisName).map((o) => o.signal));
+      const residualSignals = (absentSignalDetails ?? []).filter((s) => !opportunitySignals.has(s.signal));
+
+      const axisWeight = AXIS_WEIGHTS[axisName as Axis] ?? 0;
+      const compositeImpact =
+        totalAssessedWeight > 0 ? Math.round(residual * (axisWeight / totalAssessedWeight) * 10) / 10 : 0;
+
+      const signalCount = residualSignals.length;
+      const reason =
+        signalCount > 0
+          ? `${signalCount} signal${signalCount === 1 ? "" : "s"} not detected in scan`
+          : "Signals not detected in scan";
+
+      scoreFactors.push({
+        axis: axisName as Axis,
+        axisDeduction: Math.round(residual * 10) / 10,
+        compositeImpact,
+        reason,
+        signals: residualSignals,
+      });
+    }
+    scoreFactors.sort((a, b) => b.compositeImpact - a.compositeImpact);
+  }
+
+  // If Excellent and nothing to show at all, return null
+  if (
+    isExcellent &&
+    items.length === 0 &&
+    opportunities.length === 0 &&
+    drags.length === 0 &&
+    scoreFactors.length === 0
+  )
+    return null;
 
   // Compute projected composite by simulating ALL fixes at once via compositeFromAxes.
   // Individual pointGain values are computed independently (each assumes only that
@@ -970,6 +1076,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
     items,
     opportunities,
     drags,
+    scoreFactors,
     currentScore,
     currentTier,
     targetTier,
@@ -1934,8 +2041,12 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
   const [expanded, setExpanded] = useState(false);
   const plan = generateLevelUpPlan(data);
 
-  if (!plan || plan.items.length === 0) {
-    if (data.domain_score?.tier === "Excellent") {
+  const hasContent =
+    plan &&
+    (plan.items.length > 0 || plan.opportunities.length > 0 || plan.drags.length > 0 || plan.scoreFactors.length > 0);
+
+  if (!hasContent) {
+    if (data.domain_score?.composite === 100) {
       return (
         <div
           style={{
@@ -1960,7 +2071,7 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
             }}
           >
             <CheckCircle2 size={14} />
-            <span>You're already at A+! Maximum score achieved.</span>
+            <span>Perfect score! Nothing to improve.</span>
           </div>
         </div>
       );
@@ -2056,9 +2167,11 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
           />
         </div>
         <div style={{ fontSize: "10px", color: "var(--muted)", marginTop: "3px" }}>
-          {plan.pointsNeeded > 0
-            ? `Need +${plan.pointsNeeded} points · addressing all items below → ${projectedScore} pts (${projectedTier})`
-            : `Addressing all items below → ${projectedScore} pts (${projectedTier})`}
+          {plan.items.length > 0 || plan.opportunities.length > 0
+            ? plan.pointsNeeded > 0
+              ? `Need +${plan.pointsNeeded} points · addressing all items below → ${projectedScore} pts (${projectedTier})`
+              : `Addressing all items below → ${projectedScore} pts (${projectedTier})`
+            : `Score breakdown for this domain`}
         </div>
       </div>
 
@@ -2347,6 +2460,75 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
                   </span>
                   <span style={{ fontSize: "10px", color: "var(--dim)" }}>−{drag.pointCost.toFixed(1)}</span>
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Score Factors — residual gap explained */}
+      {plan.scoreFactors.length > 0 && (
+        <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginBottom: "8px",
+            }}
+          >
+            <Eye size={11} style={{ color: "var(--muted)" }} />
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--muted)" }}>Score factors</span>
+            <span style={{ fontSize: "10px", color: "var(--dim)" }}>
+              −{plan.scoreFactors.reduce((s, f) => s + f.compositeImpact, 0).toFixed(1)} pts
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {plan.scoreFactors.map((factor) => (
+              <div
+                key={factor.axis}
+                style={{
+                  padding: "6px 8px",
+                  borderRadius: "4px",
+                  background: "rgba(255,255,255,0.02)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        background: axisColors[factor.axis] || "var(--muted)",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ fontSize: "11px", color: "var(--muted)" }}>{factor.reason}</span>
+                  </div>
+                  <span style={{ fontSize: "10px", color: "var(--dim)", flexShrink: 0 }}>
+                    −{factor.axisDeduction.toFixed(1)} on {axisLabels[factor.axis] || factor.axis}
+                  </span>
+                </div>
+                {factor.signals.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: "4px",
+                      paddingLeft: "12px",
+                      fontSize: "10px",
+                      color: "var(--dim)",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    {factor.signals.map((s) => (
+                      <div key={s.signal} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <span style={{ opacity: 0.5 }}>·</span>
+                        <span>{s.fixDescription || s.label}</span>
+                        {s.effort && <span style={{ opacity: 0.5, marginLeft: "2px" }}>({s.effort})</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

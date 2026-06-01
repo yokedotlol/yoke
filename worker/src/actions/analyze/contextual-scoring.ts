@@ -84,6 +84,16 @@ export interface ArchetypeResult {
   weights: Record<Axis, number>; // single fixed axis weights (all archetypes use the same)
 }
 
+/** Detail about an individual absent signal (returned inside the _absent deduction). */
+export interface AbsentSignalDetail {
+  signal: string;
+  label: string;
+  weight: number;
+  fixDescription?: string;
+  effort?: string;
+  actionable: boolean;
+}
+
 /** Itemized deduction explaining where points were lost in an axis. */
 export interface AxisDeduction {
   signal: string;
@@ -96,6 +106,8 @@ export interface AxisDeduction {
   deduction: number;
   /** Category for Level-Up grouping */
   category: "fixable" | "time_dependent" | "infrastructure" | "not_detected";
+  /** For _absent deductions: the individual signals that were not detected */
+  absentSignals?: AbsentSignalDetail[];
 }
 
 export interface AxisScore {
@@ -271,19 +283,38 @@ export function computeAxisScoreWithDeductions(
   }
 
   // Absent signals: canBeGood signals that didn't fire at all
+  const firedSignals = new Set(findings.map((f) => f.signal));
   const absentWeight = Math.max(0, totalGoodWeight - Math.min(presentWeight, totalGoodWeight));
   if (absentWeight > 0) {
     const absentShare = (absentWeight / totalGoodWeight) * 100;
     const absentDeduction = absentShare * ABSENT_DEDUCTION_FACTOR;
     if (absentDeduction > 0) {
+      // Enumerate which specific signals are absent for score–suggestion consistency
+      const absentSignals: AbsentSignalDetail[] = [];
+      for (const [id, def] of Object.entries(SIGNAL_REGISTRY)) {
+        if (def.axis !== axis || !def.canBeGood) continue;
+        if (firedSignals.has(id)) continue;
+        // Skip signals whose required context isn't present (already excluded from denominator)
+        if (def.requiresContext && scoringCtx && !scoringCtx[def.requiresContext as keyof typeof scoringCtx]) continue;
+        absentSignals.push({
+          signal: id,
+          label: def.label,
+          weight: def.weightRange[1],
+          fixDescription: def.fixDescription,
+          effort: def.effort,
+          actionable: def.actionable,
+        });
+      }
+
       deductions.push({
         signal: "_absent",
-        label: `${Math.round(absentWeight)} weight of applicable signals not detected`,
+        label: `${absentSignals.length} signal${absentSignals.length === 1 ? "" : "s"} not detected in scan`,
         severity: "absent",
         weight: absentWeight,
         share: Math.round(absentShare * 10) / 10,
         deduction: Math.round(absentDeduction * 10) / 10,
         category: "not_detected",
+        absentSignals,
       });
       totalDeduction += absentDeduction;
     }

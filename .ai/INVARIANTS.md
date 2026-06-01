@@ -29,6 +29,9 @@
 - [ ] **All-green-signals = 100.** A domain with every assessed signal at `good` must score exactly 100.
   - _Verify:_ Calibration test: "all-green = perfect 100 on every axis".
 
+- [ ] **Score–suggestion consistency.** Every axis with score < 100 must have its full deficit accounted for in the Level-Up plan. `sum(displayed items + opportunities + drags + explained residuals) = 100 - axis_score`. No silent deductions.
+  - _Verify:_ For any domain, check that axes with only `_absent` deductions still surface those absent signals as enumerated opportunities or explained residuals in the Level-Up UI.
+
 ## Signal Integrity
 
 - [ ] **Signals emit exactly once.** No signal ID may appear twice in a scan's findings.

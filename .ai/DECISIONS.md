@@ -149,3 +149,12 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 - **What:** Updated all curl examples across README, CLAUDE.md, .ai/, CurlShowcase, API docs, MCP content, and meta tags to use `curl -s https://yoke.lol/...` format
 - **Why:** Bare `curl yoke.lol/...` hits HTTP and doesn't follow the 301 redirect to HTTPS. Adding `-s` suppresses progress bars for cleaner piping to jq.
 - **Directive:** All curl examples referencing yoke.lol must use explicit `https://` and `-s` flag.
+
+---
+
+### 2026-06-01: Score–suggestion consistency enforced as core directive
+
+- **What:** Every axis score deficit from 100 must be fully accounted for in the Level-Up plan. Absent signals must be enumerated individually with reasons (e.g., "probe failed", "not detected in scan"). The `compositeDelta < 0.1` filter must not create unexplained gaps.
+- **Why:** Axes scoring 93/98/97/99 with zero suggestions destroyed user trust — the product told users something was wrong without explaining what. Root cause: scoring engine deducted in aggregate (all absent signals pooled) while Level-Up evaluated individually (each below display threshold). The structural mismatch persisted across multiple fix attempts because the fundamental sync invariant was never established.
+- **Rejected:** Option 2 (don't deduct what you can't explain — inflates scores artificially), Option 3 (show all opportunities regardless of threshold — too much noise).
+- **Directive:** `sum(displayed_items) = 100 - axis_score` for every axis. Added as invariant in INVARIANTS.md and core directive in CONSTITUTION.md. Server must return enriched absent-signal data (which signals, why absent). Client must display them.

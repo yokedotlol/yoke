@@ -101,3 +101,12 @@
 
 **Don't:** Assume subagents know project invariants or recent decisions.
 **Do:** When spawning subagents for Yoke work, explicitly include relevant invariants and recent decisions in the task instructions. At minimum, summarize the key points from `.ai/INVARIANTS.md`.
+
+---
+
+### compositeDelta filter creates unexplained score gaps
+
+**What happened:** The Level-Up plan filters out items where `compositeDelta < 0.1`. When absent signals are spread across many individual signals, each one's composite impact falls below the threshold — but their combined axis deduction is clearly visible (e.g., 7 points on Security). The user sees a score of 93 with zero suggestions. This happened repeatedly because fixes targeted symptoms (adjusting factors, tweaking thresholds) without establishing the structural invariant that scoring and suggestions must stay in sync.
+
+**Don't:** Apply display-threshold filters without a fallback that accounts for the residual gap. Don't assume that because individual items are small, the aggregate is invisible.
+**Do:** Enforce the invariant: `sum(displayed_items) = 100 - axis_score` for every axis. If filtering removes items, show a grouped residual entry that explains the remaining points. Server must return enriched absent data (which signals, why absent) so the client can explain every deducted point.

@@ -744,6 +744,15 @@ export interface ScoreFinding {
   source?: string | null;
 }
 
+export interface AbsentSignalDetailData {
+  signal: string;
+  label: string;
+  weight: number;
+  fixDescription?: string;
+  effort?: string;
+  actionable: boolean;
+}
+
 export interface AxisDeductionData {
   signal: string;
   label: string;
@@ -752,6 +761,8 @@ export interface AxisDeductionData {
   share: number;
   deduction: number;
   category: "fixable" | "time_dependent" | "infrastructure" | "not_detected";
+  /** For _absent deductions: the individual signals that were not detected */
+  absentSignals?: AbsentSignalDetailData[];
 }
 
 export interface AxisScoreData {
