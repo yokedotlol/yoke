@@ -132,6 +132,16 @@ describe("Hosting/CDN Detection", () => {
     expect(result.provider).toBe("Netlify");
   });
 
+  it("should detect WordPress VIP via x-vip-go header", () => {
+    const result = detectHosting(null, { "x-vip-go": "1" });
+    expect(result.provider).toBe("WordPress VIP");
+  });
+
+  it("should detect WordPress VIP via HTML pattern", () => {
+    const result = detectHosting('<link href="https://wpvip.com/cdn/file.css">', {});
+    expect(result.provider).toBe("WordPress VIP");
+  });
+
   it("should return nulls for unknown hosting", () => {
     const result = detectHosting(null, { server: "Apache/2.4.52" });
     expect(result.provider).toBeNull();
