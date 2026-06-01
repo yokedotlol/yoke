@@ -1313,6 +1313,9 @@ export function CompareView({ initialDomain }: { initialDomain?: string }) {
             />
           </div>
 
+          {/* Score grid — heatmap comparison */}
+          <CompareScoreGrid data={data} ds1={ds1} ds2={ds2} />
+
           {/* Axis comparison bars */}
           <div className="panel p-4">
             <div
@@ -1429,6 +1432,188 @@ export function CompareView({ initialDomain }: { initialDomain?: string }) {
           </span>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Score Grid (Heatmap Comparison) ─────────────────────────────────
+
+const AXIS_ABBRS: Record<Axis, string> = {
+  security: "SEC",
+  speed: "SPD",
+  foundations: "FND",
+  reputation: "REP",
+  discoverability: "DSC",
+  email: "EML",
+};
+
+const TIER_THRESHOLDS: Array<{ min: number; label: string; color: string }> = [
+  { min: 90, label: "Excellent", color: "#22c55e" },
+  { min: 75, label: "Strong", color: "#3b82f6" },
+  { min: 60, label: "Moderate", color: "#f59e0b" },
+  { min: 40, label: "Weak", color: "#f97316" },
+  { min: 0, label: "Critical", color: "#ef4444" },
+];
+
+function tierForScore(score: number | null): { label: string; color: string } {
+  if (score == null) return { label: "N/A", color: "#6b7280" };
+  for (const t of TIER_THRESHOLDS) {
+    if (score >= t.min) return t;
+  }
+  return TIER_THRESHOLDS[TIER_THRESHOLDS.length - 1];
+}
+
+function CompareScoreGrid({ data, ds1, ds2 }: { data: CompareResult; ds1: DomainScoreData; ds2: DomainScoreData }) {
+  let winsA = 0;
+  let winsB = 0;
+  for (const ax of data.comparison.axes) {
+    if (ax.score1 != null && ax.score2 != null) {
+      if (ax.score1 > ax.score2) winsA++;
+      else if (ax.score2 > ax.score1) winsB++;
+    }
+  }
+
+  return (
+    <div className="panel p-4">
+      <div
+        style={{
+          fontFamily: "var(--font-ui)",
+          fontSize: "10px",
+          fontWeight: 600,
+          color: "var(--dim)",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          marginBottom: 10,
+        }}
+      >
+        Score Grid
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "auto repeat(6, 1fr)",
+          gap: "3px",
+        }}
+      >
+        {/* Column headers: empty corner + 6 axis labels */}
+        <div />
+        {AXES.map((axis) => (
+          <div
+            key={axis}
+            style={{
+              textAlign: "center",
+              padding: "0.3rem 0.15rem",
+              fontFamily: "var(--font-ui)",
+              fontSize: "9px",
+              fontWeight: 700,
+              color: "var(--dim)",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+            }}
+          >
+            {AXIS_ABBRS[axis]}
+          </div>
+        ))}
+
+        {/* Domain rows */}
+        {[
+          { domain: data.domain1.domain, ds: ds1, color: "var(--accent)" },
+          { domain: data.domain2.domain, ds: ds2, color: "#f97316" },
+        ].map(({ domain, ds, color }) => (
+          <div key={domain} style={{ display: "contents" }}>
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "11px",
+                fontWeight: 600,
+                color,
+                padding: "0.4rem 0.5rem 0.4rem 0",
+                display: "flex",
+                alignItems: "center",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {domain}
+            </div>
+            {AXES.map((axis) => {
+              const val = ds.axes[axis]?.score ?? null;
+              const otherDs = ds === ds1 ? ds2 : ds1;
+              const otherVal = otherDs.axes[axis]?.score ?? null;
+              const t = tierForScore(val);
+              const isWinner = val != null && otherVal != null && val > otherVal;
+              const isLoser = val != null && otherVal != null && val < otherVal;
+
+              return (
+                <div
+                  key={axis}
+                  style={{
+                    textAlign: "center",
+                    padding: "0.35rem 0.15rem",
+                    borderRadius: "4px",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    background: `${t.color}25`,
+                    color: t.color,
+                    opacity: isLoser ? 0.5 : 1,
+                    boxShadow: isWinner ? "inset 0 0 0 1.5px rgba(255,255,255,0.25)" : "none",
+                  }}
+                >
+                  {val == null ? "—" : val}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Wins summary */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: "0.75rem",
+          paddingTop: "0.6rem",
+          borderTop: "1px solid var(--border)",
+          fontFamily: "var(--font-ui)",
+          fontSize: "12px",
+          fontWeight: 600,
+        }}
+      >
+        <div style={{ flex: 1, textAlign: "center" }}>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "16px",
+              fontWeight: 700,
+              color: "var(--accent)",
+            }}
+          >
+            {winsA}
+          </div>
+          <div style={{ fontSize: "10px", color: "var(--dim)", marginTop: "0.1rem" }}>
+            {winsA === 1 ? "axis won" : "axes won"}
+          </div>
+        </div>
+        <div style={{ flex: 1, textAlign: "center" }}>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "16px",
+              fontWeight: 700,
+              color: "#f97316",
+            }}
+          >
+            {winsB}
+          </div>
+          <div style={{ fontSize: "10px", color: "var(--dim)", marginTop: "0.1rem" }}>
+            {winsB === 1 ? "axis won" : "axes won"}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

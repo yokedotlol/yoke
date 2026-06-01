@@ -449,6 +449,7 @@ export default {
           score: number | null;
           tier: string | null;
           archetype: string | null;
+          axes?: Record<string, number | null>;
         }>;
         return json({ lookups: entries.slice(0, 12) });
       } catch {

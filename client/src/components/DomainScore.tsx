@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { severityColor, severityIcon, tierColor } from "../utils/severity";
 import type { AnalysisResult, ArchetypeName, Axis, AxisScoreData } from "../utils/types";
 import { Tooltip } from "./Tooltip";
@@ -65,6 +65,145 @@ const FIXED_WEIGHTS: Record<Axis, number> = {
   discoverability: 0.13,
   email: 0.12,
 };
+
+// ─── Tier Color for Axis Bars ────────────────────────────────────────
+// Uses the same thresholds as the scoring engine for visual consistency
+
+function axisTierColor(score: number): string {
+  if (score >= 90) return "#22c55e";
+  if (score >= 75) return "#3b82f6";
+  if (score >= 60) return "#f59e0b";
+  if (score >= 40) return "#f97316";
+  return "#ef4444";
+}
+
+const NULL_BAR_BG =
+  "repeating-linear-gradient(-45deg, var(--border) 0px, var(--border) 3px, transparent 3px, transparent 6px)";
+
+// ─── Animated Axis Bars ──────────────────────────────────────────────
+
+function AnimatedAxisBars({ axes, animKey }: { axes: Record<Axis, AxisScoreData>; animKey: number }) {
+  const [progress, setProgress] = useState<number[]>(AXES.map(() => 0));
+  const [showScores, setShowScores] = useState<boolean[]>(AXES.map(() => false));
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    setProgress(AXES.map(() => 0));
+    setShowScores(AXES.map(() => false));
+
+    const startTime = performance.now() + 200; // slight delay after radar starts
+    const duration = 700;
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      if (elapsed < 0) {
+        rafRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
+      const newProgress = AXES.map((_, i) => {
+        const stagger = i * 80;
+        const axisElapsed = elapsed - stagger;
+        if (axisElapsed <= 0) return 0;
+        const t = Math.min(axisElapsed / duration, 1);
+        return 1 - (1 - t) ** 3; // ease-out cubic
+      });
+
+      setProgress(newProgress);
+
+      // Show score labels after bar finishes
+      const newShowScores = AXES.map((_, i) => {
+        const stagger = i * 80;
+        return elapsed - stagger > duration * 0.6;
+      });
+      setShowScores(newShowScores);
+
+      if (elapsed < duration + AXES.length * 80) {
+        rafRef.current = requestAnimationFrame(animate);
+      } else {
+        setProgress(AXES.map(() => 1));
+        setShowScores(AXES.map(() => true));
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [animKey]);
+
+  return (
+    <div className="space-y-1.5">
+      {AXES.map((axis, i) => {
+        const a = axes[axis];
+        const nm = a.not_measured || a.score == null;
+        const barProgress = progress[i] ?? 0;
+        const scoreVisible = showScores[i] ?? false;
+        const fillWidth = nm ? barProgress * 100 : barProgress * (a.score ?? 0);
+
+        return (
+          // biome-ignore lint/a11y/useAriaPropsSupportedByRole: role conditionally set via nm flag
+          <div
+            key={axis}
+            className="flex items-center gap-2"
+            style={{ fontSize: "11px", opacity: nm ? 0.5 : 1 }}
+            role={nm ? undefined : "meter"}
+            aria-valuenow={nm ? undefined : (a.score ?? 0)}
+            aria-valuemin={nm ? undefined : 0}
+            aria-valuemax={nm ? undefined : 100}
+            aria-label={nm ? `${AXIS_LABELS[axis]}: Not Assessed` : `${AXIS_LABELS[axis]}: ${a.score} out of 100`}
+          >
+            <span
+              style={{
+                fontFamily: "var(--font-ui)",
+                color: "var(--dim)",
+                width: 90,
+                flexShrink: 0,
+                fontWeight: 500,
+                textAlign: "right",
+                textTransform: "uppercase",
+                fontSize: "10px",
+                letterSpacing: "0.04em",
+              }}
+            >
+              {AXIS_LABELS[axis]}
+            </span>
+            <div
+              className="flex-1 rounded"
+              style={{
+                height: 14,
+                background: "var(--bg)",
+                overflow: "hidden",
+                position: "relative",
+              }}
+            >
+              <div
+                className="rounded"
+                style={{
+                  height: "100%",
+                  width: `${fillWidth}%`,
+                  background: nm ? NULL_BAR_BG : axisTierColor(a.score ?? 0),
+                }}
+              />
+            </div>
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontWeight: 700,
+                color: "var(--text)",
+                minWidth: 28,
+                textAlign: "right",
+                fontSize: "11px",
+                opacity: scoreVisible ? 1 : 0,
+                transition: "opacity 0.3s ease-out",
+              }}
+            >
+              {nm ? "N/A" : a.score}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // ─── Radar Plot SVG ──────────────────────────────────────────────────
 
@@ -438,6 +577,8 @@ function scoreColor(score: number): string {
 
 export function DomainScore({ data }: { data: AnalysisResult }) {
   const ds = data.domain_score;
+  const [animKey, setAnimKey] = useState(0);
+  const replay = useCallback(() => setAnimKey((k) => k + 1), []);
   if (!ds) return null;
 
   // Always use the detected archetype — manual override removed after calibration
@@ -547,85 +688,43 @@ export function DomainScore({ data }: { data: AnalysisResult }) {
               {weightSummary(weightsTable)}
             </p>
 
-            {/* Axis breakdown bars */}
-            <div className="space-y-1.5">
-              {AXES.map((axis) => {
-                const a = ds.axes[axis];
-                const nm = a.not_measured || a.score == null;
-                return (
-                  // biome-ignore lint/a11y/useAriaPropsSupportedByRole: role conditionally set via nm flag
-                  <div
-                    key={axis}
-                    className="flex items-center gap-2"
-                    style={{ fontSize: "11px", opacity: nm ? 0.5 : 1 }}
-                    role={nm ? undefined : "meter"}
-                    aria-valuenow={nm ? undefined : (a.score ?? 0)}
-                    aria-valuemin={nm ? undefined : 0}
-                    aria-valuemax={nm ? undefined : 100}
-                    aria-label={
-                      nm ? `${AXIS_LABELS[axis]}: Not Assessed` : `${AXIS_LABELS[axis]}: ${a.score} out of 100`
-                    }
-                  >
-                    <span
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        color: "var(--dim)",
-                        width: 80,
-                        flexShrink: 0,
-                        fontWeight: 500,
-                      }}
-                    >
-                      {AXIS_LABELS[axis]}
-                    </span>
-                    {nm ? (
-                      <>
-                        <div className="flex-1 h-1.5 rounded-full" style={{ background: "var(--border)" }} />
-                        <span
-                          style={{
-                            fontFamily: "var(--font-ui)",
-                            fontSize: "9px",
-                            fontStyle: "italic",
-                            color: "var(--dim)",
-                            minWidth: 60,
-                            textAlign: "right",
-                          }}
-                        >
-                          Not Assessed
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex-1 h-1.5 rounded-full" style={{ background: "var(--border)" }}>
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${a.score}%`,
-                              background:
-                                (a.score ?? 0) >= 80
-                                  ? "var(--success)"
-                                  : (a.score ?? 0) >= 60
-                                    ? "var(--warning)"
-                                    : "var(--danger)",
-                              transition: "width 0.6s ease-out",
-                            }}
-                          />
-                        </div>
-                        <span
-                          style={{
-                            fontFamily: "var(--font-mono)",
-                            fontWeight: 600,
-                            color: "var(--text)",
-                            minWidth: 24,
-                            textAlign: "right",
-                          }}
-                        >
-                          {a.score}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+            {/* Animated axis breakdown bars */}
+            <AnimatedAxisBars axes={ds.axes} animKey={animKey} />
+
+            {/* Replay button */}
+            <div style={{ display: "flex", justifyContent: "center", marginTop: "0.75rem" }}>
+              <button
+                type="button"
+                onClick={replay}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  background: "var(--surface)",
+                  color: "var(--dim)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "6px",
+                  padding: "0.3rem 0.75rem",
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--text)";
+                  e.currentTarget.style.borderColor = "var(--accent)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--dim)";
+                  e.currentTarget.style.borderColor = "var(--border)";
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M3.6 2.2A7 7 0 0 1 15 8a7 7 0 0 1-14 0h2a5 5 0 1 0 1.73-3.79L7 6.5H1V.5l2.6 1.7z" />
+                </svg>
+                Replay
+              </button>
             </div>
 
             {/* Secondary archetype note */}

@@ -247,6 +247,7 @@ function scoreColor(score: number): string {
 }
 
 const AXIS_LABELS = ["Security", "Foundations", "Reputation", "Speed", "Discoverability", "Email"];
+const AXIS_ABBR_OG = ["SEC", "FND", "REP", "SPD", "DSC", "EML"];
 
 // ─── OG Image (SVG) ─────────────────────────────────────────────────
 
@@ -256,18 +257,27 @@ function generateOgSvg(data: SharePayload): string {
   const tier = data.g;
   const gc = tierColor(tier);
   const sc = scoreColor(score);
+  const dateStr = new Date(data.t * 1000).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
-  // 1200×630 SVG — 6 axis bars
-  const bars = data.a
+  // Build axis pills
+  const pillWidth = 108;
+  const pillGap = 12;
+  const totalPillsWidth = 6 * pillWidth + 5 * pillGap;
+  const pillStartX = (1200 - totalPillsWidth) / 2;
+
+  const axisPills = data.a
     .map((val, i) => {
-      const y = 230 + i * 50;
-      const barWidth = Math.max(4, (val / 100) * 460);
+      const x = pillStartX + i * (pillWidth + pillGap);
+      const y = 430;
       const color = scoreColor(val);
       return `
-      <text x="660" y="${y + 4}" fill="#8b949e" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="15" text-anchor="end">${AXIS_LABELS[i] ?? ""}</text>
-      <rect x="680" y="${y - 12}" width="460" height="22" rx="4" fill="#21262d"/>
-      <rect x="680" y="${y - 12}" width="${barWidth}" height="22" rx="4" fill="${color}" opacity="0.85"/>
-      <text x="1152" y="${y + 4}" fill="#e6edf3" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="14" text-anchor="end">${val}</text>
+      <rect x="${x}" y="${y}" width="${pillWidth}" height="${70}" rx="8" fill="${color}" fill-opacity="0.12" stroke="${color}" stroke-opacity="0.25" stroke-width="1"/>
+      <text x="${x + pillWidth / 2}" y="${y + 24}" fill="#94a3b8" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="0.8">${AXIS_ABBR_OG[i] ?? ""}</text>
+      <text x="${x + pillWidth / 2}" y="${y + 52}" fill="${color}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="22" font-weight="700" text-anchor="middle">${val}</text>
     `;
     })
     .join("");
@@ -275,53 +285,36 @@ function generateOgSvg(data: SharePayload): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0d1117"/>
-      <stop offset="100%" stop-color="#161b22"/>
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
     </linearGradient>
-    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${gc}" stop-opacity="0.15"/>
-      <stop offset="100%" stop-color="${gc}" stop-opacity="0"/>
-    </linearGradient>
-    <filter id="invert">
-      <feColorMatrix type="matrix" values="-1 0 0 0 1  0 -1 0 0 1  0 0 -1 0 1  0 0 0 1 0"/>
-    </filter>
   </defs>
 
   <!-- Background -->
   <rect width="1200" height="630" fill="url(#bg)"/>
-  <rect width="1200" height="200" fill="url(#glow)"/>
 
   <!-- Border -->
-  <rect x="0.5" y="0.5" width="1199" height="629" rx="0" fill="none" stroke="#30363d" stroke-width="1"/>
+  <rect x="0.5" y="0.5" width="1199" height="629" rx="0" fill="none" stroke="#334155" stroke-width="1"/>
 
-  <!-- Yoke branding -->
-  <image x="56" y="50" width="28" height="28" href="${OX_LOGO_DATA_URI}" filter="url(#invert)" opacity="0.7"/>
-  <text x="92" y="72" fill="#8b949e" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="18" font-weight="600" letter-spacing="2">YOKE</text>
-  <text x="170" y="72" fill="#484f58" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="14">DOMAIN INTELLIGENCE</text>
+  <!-- Yoke branding top-left -->
+  <text x="48" y="56" fill="#818cf8" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="22" font-weight="800" letter-spacing="1.5">YOKE</text>
 
-  <!-- Domain name -->
-  <text x="60" y="146" fill="#e6edf3" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="46" font-weight="700">${domain.length > 28 ? `${domain.substring(0, 28)}…` : domain}</text>
+  <!-- Domain name centered -->
+  <text x="600" y="170" fill="#f1f5f9" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="42" font-weight="700" text-anchor="middle" letter-spacing="-0.5">${domain.length > 30 ? `${domain.substring(0, 30)}…` : domain}</text>
 
-  <!-- Divider -->
-  <line x1="60" y1="175" x2="580" y2="175" stroke="#30363d" stroke-width="1"/>
+  <!-- Big score number centered -->
+  <text x="600" y="300" fill="${sc}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="96" font-weight="800" text-anchor="middle" letter-spacing="-2">${score}</text>
 
-  <!-- Score circle -->
-  <circle cx="200" cy="370" r="120" fill="none" stroke="#21262d" stroke-width="8"/>
-  <circle cx="200" cy="370" r="120" fill="none" stroke="${sc}" stroke-width="8" stroke-dasharray="${(score / 100) * 754} 754" stroke-linecap="round" transform="rotate(-90 200 370)" opacity="0.7"/>
-  <circle cx="200" cy="370" r="100" fill="#0d1117" opacity="0.5"/>
-  <text x="200" y="370" fill="${sc}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="72" font-weight="700" text-anchor="middle" dominant-baseline="central">${score}</text>
-  <text x="200" y="420" fill="#8b949e" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="16" text-anchor="middle"></text>
+  <!-- Tier pill centered -->
+  <rect x="${600 - 70}" y="325" width="140" height="38" rx="19" fill="${gc}" fill-opacity="0.15" stroke="${gc}" stroke-opacity="0.35" stroke-width="1.5"/>
+  <text x="600" y="350" fill="${gc}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="15" font-weight="700" text-anchor="middle" letter-spacing="1.5">${esc(tier).toUpperCase()}</text>
 
-  <!-- Tier badge -->
-  <rect x="400" y="340" width="180" height="64" rx="16" fill="${gc}" opacity="0.15" stroke="${gc}" stroke-width="2"/>
-  <text x="490" y="372" fill="${gc}" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="26" font-weight="700" text-anchor="middle" dominant-baseline="central">${esc(tier)}</text>
+  <!-- Axis pills -->
+  ${axisPills}
 
-  <!-- Axis scores -->
-  ${bars}
-
-  <!-- Footer -->
-  <text x="60" y="585" fill="#484f58" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="13">yoke.lol — Free domain intelligence report</text>
-  <text x="1140" y="585" fill="#484f58" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="13" text-anchor="end">Analyzed ${new Date(data.t * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</text>
+  <!-- Footer date -->
+  <text x="1152" y="595" fill="#475569" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="13" text-anchor="end">Scanned ${dateStr}</text>
+  <text x="48" y="595" fill="#475569" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="13">yoke.lol</text>
 </svg>`;
 }
 

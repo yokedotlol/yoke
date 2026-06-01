@@ -1175,15 +1175,28 @@ async function runAnalysisCore(
         // Update recent lookups ticker (non-critical, swallow errors)
         try {
           const ds = result.domain_score as
-            | { composite: number; tier: string; archetype?: { detected?: string } }
+            | {
+                composite: number;
+                tier: string;
+                archetype?: { detected?: string };
+                axes?: Record<string, { score: number | null; not_measured?: boolean }>;
+              }
             | null
             | undefined;
+          // Build compact axis scores map for the feed heatmap
+          const axisKeys = ["security", "speed", "foundations", "reputation", "discoverability", "email"] as const;
+          const axes: Record<string, number | null> = {};
+          for (const key of axisKeys) {
+            const ax = ds?.axes?.[key];
+            axes[key] = ax && !ax.not_measured ? (ax.score ?? null) : null;
+          }
           const entry = {
             domain,
             analyzed_at: new Date().toISOString(),
             score: ds?.composite ?? null,
             tier: ds?.tier ?? null,
             archetype: ds?.archetype?.detected ?? null,
+            axes,
           };
           const raw = await env.REFERENCE_DATA.get("recent:index", "text");
           const existing: (typeof entry)[] = raw ? JSON.parse(raw) : [];
