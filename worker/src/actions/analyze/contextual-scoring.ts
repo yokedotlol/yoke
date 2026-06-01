@@ -15,8 +15,10 @@ import {
 } from "../../config/scoring-thresholds";
 import {
   AXIS_MAX_GOOD_WEIGHT,
+  computeEffectiveMaxGoodWeight,
   AXIS_WEIGHTS as REGISTRY_AXIS_WEIGHTS,
   tierFromComposite as registryTierFromComposite,
+  type ScoringContext,
 } from "../../config/signal-registry";
 import { analyzeNsDiversity } from "../../data/ns-providers";
 import { scanForVulnerableLibraries } from "../../data/vulnerable-libraries";
@@ -93,6 +95,8 @@ export interface DomainScoreResult {
   tier: string;
   axes: Record<Axis, AxisScore>;
   archetype: ArchetypeResult;
+  /** Detected context flags — signals gated by requiresContext only count when their context is present */
+  scoringContext?: ScoringContext;
 }
 
 // ─── Severity → Score mapping ────────────────────────────────────────
@@ -222,13 +226,15 @@ export function applyAbsencePenalties(score: number, axis: Axis, findings: Findi
 // ─── Exported Scoring Helpers ────────────────────────────────────────
 // Pure functions extracted for testability. Used by calculateDomainScore below.
 
-export function computeAxisScore(findings: Finding[], axis?: Axis): number {
+export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: ScoringContext): number {
   if (findings.length === 0) return BASELINE;
 
   const TARGET_RANGE = 100 - BASELINE; // 45
 
   // Get max possible good bonus for this axis (only when axis explicitly provided)
-  const maxGoodWeight = axis ? AXIS_MAX_GOOD_WEIGHT[axis] : 0;
+  // When scoringCtx is provided, exclude inapplicable signals (e.g., cookie_security on cookieless sites)
+  const effectiveMaxGoodWeight = scoringCtx ? computeEffectiveMaxGoodWeight(scoringCtx) : AXIS_MAX_GOOD_WEIGHT;
+  const maxGoodWeight = axis ? effectiveMaxGoodWeight[axis] : 0;
   const maxRawBonus = maxGoodWeight > 0 ? maxGoodWeight * 2 : 0;
 
   // Compute raw bonus and penalty separately
@@ -4073,6 +4079,13 @@ export function calculateDomainScore(opts: {
   const axes: Axis[] = ["security", "speed", "foundations", "reputation", "discoverability", "email"];
   const axisScores: Record<Axis, AxisScore> = {} as Record<Axis, AxisScore>;
 
+  // Build scoring context for context-aware normalization.
+  // Excludes inapplicable signals from the max achievable score denominator.
+  const scoringCtx: ScoringContext = {
+    cookies: !!(opts.cookieSecurity && opts.cookieSecurity.cookies.length > 0),
+    wordpress: !!opts.wordpress,
+  };
+
   for (const axis of axes) {
     const axisFindings = findings.filter((f) => f.axis === axis);
 
@@ -4087,7 +4100,7 @@ export function calculateDomainScore(opts: {
       axisScores[axis] = { score: null, weight: AXIS_WEIGHTS[axis], findings: axisFindings, not_measured: true };
       continue;
     }
-    let score = computeAxisScore(axisFindings, axis);
+    let score = computeAxisScore(axisFindings, axis, scoringCtx);
 
     // Apply absence penalties — expected-but-missing signals get mild deductions.
     // Pass all findings so absence detection can check if HTTP/SSL ran.
@@ -4149,5 +4162,5 @@ export function calculateDomainScore(opts: {
     }
   }
 
-  return { composite, tier, axes: axisScores, archetype };
+  return { composite, tier, axes: axisScores, archetype, scoringContext: scoringCtx };
 }

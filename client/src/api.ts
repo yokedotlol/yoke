@@ -778,6 +778,8 @@ export interface DomainScoreData {
   tier: string;
   axes: Record<Axis, AxisScoreData>;
   archetype: ArchetypeData;
+  /** Detected context flags for context-aware normalization */
+  scoringContext?: { cookies?: boolean; wordpress?: boolean };
 }
 
 // ─── Subdomain scan types ────────────────────────────────────────────

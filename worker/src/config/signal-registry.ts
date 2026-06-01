@@ -66,6 +66,13 @@ export interface SignalDef {
   promptGuidance?: string;
   /** Archetype-specific notes that override or supplement promptGuidance */
   archetypeNotes?: Partial<Record<ArchetypeName, string>>;
+  /**
+   * Context required for this signal to be applicable.
+   * When set, the signal is excluded from normalization (AXIS_MAX_GOOD_WEIGHT)
+   * and Level-Up opportunities unless the scan detects the matching context.
+   * Values: "cookies" (site sets cookies), "wordpress" (site runs WordPress).
+   */
+  requiresContext?: "cookies" | "wordpress";
 }
 
 // ─── Signal Registry ────────────────────────────────────────────────
@@ -448,6 +455,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — update cookie settings",
     fixDescription: "Set Secure/HttpOnly/SameSite on cookies",
     weightRange: [3, 3],
+    requiresContext: "cookies",
     promptGuidance:
       "Secure flag required for HTTPS. HttpOnly prevents XSS cookie theft. SameSite prevents CSRF. All three on session cookies.",
   },
@@ -854,6 +862,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [0, 0],
+    requiresContext: "wordpress",
     promptGuidance: "Display-only positive signal. Site has a recognized security plugin installed.",
   },
   wp_caching_plugin_detected: {
@@ -863,6 +872,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [0, 0],
+    requiresContext: "wordpress",
     promptGuidance: "Display-only positive signal. Site has a recognized caching/performance plugin installed.",
   },
 
@@ -1875,7 +1885,18 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
 
 // ─── Derived Constants ──────────────────────────────────────────────
 
-/** Precomputed max achievable good-bonus per axis, for score normalization. */
+/**
+ * Detected context flags from a scan, used to exclude inapplicable signals
+ * from normalization. E.g., cookieless sites shouldn't have cookie_security
+ * counted in their max achievable score.
+ */
+export interface ScoringContext {
+  cookies?: boolean;
+  wordpress?: boolean;
+}
+
+/** Precomputed max achievable good-bonus per axis (all contexts assumed present).
+ *  Used by calibration tests. For per-scan scoring, use computeEffectiveMaxGoodWeight. */
 export const AXIS_MAX_GOOD_WEIGHT: Record<Axis, number> = (() => {
   const result: Partial<Record<Axis, number>> = {};
   for (const [_key, def] of Object.entries(SIGNAL_REGISTRY)) {
@@ -1885,6 +1906,28 @@ export const AXIS_MAX_GOOD_WEIGHT: Record<Axis, number> = (() => {
   }
   return result as Record<Axis, number>;
 })();
+
+/**
+ * Compute effective max good weight per axis, excluding signals whose
+ * requiresContext doesn't match what the scan detected.
+ * Falls back to AXIS_MAX_GOOD_WEIGHT when no context is provided.
+ */
+export function computeEffectiveMaxGoodWeight(ctx?: ScoringContext): Record<Axis, number> {
+  if (!ctx) return AXIS_MAX_GOOD_WEIGHT;
+  const result: Partial<Record<Axis, number>> = {};
+  for (const [_key, def] of Object.entries(SIGNAL_REGISTRY)) {
+    if (!def.canBeGood) continue;
+    // Skip signals that require a context not present in this scan
+    if (def.requiresContext && !ctx[def.requiresContext]) continue;
+    const axis = def.axis;
+    result[axis] = (result[axis] ?? 0) + def.weightRange[1];
+  }
+  // Fill any missing axes with 0
+  for (const axis of ["security", "speed", "foundations", "reputation", "discoverability", "email"] as Axis[]) {
+    if (!(axis in result)) result[axis] = 0;
+  }
+  return result as Record<Axis, number>;
+}
 
 /** Signal IDs for signals that are non-actionable but CAN be non-good (i.e. should be excluded from Grade-Up) */
 export const NON_ACTIONABLE_SIGNALS: string[] = Object.entries(SIGNAL_REGISTRY)

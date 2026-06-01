@@ -23,6 +23,7 @@ import {
   FIX_DESC_MAP,
   NON_ACTIONABLE_SIGNALS,
   SCORE_DRAG_SIGNALS,
+  SIGNAL_REGISTRY,
   TIER_THRESHOLDS,
 } from "../../../worker/src/config/signal-registry";
 import type { Axis, ScoreFinding, Severity } from "../api";
@@ -673,6 +674,17 @@ interface GradeUpItem {
   fixLink: { url: string; label: string } | null;
 }
 
+/** Missing canBeGood signal that the site could earn */
+interface GradeUpOpportunity {
+  signal: string;
+  label: string;
+  axis: Axis;
+  weight: number;
+  pointGain: number; // estimated composite score improvement if earned
+  description: string;
+  effort?: string;
+}
+
 interface ScoreDragItem {
   signal: string;
   label: string;
@@ -717,6 +729,7 @@ function computeAxisScore(findings: ScoreFinding[]): number {
 
 function generateLevelUpPlan(data: AnalysisResult): {
   items: GradeUpItem[];
+  opportunities: GradeUpOpportunity[];
   drags: ScoreDragItem[];
   currentScore: number;
   currentTier: string;
@@ -829,6 +842,70 @@ function generateLevelUpPlan(data: AnalysisResult): {
   // Sort by biggest impact first
   items.sort((a, b) => b.pointGain - a.pointGain);
 
+  // ── Positive Opportunities ──────────────────────────────────────
+  // Surface canBeGood signals that didn't fire — actionable improvements
+  // the user could earn that aren't in the current findings.
+  const opportunities: GradeUpOpportunity[] = [];
+  {
+    // Build set of all signals that fired (any severity)
+    const firedSignals = new Set<string>();
+    for (const [, axisData] of Object.entries(score.axes) as [Axis, (typeof score.axes)[Axis]][]) {
+      if (!axisData.findings) continue;
+      for (const f of axisData.findings) {
+        firedSignals.add(f.signal);
+      }
+    }
+
+    // Get the scoring context from the score result (cookies, wordpress detection)
+    const scoringCtx = score.scoringContext;
+
+    for (const [signalId, def] of Object.entries(SIGNAL_REGISTRY)) {
+      if (!def.canBeGood) continue;
+      if (firedSignals.has(signalId)) continue; // already present
+      if (def.weightRange[1] === 0) continue; // zero-weight signals don't affect score
+      if (!def.actionable) continue; // non-actionable signals aren't user-fixable
+
+      // Skip signals whose required context isn't present
+      if (def.requiresContext && !scoringCtx?.[def.requiresContext as keyof typeof scoringCtx]) continue;
+
+      // Simulate adding this signal as "good" to its axis
+      const axisName = def.axis;
+      const axisData = score.axes[axisName];
+      if (!axisData || axisData.not_measured) continue;
+
+      const augmentedFindings = [
+        ...(axisData.findings || []),
+        {
+          signal: signalId,
+          axis: axisName,
+          severity: "good" as Severity,
+          weight: def.weightRange[1],
+          label: def.label,
+          tradeoff: null,
+        },
+      ];
+      const rawNewAxisScore = computeAxisScore(augmentedFindings);
+      const newAxisScore = Math.max(0, Math.min(100, Math.round(rawNewAxisScore + (absenceAdjustment[axisName] ?? 0))));
+      const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
+      const newComposite = compositeFromAxes(simScores);
+      const compositeDelta = Math.round((newComposite - currentScore) * 10) / 10;
+
+      if (compositeDelta < 0.1) continue; // negligible impact
+
+      opportunities.push({
+        signal: signalId,
+        label: def.label,
+        axis: axisName,
+        weight: def.weightRange[1],
+        pointGain: compositeDelta,
+        description: def.fixDescription || def.label,
+        effort: def.effort,
+      });
+    }
+
+    opportunities.sort((a, b) => b.pointGain - a.pointGain);
+  }
+
   // Collect non-actionable score drags — things hurting the score that can't be fixed
   const drags: ScoreDragItem[] = [];
   for (const [axisName, axisData] of Object.entries(score.axes) as [Axis, (typeof score.axes)[Axis]][]) {
@@ -865,21 +942,34 @@ function generateLevelUpPlan(data: AnalysisResult): {
   drags.sort((a, b) => b.pointCost - a.pointCost);
 
   // If Excellent and no actionable items found, return null
-  if (isExcellent && items.length === 0 && drags.length === 0) return null;
+  if (isExcellent && items.length === 0 && opportunities.length === 0 && drags.length === 0) return null;
 
   // Compute projected composite by simulating ALL fixes at once via compositeFromAxes.
   // Individual pointGain values are computed independently (each assumes only that
   // one fix), so summing them double-counts the interaction effect.
   // Instead: for each axis, re-score with ALL that axis's actionable findings
-  // flipped to "good", then run compositeFromAxes on the full set.
+  // flipped to "good" AND all opportunities added, then run compositeFromAxes.
   const allFixedAxisScores = { ...currentAxisScores };
   for (const [axisName, axisData] of Object.entries(score.axes) as [Axis, (typeof score.axes)[Axis]][]) {
     if (axisData.not_measured || !axisData.findings) continue;
     const actionableSignals = new Set(items.filter((i) => i.axis === axisName).map((i) => i.signal));
-    if (actionableSignals.size === 0) continue;
-    const fixedFindings = axisData.findings.map((f) =>
+    const axisOpportunities = opportunities.filter((o) => o.axis === axisName);
+    if (actionableSignals.size === 0 && axisOpportunities.length === 0) continue;
+    // Start with findings, flip actionable penalties to good
+    const fixedFindings: ScoreFinding[] = axisData.findings.map((f) =>
       actionableSignals.has(f.signal) ? { ...f, severity: "good" as Severity } : f,
     );
+    // Add opportunity signals as good findings
+    for (const opp of axisOpportunities) {
+      fixedFindings.push({
+        signal: opp.signal,
+        axis: opp.axis,
+        severity: "good" as Severity,
+        weight: opp.weight,
+        label: opp.label,
+        tradeoff: null,
+      });
+    }
     const rawFixed = computeAxisScore(fixedFindings);
     allFixedAxisScores[axisName] = Math.max(
       0,
@@ -890,6 +980,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
 
   return {
     items,
+    opportunities,
     drags,
     currentScore,
     currentTier,
@@ -1978,8 +2069,8 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
         </div>
         <div style={{ fontSize: "10px", color: "var(--muted)", marginTop: "3px" }}>
           {plan.pointsNeeded > 0
-            ? `Need +${plan.pointsNeeded} points · fixing all items below → ${projectedScore} pts (${projectedTier})`
-            : `Fixing all items below → ${projectedScore} pts (${projectedTier})`}
+            ? `Need +${plan.pointsNeeded} points · addressing all items below → ${projectedScore} pts (${projectedTier})`
+            : `Addressing all items below → ${projectedScore} pts (${projectedTier})`}
         </div>
       </div>
 
@@ -2136,6 +2227,71 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
       )}
 
       {/* Non-actionable score drags */}
+      {plan.opportunities.length > 0 && (
+        <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginBottom: "8px",
+            }}
+          >
+            <Zap size={11} style={{ color: "var(--green)" }} />
+            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--muted)" }}>Additional opportunities</span>
+            <span style={{ fontSize: "10px", color: "var(--green)" }}>
+              +{plan.opportunities.reduce((s, o) => s + o.pointGain, 0).toFixed(1)} pts
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            {plan.opportunities.map((opp, i) => (
+              <div
+                key={`${opp.signal}-${i}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "8px",
+                  padding: "5px 8px",
+                  borderRadius: "4px",
+                  background: "rgba(255,255,255,0.02)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: axisColors[opp.axis] || "var(--muted)",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: "var(--text-secondary)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {opp.description}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                  {opp.effort && <span style={{ fontSize: "9px", color: "var(--dim)" }}>{opp.effort}</span>}
+                  <span style={{ fontSize: "10px", color: "var(--green)", fontWeight: 600 }}>
+                    +{opp.pointGain.toFixed(1)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Beyond your control */}
       {plan.drags.length > 0 && (
         <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
           <div
