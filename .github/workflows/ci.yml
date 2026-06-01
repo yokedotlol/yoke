@@ -137,7 +137,7 @@ jobs:
           cat > wrangler.toml << EOF
           name = "yoke"
           main = "dist/worker.js"
-          compatibility_date = "2024-12-01"
+          compatibility_date = "2026-05-31"
 
           [vars]
           BASE_URL = "https://yoke.lol"
@@ -158,6 +158,10 @@ jobs:
 
           [[routes]]
           pattern = "yoke.lol/*"
+          zone_name = "yoke.lol"
+
+          [[routes]]
+          pattern = "mta-sts.yoke.lol/*"
           zone_name = "yoke.lol"
 
           [[services]]
@@ -199,6 +203,20 @@ jobs:
           curl -sf --max-time 30 https://yoke.lol/ | grep -q '<title>'
           echo "✓ Homepage OK"
 
+      - name: Smoke test — Deployed version
+        run: |
+          echo "Checking X-Yoke-Version header matches commit..."
+          VERSION=$(curl -sI --max-time 10 https://yoke.lol/api/docs | grep -i 'x-yoke-version' | awk '{print $2}' | tr -d '\r')
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+          echo "Deployed version: $VERSION"
+          echo "Expected commit prefix: $SHORT_SHA"
+          if echo "$VERSION" | grep -q "$SHORT_SHA"; then
+            echo "✓ Version matches commit"
+          else
+            echo "::warning::Version header ($VERSION) doesn't contain commit SHA ($SHORT_SHA) — may still be propagating"
+          fi
+
       - name: Smoke test — API docs
         run: |
           echo "Checking https://yoke.lol/api/docs..."
@@ -228,7 +246,7 @@ jobs:
           cat > wrangler.toml << EOF
           name = "yoke"
           main = "dist/worker.js"
-          compatibility_date = "2024-12-01"
+          compatibility_date = "2026-05-31"
 
           [vars]
           BASE_URL = "https://yoke.lol"
@@ -249,6 +267,10 @@ jobs:
 
           [[routes]]
           pattern = "yoke.lol/*"
+          zone_name = "yoke.lol"
+
+          [[routes]]
+          pattern = "mta-sts.yoke.lol/*"
           zone_name = "yoke.lol"
 
           [[services]]

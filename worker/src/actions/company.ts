@@ -334,81 +334,9 @@ export async function getCompanyInfo(kv: KVNamespace, rawDomain: string, force?:
   const crunchbaseSlug = domain.split(".")[0].toLowerCase();
   const crunchbase_url = `https://www.crunchbase.com/organization/${crunchbaseSlug}`;
 
-  let stock: StockData | null = null;
-
-  // If we have an exchange but no ticker, try Yahoo Finance search by company name
-  if (company && !company.ticker && company.exchange && company.name) {
-    try {
-      const searchRes = await fetchWithTimeout(
-        `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(company.name)}&quotesCount=5&newsCount=0`,
-        { timeout: 5000, headers: { "User-Agent": "Mozilla/5.0" } },
-      );
-      if (searchRes.ok) {
-        const searchData = (await searchRes.json()) as {
-          quotes?: Array<{ symbol?: string; shortname?: string; exchDisp?: string; quoteType?: string }>;
-        };
-        const equity = searchData.quotes?.find((q) => q.quoteType === "EQUITY" && q.symbol && !q.symbol.includes("."));
-        if (equity?.symbol) {
-          company.ticker = equity.symbol;
-        }
-      }
-    } catch {
-      /* Yahoo search failed */
-    }
-  }
-
-  // Fetch stock quote if ticker found
-  if (company?.ticker) {
-    try {
-      const symbol = company.ticker;
-      const yfRes = await fetchWithTimeout(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`,
-        { timeout: 8000, headers: { "User-Agent": "Mozilla/5.0" } },
-      );
-      if (yfRes.ok) {
-        const yfData = (await yfRes.json()) as {
-          chart?: {
-            result?: Array<{
-              meta?: {
-                regularMarketPrice?: number;
-                previousClose?: number;
-                fiftyTwoWeekHigh?: number;
-                fiftyTwoWeekLow?: number;
-                regularMarketVolume?: number;
-                marketCap?: number;
-                currency?: string;
-              };
-              indicators?: { quote?: Array<{ close?: (number | null)[] }> };
-            }>;
-          };
-        };
-        const chartResult = yfData.chart?.result?.[0];
-        const meta = chartResult?.meta;
-        if (meta) {
-          const price = meta.regularMarketPrice ?? null;
-          const prevClose = meta.previousClose ?? null;
-          const change = price != null && prevClose != null ? price - prevClose : null;
-          const changePct = change != null && prevClose ? (change / prevClose) * 100 : null;
-          const rawClose = chartResult?.indicators?.quote?.[0]?.close;
-          const sparkline = rawClose ? rawClose.filter((v): v is number => v != null) : null;
-          stock = {
-            price,
-            change: change ? parseFloat(change.toFixed(2)) : null,
-            change_percent: changePct ? parseFloat(changePct.toFixed(2)) : null,
-            market_cap: meta.marketCap ?? null,
-            volume: meta.regularMarketVolume ?? null,
-            high_52w: meta.fiftyTwoWeekHigh ?? null,
-            low_52w: meta.fiftyTwoWeekLow ?? null,
-            currency: meta.currency ?? null,
-            sparkline: sparkline && sparkline.length >= 2 ? sparkline : null,
-          };
-          await setCache(kv, domain, "stock_quote", stock, 15 * 60 * 1000);
-        }
-      }
-    } catch {
-      /* stock fetch failed */
-    }
-  }
+  // Stock data removed — Yahoo Finance's undocumented API requires UA spoofing and violates ToS.
+  // Stock field kept as null for API compatibility.
+  const stock: StockData | null = null;
 
   const result = { company, stock, crunchbase_url };
   await setCache(kv, domain, "company_info", result, 24 * 60 * 60 * 1000);

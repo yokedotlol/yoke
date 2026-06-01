@@ -1172,7 +1172,7 @@ async function runAnalysisCore(
           console.warn(`[yoke:cache] KV write failed for ${domain}:`, e instanceof Error ? e.message : e);
         }
       } else {
-        console.log(`[yoke:cache] Skipping cache write for ${domain} — site unreachable`);
+        // Skip cache write for unreachable sites silently
       }
 
       // Recent lookups: maintain a JSON array in KV, prepend new entry, trim to 500

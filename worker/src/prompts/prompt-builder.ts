@@ -63,7 +63,7 @@ export function buildSystemPrompt(archetype: ArchetypeResult, signalIds: string[
     .join(", ");
 
   sections.push(
-    `SCORING CONTEXT:\nComposite scoring: Yoke scores 0-100 using anchor-and-adjust across 6 categories: ${axisStr}.\nScoring model: baseline 55, good findings earn bonuses (+2×weight), negatives penalize by severity×weight (critical -4, high -2.5, medium -1.25, low -0.5). Composite uses weighted geometric mean. Categories with <3 scoreable findings are marked "Not Assessed" and excluded from the composite.\nTiers: ${tierStr}.`,
+    `SCORING CONTEXT:\nComposite scoring: Yoke scores 0-100 using budget-based deductive scoring across 6 categories: ${axisStr}.\nScoring model: each axis starts at 100. Issues deduct points proportional to signal weight share (signal_weight / total_good_weight × 100). Severity multipliers: good=0, info=0, low=0.5, medium=0.75, high=1.0, critical=1.5. Signals expected but not detected deduct 0.25× their share. Composite = weighted arithmetic mean of axis scores. Floor cap: any axis below 40 caps composite at 74.\nTiers: ${tierStr}.`,
   );
 
   // Axis descriptions

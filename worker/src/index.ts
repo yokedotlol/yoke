@@ -9,7 +9,6 @@ import { checkGlobalAvailability } from "./actions/availability";
 import { getCompanyInfo } from "./actions/company";
 import { compareDomains } from "./actions/compare";
 import { getNews } from "./actions/news";
-import { getRecentLookups } from "./actions/recent";
 import { getReverseIP } from "./actions/reverse-ip";
 import { getSocialAccounts } from "./actions/social";
 import { scanSubdomains } from "./actions/subdomain-scan";
@@ -311,10 +310,9 @@ export default {
 
     // Handle CORS preflight
     if (method === "OPTIONS") {
-      const allowHeaders = "Content-Type";
       return new Response(null, {
         status: 204,
-        headers: { ...CORS_HEADERS, "Access-Control-Allow-Headers": allowHeaders },
+        headers: CORS_HEADERS,
       });
     }
 
@@ -523,11 +521,7 @@ export default {
           return addHeaders(resp, rl.headers);
         }
 
-        // GET /api/recent — internal, capped at 8 results for homepage
-        if (method === "GET" && path === "/api/recent") {
-          const result = await getRecentLookups(env.REFERENCE_DATA!, 8);
-          return json(result);
-        }
+        // GET /api/recent — removed (privacy: global search history should not be public API)
 
         // POST /api/subdomains
         if (method === "POST" && path === "/api/subdomains") {
@@ -735,10 +729,20 @@ export default {
           return json(prompt);
         }
 
-        // GET /api/health — API error observability dashboard
+        // GET /api/health — basic health always public; detailed errors require admin auth
         if (method === "GET" && path === "/api/health") {
-          const health = await getApiHealth(env.STATS_DB);
-          return json(health);
+          const isAdmin = env.ADMIN_KEY && timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY);
+          if (isAdmin) {
+            // Full health including error metrics
+            const health = await getApiHealth(env.STATS_DB);
+            return json(health);
+          }
+          // Public: basic health status only
+          return json({
+            status: "ok",
+            version: YOKE_VERSION,
+            uptime: "healthy",
+          });
         }
 
         // POST /api/share-sign — sign a share card payload
@@ -866,7 +870,7 @@ export default {
               fix_desc_map: FIX_DESC_MAP,
               thresholds: ALL_THRESHOLDS,
               archetype_note:
-                "Anchor-and-adjust scoring: baseline 55, penalties scale by severity×weight (critical -4, high -2.5, medium -1.25, low -0.5), good bonus = 2×weight. Composite uses weighted geometric mean over assessed axes (penalizes weak categories). No per-category hard caps; breach tier cap retained (recent breaches >100M pwned cap at Strong). Categories with <3 scoreable findings are 'Not Assessed' and excluded from composite with weight re-normalization. Tier thresholds: Excellent≥90, Strong≥75, Moderate≥60, Weak≥40, Critical<40. Categories: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12).",
+                "Budget-based deductive scoring: each axis starts at 100 and loses points for issues. Signal share = signal_weight / total_good_weight × 100. Severity multipliers: good=0, info=0, low=0.5×share, medium=0.75×share, high=1.0×share, critical=1.5×share. Absent canBeGood signals deduct 0.25×share. Composite = weighted arithmetic mean. Floor cap: any axis below 40 caps composite at 74 (Moderate). Cache hits do not count against rate limits. Categories: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12).",
             },
             200,
           );
@@ -1050,16 +1054,13 @@ export default {
                 rate_limit: "20 req/hr",
               },
               "GET /api/health": {
-                description: "Health check",
+                description: "Health check — basic status. Admin auth returns detailed error metrics.",
                 rate_limit: "none",
               },
               "GET /api/scoring": {
                 description: "Scoring methodology — all thresholds, weights, and severity bands",
                 rate_limit: "none",
-              },
-              "GET /api/recent": {
-                description: "Recently analyzed domains",
-                rate_limit: "none",
+                note: "Cache hits do not count against rate limits.",
               },
             },
             examples: {

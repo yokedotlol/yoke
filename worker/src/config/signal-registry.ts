@@ -791,9 +791,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: false,
     effort: "~10 min — security plugin or REST API restriction",
     fixDescription: "Block public access to /wp-json/wp/v2/users to prevent username discovery",
-    weightRange: [0, 0],
+    weightRange: [1, 1],
+    requiresContext: "wordpress",
     promptGuidance:
-      "Display-only signal. Usernames visible via REST API aid brute-force attacks. Fixable via security plugins (Wordfence, iThemes) or custom code.",
+      "Usernames visible via REST API aid brute-force attacks. Fixable via security plugins (Wordfence, iThemes) or custom code.",
   },
   wp_xmlrpc_exposed: {
     axis: "security",
@@ -1359,12 +1360,12 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "Email Trust",
     actionable: true,
     canBeNonGood: true,
-    canBeGood: true,
+    canBeGood: false,
     effort: "~30 min — DNS + email provider config",
     fixDescription: "Improve email authentication for trust",
-    weightRange: [2, 3],
+    weightRange: [1, 1],
     promptGuidance:
-      "Complete email auth (SPF+DKIM+DMARC) is trust signal. Incomplete leaves domain vulnerable to spoofing.",
+      "Penalizes incomplete email auth. The email_auth signal already rewards complete auth — this only fires when auth is missing or incomplete.",
     archetypeNotes: { infrastructure: "API domains that don't send email: missing auth is informational." },
   },
   security_txt: {

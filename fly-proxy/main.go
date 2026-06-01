@@ -436,11 +436,6 @@ func probeGeoIP(ip string) GeoResult {
 	if result := tryIpWhois(ip); result != nil {
 		return *result
 	}
-	// Last resort: ip-api.com (HTTP only on free tier — acceptable since
-	// the IP being looked up is already public hosting-IP information)
-	if result := tryIpApi(ip); result != nil {
-		return *result
-	}
 	errStr := "all geolocation providers failed"
 	return GeoResult{IP: ip, Error: &errStr}
 }
@@ -488,52 +483,6 @@ func tryMaxMind(ipStr string) *GeoResult {
 		IP: ipStr, City: &city, Country: &country,
 		CountryCode: &countryCode, Lat: &lat, Lon: &lon,
 		ISP: isp, Org: org, ASN: asn, Source: "maxmind",
-	}
-}
-
-// tryIpApi uses ip-api.com as a GeoIP fallback. Note: ip-api.com's free tier
-// only supports plain HTTP (no HTTPS), so the queried IP address is transmitted
-// in cleartext. This is acceptable because: (1) MaxMind local DB is the primary
-// source, (2) ip-api.com is only reached when MaxMind is unavailable, and (3) the
-// IP being looked up is already public information (it's the domain's hosting IP).
-// For production hardening, consider upgrading to ip-api.com's paid tier (HTTPS)
-// or removing this fallback entirely since ipwho.is (HTTPS) is also available.
-func tryIpApi(ip string) *GeoResult {
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get("http://ip-api.com/json/" + ip + "?fields=status,country,countryCode,city,lat,lon,isp,org,as")
-	if err != nil {
-		return nil
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil
-	}
-
-	var data struct {
-		Status      string  `json:"status"`
-		Country     string  `json:"country"`
-		CountryCode string  `json:"countryCode"`
-		City        string  `json:"city"`
-		Lat         float64 `json:"lat"`
-		Lon         float64 `json:"lon"`
-		ISP         string  `json:"isp"`
-		Org         string  `json:"org"`
-		AS          string  `json:"as"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil || data.Status != "success" {
-		return nil
-	}
-
-	// Parse ASN from "AS13335 Cloudflare, Inc." format
-	asn := ""
-	if parts := strings.SplitN(data.AS, " ", 2); len(parts) > 0 {
-		asn = parts[0]
-	}
-
-	return &GeoResult{
-		IP: ip, City: &data.City, Country: &data.Country,
-		CountryCode: &data.CountryCode, Lat: &data.Lat, Lon: &data.Lon,
-		ISP: &data.ISP, Org: &data.Org, ASN: &asn, Source: "ip-api.com",
 	}
 }
 

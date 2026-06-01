@@ -19,6 +19,7 @@ import {
   AXIS_WEIGHTS as REGISTRY_AXIS_WEIGHTS,
   tierFromComposite as registryTierFromComposite,
   type ScoringContext,
+  SIGNAL_REGISTRY,
 } from "../../config/signal-registry";
 import { analyzeNsDiversity } from "../../data/ns-providers";
 import { scanForVulnerableLibraries } from "../../data/vulnerable-libraries";
@@ -253,6 +254,10 @@ const TIME_DEPENDENT_SIGNALS = new Set([
 function classifyDeduction(signal: string, severity: string): AxisDeduction["category"] {
   if (TIME_DEPENDENT_SIGNALS.has(signal)) return "time_dependent";
   if (severity === "good" || severity === "info") return "not_detected"; // shouldn't happen for real deductions
+  // Non-actionable signals (blocklist from shared IP, DNS resolution, domain age, etc.)
+  // are infrastructure issues the user can't directly fix.
+  const reg = SIGNAL_REGISTRY[signal as keyof typeof SIGNAL_REGISTRY];
+  if (reg && !reg.actionable) return "infrastructure";
   return "fixable";
 }
 
@@ -294,12 +299,13 @@ export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: 
     const factor = SEVERITY_DEDUCTION_FACTOR[f.severity];
     totalDeduction += share * factor;
 
-    // Track weight of signals that fired, regardless of severity.
-    // Only count weights that are part of the axis budget (canBeGood signals).
-    // Heuristic: any signal that CAN fire as good but fired as non-good
-    // still "accounts for" its weight — it should NOT also be absent.
-    // We count all finding weights up to totalGoodWeight.
-    presentWeight += f.weight;
+    // Track weight of canBeGood signals that fired, regardless of severity.
+    // Only canBeGood signals count toward the "present" budget — non-good-only
+    // signals (e.g. canBeGood=false security warnings) don't reduce absent weight.
+    const reg = SIGNAL_REGISTRY[f.signal as keyof typeof SIGNAL_REGISTRY];
+    if (reg?.canBeGood) {
+      presentWeight += f.weight;
+    }
   }
 
   // Absent signals: canBeGood signals that didn't fire at all.
@@ -353,7 +359,11 @@ export function computeAxisScoreWithDeductions(
     }
     totalDeduction += deduction;
 
-    presentWeight += f.weight;
+    // Only count canBeGood signals toward present weight (see computeAxisScore)
+    const reg = SIGNAL_REGISTRY[f.signal as keyof typeof SIGNAL_REGISTRY];
+    if (reg?.canBeGood) {
+      presentWeight += f.weight;
+    }
   }
 
   // Absent signals: canBeGood signals that didn't fire at all
@@ -3210,55 +3220,48 @@ export function calculateDomainScore(opts: {
     // No Tranco rank — neutral, no penalty (most legitimate domains aren't top 1M)
   }
 
-  // Email auth completeness (trust signal — bidirectional: penalize incomplete, reward complete)
+  // Email auth completeness (trust signal — penalty-only; email_auth handles the reward)
   if (opts.emailAuth) {
     const hasSpf = opts.emailAuth.spf.found;
     const hasDmarc = opts.emailAuth.dmarc.found;
     const hasDkim = opts.emailAuth.dkim_selectors_found.length > 0;
     const complete = hasSpf && hasDmarc && hasDkim;
-    if (complete) {
-      findings.push({
-        signal: "email_trust",
-        axis: "email",
-        severity: "good",
-        label: "Complete email authentication",
-        tradeoff: null,
-        weight: 3,
-      });
-    } else if (!hasSpf && !hasDmarc && !hasDkim) {
-      findings.push({
-        signal: "email_trust",
-        axis: "email",
-        severity: "high",
-        label: "No email authentication (missing SPF, DKIM, DMARC)",
-        tradeoff: null,
-        weight: 3,
-      });
-    } else {
-      const missing: string[] = [];
-      if (!hasSpf) missing.push("SPF");
-      // DKIM absence is too noisy for Trust axis too — external detection is limited.
-      // Only flag SPF and DMARC absence in Trust.
-      if (!hasDmarc) missing.push("DMARC");
-      if (missing.length > 0) {
+    if (!complete) {
+      if (!hasSpf && !hasDmarc && !hasDkim) {
         findings.push({
           signal: "email_trust",
           axis: "email",
-          severity: "medium",
-          label: `Incomplete email auth (missing ${missing.join(", ")})`,
+          severity: "high",
+          label: "No email authentication (missing SPF, DKIM, DMARC)",
           tradeoff: null,
-          weight: 2,
+          weight: 1,
         });
       } else {
-        // Only DKIM missing — treat as mostly complete
-        findings.push({
-          signal: "email_trust",
-          axis: "email",
-          severity: "info",
-          label: "Email auth present (SPF + DMARC) — DKIM not externally detected",
-          tradeoff: null,
-          weight: 2,
-        });
+        const missing: string[] = [];
+        if (!hasSpf) missing.push("SPF");
+        // DKIM absence is too noisy for Trust axis too — external detection is limited.
+        // Only flag SPF and DMARC absence in Trust.
+        if (!hasDmarc) missing.push("DMARC");
+        if (missing.length > 0) {
+          findings.push({
+            signal: "email_trust",
+            axis: "email",
+            severity: "medium",
+            label: `Incomplete email auth (missing ${missing.join(", ")})`,
+            tradeoff: null,
+            weight: 1,
+          });
+        } else {
+          // Only DKIM missing — treat as mostly complete
+          findings.push({
+            signal: "email_trust",
+            axis: "email",
+            severity: "info",
+            label: "Email auth present (SPF + DMARC) — DKIM not externally detected",
+            tradeoff: null,
+            weight: 1,
+          });
+        }
       }
     }
   }
