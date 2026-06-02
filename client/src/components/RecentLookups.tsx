@@ -270,16 +270,14 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
               })}
             </div>
 
-            {/* Tier + Percentile */}
+            {/* Percentile — fixed-width cell */}
             <span
               style={{
-                flex: "0 0 auto",
+                flex: "0 0 42px",
                 textAlign: "right",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-end",
-                gap: 4,
-                minWidth: 52,
               }}
             >
               {entry.composite_percentile != null && (
@@ -293,26 +291,28 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
                     padding: "1px 5px",
                     borderRadius: "10px",
                     whiteSpace: "nowrap",
-                    flexShrink: 0,
                   }}
                 >
                   {pctilePipText(entry.composite_percentile)}
                 </span>
               )}
-              <span
-                className="recent-tier-label"
-                style={{
-                  fontFamily: "var(--font-ui)",
-                  fontSize: "10px",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                  color: tierFor(entry.score).color,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {entry.tier ?? ""}
-              </span>
+            </span>
+            {/* Tier label — fixed-width cell */}
+            <span
+              className="recent-tier-label"
+              style={{
+                flex: "0 0 30px",
+                textAlign: "right",
+                fontFamily: "var(--font-ui)",
+                fontSize: "10px",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                color: tierFor(entry.score).color,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {entry.tier ?? ""}
             </span>
           </button>
         ))}
