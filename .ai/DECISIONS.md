@@ -167,3 +167,19 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **Why:** These signals penalized sites for things that are either not applicable (ads.txt on non-ad sites, hreflang on English-only sites), architectural choices (PWA), traffic-dependent (CrUX/INP), redundant with other signals (GreyNoise RIOT overlaps CDN detection), or UX rather than security (HTTP→HTTPS redirect when TLS+HSTS present). Industry pattern (Lighthouse, Mozilla Observatory, SecurityHeaders) is clear: score on universals, inform on niche features.
 **Rejected:** Archetype-specific weighting (too complex, maintainability risk). Removing signals entirely (they're still useful as informational indicators). cookie_consent_cmp was NOT reclassified — it already had requiresContext: "cookies" gating, which is the correct behavior (score when cookies present, exclude when absent).
 **Directive:** Score on universals, inform on niche features. Use `canBeGood: false` + `weightRange: [0, 0]` for informational signals. Use `requiresContext` when a signal is valid only in specific contexts. Informational signals are still detected and displayed — they just don't affect scores.
+
+---
+
+### 2026-06-01: ABSENT_DEDUCTION_FACTOR increased 0.15 → 0.30
+
+**What changed:** The penalty applied when a signal is absent (can't be assessed) increased from 15% to 30% of its potential deduction.
+**Why:** After adding null axis imputation at 35, the 0.15 factor was too lenient — domains with many absent signals weren't penalized enough. The higher factor combined with NULL_AXIS_IMPUTE = 35 gives a more honest score for domains where the scanner couldn't assess many signals.
+**Directive:** The current value is 0.30. Changes to this constant affect ALL scores and must be validated with calibration tests.
+
+---
+
+### 2026-06-01: Level-Up composite delta filter replaced with axis-deduction threshold
+
+**What changed:** The `compositeDelta < 0.1` filter that dropped Level-Up items was replaced with an axis-deduction threshold (`signalGain < 0.5`). Composite delta is now computed with unrounded precision for display/sorting, with a 0.1-point floor.
+**Why:** Integer rounding of composites caused small-but-real deductions (1-2 points on an axis) to round to 0 composite delta, dropping legitimate items. The core invariant (`sum(displayed_items) = 100 - axis_score`) was violated because the filter operated at the wrong granularity — composite-level instead of axis-level.
+**Directive:** Every deduction ≥ 0.5 axis points must appear in the Level-Up plan. The score–suggestion consistency invariant is non-negotiable.

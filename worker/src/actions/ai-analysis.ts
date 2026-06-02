@@ -499,6 +499,7 @@ function streamOpenRouter(
       try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
+          signal: AbortSignal.timeout(25000), // Stay within CF's 30s CPU limit
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",

@@ -11,7 +11,7 @@
 |-----------|---------|--------|
 | Worker (service) | 2.0.0 | `YOKE_VERSION` in `worker/src/helpers.ts` |
 | CLI | 1.5.0 | `cli/` GoReleaser tag `cli/v1.5.0` |
-| MCP Server | 1.0.1 | `mcp-server/package.json` |
+| MCP Server | 1.0.0 | `mcp/package.json` |
 | Chrome Extension | — | `extension/manifest.json` |
 
 ## Scoring
@@ -23,7 +23,7 @@
 | Signal count | 155 |
 | Composite method | Weighted arithmetic mean + outlier floor cap |
 | Tier labels | Excellent, Strong, Moderate, Weak, Critical |
-| Absent penalty | 0.15 |
+| Absent penalty | 0.30 |
 | Site archetypes | 7 |
 | AI model | DeepSeek V3 (via OpenRouter) |
 

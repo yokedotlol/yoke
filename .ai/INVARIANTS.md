@@ -8,8 +8,8 @@
 - [ ] **Deductive scoring only.** Every axis starts at 100 and subtracts. Never starts at a baseline and adds.
   - _Verify:_ `contextual-scoring.ts` must not contain `BASELINE` or additive scoring logic.
 
-- [ ] **ABSENT_DEDUCTION_FACTOR = 0.15.** The penalty for absent (unassessable) signals.
-  - _Verify:_ `grep 'ABSENT_DEDUCTION_FACTOR' worker/src/actions/analyze/contextual-scoring.ts` → must show `0.15`.
+- [ ] **ABSENT_DEDUCTION_FACTOR = 0.30.** The penalty for absent (unassessable) signals.
+  - _Verify:_ `grep 'ABSENT_DEDUCTION_FACTOR' worker/src/actions/analyze/contextual-scoring.ts` → must show `0.30`.
 
 - [ ] **Severity deduction factors: good=0, info=0, low=0.5, medium=0.75, high=1.0, critical=1.5.**
   - _Verify:_ Check `SEVERITY_DEDUCTION_FACTOR` in `contextual-scoring.ts`.

@@ -800,7 +800,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
     }
     assessedAxes.push(axisName);
     currentAxisScores[axisName] = axisData.score;
-    axisDeductions[axisName] = (axisData as any).deductions ?? [];
+    axisDeductions[axisName] = axisData.deductions ?? [];
   }
 
   // Helper: compute weighted arithmetic mean from axis scores with outlier floor cap.
@@ -837,14 +837,26 @@ function generateLevelUpPlan(data: AnalysisResult): {
         { score: axisData.score, deductions: axisDeductions[axisName] },
         finding.signal,
       );
+
+      // Skip findings with no deduction (e.g. info-severity or signals not in deductions)
+      if (signalGain < 0.5) continue;
+
       const newAxisScore = Math.max(0, Math.min(100, Math.round((axisData.score ?? 0) + signalGain)));
 
-      // Compute composite delta using weighted arithmetic mean
-      const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
-      const newComposite = compositeFromAxes(simScores);
-      const compositeDelta = Math.round((newComposite - currentScore) * 10) / 10;
-
-      if (compositeDelta < 0.1) continue; // negligible impact
+      // Compute composite delta with unrounded precision to avoid rounding two integers to 0
+      const totalWeight = assessedAxes.reduce((sum, a) => sum + (AXIS_WEIGHTS[a as Axis] ?? 0), 0);
+      const preciseCurrentComposite = assessedAxes.reduce(
+        (sum, a) => sum + ((AXIS_WEIGHTS[a as Axis] ?? 0) / totalWeight) * (currentAxisScores[a] ?? 0),
+        0,
+      );
+      const preciseNewComposite = assessedAxes.reduce(
+        (sum, a) =>
+          sum +
+          ((AXIS_WEIGHTS[a as Axis] ?? 0) / totalWeight) *
+            (a === axisName ? newAxisScore : (currentAxisScores[a] ?? 0)),
+        0,
+      );
+      const compositeDelta = Math.round((preciseNewComposite - preciseCurrentComposite) * 10) / 10;
 
       // Fix description from signal-registry (single source of truth)
       const signalKey = finding.signal.toLowerCase().replace(/[^a-z0-9_]/g, "_");
@@ -856,7 +868,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
         axis: axisName,
         currentSeverity: finding.severity,
         weight: finding.weight,
-        pointGain: compositeDelta,
+        pointGain: Math.max(compositeDelta, 0.1), // floor to 0.1 so every item shows nonzero impact
         fixDescription,
         fixLink: getFixLink(finding, data),
       });
@@ -907,19 +919,32 @@ function generateLevelUpPlan(data: AnalysisResult): {
       if (absentDed && absentDed.weight > 0) {
         signalGain = (def.weightRange[1] / absentDed.weight) * absentDed.deduction;
       }
-      const newAxisScore = Math.max(0, Math.min(100, Math.round((axisData.score ?? 0) + signalGain)));
-      const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
-      const newComposite = compositeFromAxes(simScores);
-      const compositeDelta = Math.round((newComposite - currentScore) * 10) / 10;
 
-      if (compositeDelta < 0.1) continue; // negligible impact
+      // Skip opportunities with negligible axis impact
+      if (signalGain < 0.5) continue;
+
+      const newAxisScore = Math.max(0, Math.min(100, Math.round((axisData.score ?? 0) + signalGain)));
+      // Use unrounded composite for delta to avoid rounding two integers to 0
+      const totalWeight = assessedAxes.reduce((sum, a) => sum + (AXIS_WEIGHTS[a as Axis] ?? 0), 0);
+      const preciseCurrentComposite = assessedAxes.reduce(
+        (sum, a) => sum + ((AXIS_WEIGHTS[a as Axis] ?? 0) / totalWeight) * (currentAxisScores[a] ?? 0),
+        0,
+      );
+      const preciseNewComposite = assessedAxes.reduce(
+        (sum, a) =>
+          sum +
+          ((AXIS_WEIGHTS[a as Axis] ?? 0) / totalWeight) *
+            (a === axisName ? newAxisScore : (currentAxisScores[a] ?? 0)),
+        0,
+      );
+      const compositeDelta = Math.round((preciseNewComposite - preciseCurrentComposite) * 10) / 10;
 
       opportunities.push({
         signal: signalId,
         label: def.label,
         axis: axisName,
         weight: def.weightRange[1],
-        pointGain: compositeDelta,
+        pointGain: Math.max(compositeDelta, 0.1), // floor to 0.1 so every item shows nonzero impact
         description: def.fixDescription || def.label,
         effort: def.effort,
       });
@@ -942,12 +967,25 @@ function generateLevelUpPlan(data: AnalysisResult): {
         { score: axisData.score, deductions: axisDeductions[axisName] },
         finding.signal,
       );
-      const newAxisScore = Math.max(0, Math.min(100, Math.round((axisData.score ?? 0) + signalGain)));
-      const simScores = { ...currentAxisScores, [axisName]: newAxisScore };
-      const newComposite = compositeFromAxes(simScores);
-      const costDelta = Math.round((newComposite - currentScore) * 10) / 10;
 
-      if (costDelta < 0.1) continue;
+      // Skip drags with negligible axis impact
+      if (signalGain < 0.5) continue;
+
+      const newAxisScore = Math.max(0, Math.min(100, Math.round((axisData.score ?? 0) + signalGain)));
+      // Use unrounded composite for delta
+      const totalWeight = assessedAxes.reduce((sum, a) => sum + (AXIS_WEIGHTS[a as Axis] ?? 0), 0);
+      const preciseCurrentComposite = assessedAxes.reduce(
+        (sum, a) => sum + ((AXIS_WEIGHTS[a as Axis] ?? 0) / totalWeight) * (currentAxisScores[a] ?? 0),
+        0,
+      );
+      const preciseNewComposite = assessedAxes.reduce(
+        (sum, a) =>
+          sum +
+          ((AXIS_WEIGHTS[a as Axis] ?? 0) / totalWeight) *
+            (a === axisName ? newAxisScore : (currentAxisScores[a] ?? 0)),
+        0,
+      );
+      const costDelta = Math.round((preciseNewComposite - preciseCurrentComposite) * 10) / 10;
 
       drags.push({
         signal: finding.signal,
@@ -955,7 +993,7 @@ function generateLevelUpPlan(data: AnalysisResult): {
         axis: axisName,
         currentSeverity: finding.severity,
         weight: finding.weight,
-        pointCost: costDelta,
+        pointCost: Math.max(costDelta, 0.1), // floor to 0.1 so every drag shows nonzero impact
       });
     }
   }
