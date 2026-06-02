@@ -1359,11 +1359,13 @@ function tierForScore(score: number | null): { label: string; color: string } {
 function CompareScoreGrid({ data, ds1, ds2 }: { data: CompareResult; ds1: DomainScoreData; ds2: DomainScoreData }) {
   let winsA = 0;
   let winsB = 0;
+  let ties = 0;
   const axisDeltas: Record<string, { delta: number; absDelta: number }> = {};
   for (const ax of data.comparison.axes) {
     if (ax.score1 != null && ax.score2 != null) {
       if (ax.score1 > ax.score2) winsA++;
       else if (ax.score2 > ax.score1) winsB++;
+      else ties++;
     }
     axisDeltas[ax.axis] = { delta: ax.delta, absDelta: ax.absDelta };
   }
@@ -1471,7 +1473,7 @@ function CompareScoreGrid({ data, ds1, ds2 }: { data: CompareResult; ds1: Domain
             fontSize: "9px",
             fontWeight: 600,
             color: "var(--dim)",
-            padding: "0.25rem 0.5rem 0.25rem 0",
+            padding: "0.3rem 0.5rem 0.3rem 0",
             display: "flex",
             alignItems: "center",
           }}
@@ -1486,15 +1488,15 @@ function CompareScoreGrid({ data, ds1, ds2 }: { data: CompareResult; ds1: Domain
                 key={axis}
                 style={{
                   textAlign: "center",
-                  padding: "0.2rem 0.15rem",
+                  padding: "0.25rem 0.15rem",
                   fontFamily: "var(--font-mono)",
-                  fontSize: "10px",
-                  fontWeight: 600,
+                  fontSize: "9px",
+                  fontWeight: 500,
                   color: "var(--dim)",
-                  opacity: 0.4,
+                  opacity: 0.5,
                 }}
               >
-                —
+                tie
               </div>
             );
           }
@@ -1505,18 +1507,18 @@ function CompareScoreGrid({ data, ds1, ds2 }: { data: CompareResult; ds1: Domain
               key={axis}
               style={{
                 textAlign: "center",
-                padding: "0.2rem 0.15rem",
+                padding: "0.25rem 0.15rem",
+                borderRadius: "3px",
                 fontFamily: "var(--font-mono)",
                 fontSize: "10px",
                 fontWeight: 700,
                 color: winnerColor,
+                background: isBig ? "rgba(255,255,255,0.04)" : "transparent",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 2,
               }}
             >
-              {isBig && <span style={{ fontSize: "8px", color: "var(--warning)" }}>★</span>}
               {ad.delta > 0 ? "+" : ""}
               {ad.delta}
             </div>
@@ -1552,6 +1554,21 @@ function CompareScoreGrid({ data, ds1, ds2 }: { data: CompareResult; ds1: Domain
             {winsA === 1 ? "axis won" : "axes won"}
           </div>
         </div>
+        {ties > 0 && (
+          <div style={{ flex: 1, textAlign: "center" }}>
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "var(--dim)",
+              }}
+            >
+              {ties}
+            </div>
+            <div style={{ fontSize: "10px", color: "var(--dim)", marginTop: "0.1rem" }}>tied</div>
+          </div>
+        )}
         <div style={{ flex: 1, textAlign: "center" }}>
           <div
             style={{
