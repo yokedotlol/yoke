@@ -3,11 +3,34 @@
 // Delegates all analysis logic to the shared core pipeline.
 
 import { CORS_HEADERS, type Env, normalizeDomain } from "../helpers";
+import { getPercentiles } from "../percentiles";
 import { type AnalysisCallbacks, runAnalysis } from "./analyze/core";
 
 // SSE helper: format an event
 function sseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+// Inject percentile data into the result (non-blocking, swallows errors)
+async function injectPercentiles(data: Record<string, unknown>, env: Env): Promise<void> {
+  try {
+    const ds = data.domain_score as { composite?: number; axes?: Record<string, { score?: number }> } | undefined;
+    if (ds?.composite != null && ds.axes) {
+      const pctile = await getPercentiles(env, {
+        composite: ds.composite,
+        security: ds.axes.security?.score,
+        speed: ds.axes.speed?.score,
+        foundations: ds.axes.foundations?.score,
+        reputation: ds.axes.reputation?.score,
+        discoverability: ds.axes.discoverability?.score,
+      });
+      if (pctile) {
+        data.percentiles = pctile;
+      }
+    }
+  } catch {
+    /* percentile injection is non-critical */
+  }
 }
 
 export async function analyzeDomainStream(
@@ -60,9 +83,11 @@ export async function analyzeDomainStream(
 
       // For cached results, just send the done event
       if (result.kind === "cached") {
+        await injectPercentiles(result.data, env);
         await send("done", result.data);
       } else {
         // Send final assembled result
+        await injectPercentiles(result.data, env);
         await send("done", result.data);
       }
     } catch (err) {

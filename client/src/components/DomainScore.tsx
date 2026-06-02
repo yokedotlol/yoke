@@ -294,9 +294,10 @@ interface RadarPlotProps {
   axes: Record<Axis, AxisScoreData>;
   archetype: ArchetypeName;
   weightsTable?: Record<Axis, number>;
+  animKey?: number;
 }
 
-export function RadarPlot({ axes, archetype, weightsTable }: RadarPlotProps) {
+export function RadarPlot({ axes, archetype: _archetype, weightsTable, animKey }: RadarPlotProps) {
   const weights = weightsTable ?? FIXED_WEIGHTS;
   const [animProgress, setAnimProgress] = useState(0);
   const [hoveredAxis, setHoveredAxis] = useState<Axis | null>(null);
@@ -319,7 +320,9 @@ export function RadarPlot({ axes, archetype, weightsTable }: RadarPlotProps) {
     return () => observer.disconnect();
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: animKey is intentionally used to trigger animation replay
   useEffect(() => {
+    setAnimProgress(0);
     const start = performance.now();
     const duration = 600;
     const animate = (now: number) => {
@@ -332,7 +335,7 @@ export function RadarPlot({ axes, archetype, weightsTable }: RadarPlotProps) {
     };
     rafRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafRef.current);
-  }, []);
+  }, [animKey]);
 
   // biome-ignore lint/style/noNonNullAssertion: null-checked via ternary guard
   const values = AXES.map((a) => (axes[a].not_measured || axes[a].score == null ? 0 : axes[a].score! * animProgress));
@@ -688,7 +691,7 @@ export function DomainScore({ data }: { data: AnalysisResult }) {
         <div className="flex flex-col lg:flex-row items-center gap-6">
           {/* Radar Plot */}
           <div className="flex-shrink-0 w-full max-w-[200px]">
-            <RadarPlot axes={ds.axes} archetype={activeArchetype} weightsTable={weightsTable} />
+            <RadarPlot axes={ds.axes} archetype={activeArchetype} weightsTable={weightsTable} animKey={animKey} />
           </div>
 
           {/* Score + Details */}
