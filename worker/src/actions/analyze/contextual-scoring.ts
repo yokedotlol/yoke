@@ -25,6 +25,7 @@ import { analyzeNsDiversity } from "../../data/ns-providers";
 import { scanForVulnerableLibraries } from "../../data/vulnerable-libraries";
 import type { BreachResult } from "../breaches";
 import type { WordPressDetails } from "../wordpress";
+import type { AssetCdnResult } from "./asset-cdn";
 import type { NetworkHealth } from "./network-health";
 import type {
   AccessibilityResult,
@@ -765,6 +766,7 @@ export function calculateDomainScore(opts: {
   statusResult: { is_up: boolean; status_code: number | null; http_blocked?: boolean; status_label?: string } | null;
   robotsParsed: RobotsParsed | null;
   wordpress: WordPressDetails | null;
+  assetCdn: AssetCdnResult | null;
   /** Internal: set during breach analysis for grade cap logic */
   _recentBreachCount?: number;
   _weightedPwned?: number;
@@ -2732,6 +2734,19 @@ export function calculateDomainScore(opts: {
     });
   }
 
+  // Asset CDN — only fires if main site is NOT already behind a full-site CDN
+  if (opts.assetCdn?.detected && !opts.hosting?.cdn) {
+    const providerNames = opts.assetCdn.providers.map((p) => p.name).join(", ");
+    findings.push({
+      signal: "asset_cdn",
+      axis: "speed",
+      severity: "good",
+      label: providerNames ? `Assets served via CDN: ${providerNames}` : "Assets served via CDN subdomain",
+      tradeoff: null,
+      weight: 2,
+    });
+  }
+
   // ─── NEW: Redirect Chain Length ──────────────────────────────────
   if (opts.redirects.length > 0) {
     const hops = opts.redirects.length;
@@ -2817,16 +2832,16 @@ export function calculateDomainScore(opts: {
     weight: 1,
   });
 
-  // Multiple A records (load balancing) — informational only, weak heuristic
+  // Multiple A records (DNS redundancy) — IP-level resilience indicator
   const aCount = dns.filter((r) => r.type === "A").length;
   if (aCount >= 2) {
     findings.push({
       signal: "lb",
       axis: "foundations",
-      severity: "info",
-      label: `${aCount} A records (load balanced)`,
+      severity: "good",
+      label: `DNS redundancy (${aCount} A records)`,
       tradeoff: null,
-      weight: 0,
+      weight: 1,
     });
   }
 

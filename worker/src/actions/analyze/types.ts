@@ -332,9 +332,9 @@ export interface EmailAuthResult {
 
 // ─── Accessibility types ──────────────────────────────────────────────
 export type { AccessibilityCheck, AccessibilityResult } from "./accessibility";
+export type { AssetCdnProvider, AssetCdnResult } from "./asset-cdn";
 // ─── Cache Analysis types ─────────────────────────────────────────────
 export type { CacheAnalysis } from "./cache";
-
 // ─── Cookie Consent types ─────────────────────────────────────────────
 export type { CmpDetection, CookieConsentResult, CookieInfo } from "./cookie-consent";
 export type {

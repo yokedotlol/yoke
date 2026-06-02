@@ -10,6 +10,7 @@ import { backgroundWork, type Env, fetchWithTimeout, normalizeDomain } from "../
 import { type BreachResult } from "../breaches";
 import { analyzeWordPress, probeWordPressSecurity } from "../wordpress";
 import { analyzeAccessibility } from "./accessibility";
+import { detectAssetCdn } from "./asset-cdn";
 import { checkCacheHeaders } from "./cache";
 import {
   type AnsResult,
@@ -851,6 +852,7 @@ async function runAnalysisCore(
   const accessibilityResult = httpProbeSucceeded ? analyzeAccessibility(html) : null;
   const thirdPartyScriptsResult = httpProbeSucceeded ? analyzeThirdPartyScripts(html, domain) : null;
   const cookieConsentResult = httpProbeSucceeded ? analyzeCookieConsent(html, effectiveHeaders ?? {}, domain) : null;
+  const assetCdnResult = httpProbeSucceeded ? detectAssetCdn(html, domain) : null;
 
   // Trust signal aggregation
   const caaAnalysis = analyzeCaaRecords(dnsRecords);
@@ -936,6 +938,7 @@ async function runAnalysisCore(
     statusResult: enhancedStatus,
     robotsParsed,
     wordpress: wpDetails,
+    assetCdn: assetCdnResult,
   });
 
   const result: AnalysisResult = {

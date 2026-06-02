@@ -1087,6 +1087,18 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     promptGuidance:
       "CDN detected is positive — reduces latency, improves caching. CDN-fronted sites handle compression/caching at edge.",
   },
+  asset_cdn: {
+    axis: "speed",
+    label: "Asset CDN",
+    fixDescription: "Third-party CDN hostnames detected in page source for static assets",
+    actionable: false,
+    canBeNonGood: false,
+    canBeGood: true,
+    weightRange: [2, 2],
+    goodPrevalence: 0.4,
+    promptGuidance:
+      "Third-party CDN hostnames detected in page source for static assets (images, scripts, stylesheets). Indicates the site uses a CDN for asset delivery even if the main site isn't CDN-fronted. Only fires when full-site CDN is not already detected.",
+  },
   http2: {
     axis: "foundations",
     label: "HTTP/2 Enabled",
@@ -1270,14 +1282,15 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   },
   lb: {
     axis: "foundations",
-    label: "Load Balancing",
-    fixDescription: "Detected automatically — multiple A records indicate load-balanced infrastructure",
+    label: "DNS Redundancy",
+    fixDescription: "Detected automatically — multiple A records indicate redundant hosting infrastructure",
     actionable: false,
     canBeNonGood: false,
-    canBeGood: false,
-    weightRange: [0, 0],
+    canBeGood: true,
+    weightRange: [1, 1],
+    goodPrevalence: 0.35,
     promptGuidance:
-      "Multiple A records suggest load balancing. Weak heuristic — just A record count, conflates CDN anycast with real LB. Informational only.",
+      "Multiple A records provide IP-level redundancy. Not necessarily intentional load balancing — may reflect hosting provider infrastructure, CDN anycast, or round-robin DNS.",
   },
   caa: {
     axis: "foundations",
