@@ -39,11 +39,11 @@ const AXIS_LABELS: Record<string, string> = {
 };
 
 const TIER_THRESHOLDS: Array<{ min: number; label: string; color: string }> = [
-  { min: 90, label: "Excellent", color: "#22c55e" },
-  { min: 75, label: "Strong", color: "#3b82f6" },
-  { min: 60, label: "Moderate", color: "#f59e0b" },
-  { min: 40, label: "Weak", color: "#f97316" },
-  { min: 0, label: "Critical", color: "#ef4444" },
+  { min: 90, label: "Excellent", color: "var(--tier-excellent)" },
+  { min: 75, label: "Strong", color: "var(--tier-strong)" },
+  { min: 60, label: "Moderate", color: "var(--tier-moderate)" },
+  { min: 40, label: "Weak", color: "var(--tier-weak)" },
+  { min: 0, label: "Critical", color: "var(--tier-critical)" },
 ];
 
 function tierFor(score: number | null | undefined): { label: string; color: string } {
@@ -258,7 +258,7 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
                         fontFamily: "var(--font-mono)",
                         fontSize: "10px",
                         fontWeight: 700,
-                        color: isNull ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.95)",
+                        color: isNull ? "rgba(255,255,255,0.5)" : "var(--tier-text)",
                         textShadow: "0 1px 2px rgba(0,0,0,0.6)",
                         pointerEvents: "none",
                       }}
@@ -279,7 +279,7 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
                 alignItems: "center",
                 justifyContent: "flex-end",
                 gap: 4,
-                minWidth: 0,
+                minWidth: 52,
               }}
             >
               {entry.composite_percentile != null && (

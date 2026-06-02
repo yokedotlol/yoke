@@ -1341,11 +1341,11 @@ const AXIS_ABBRS: Record<Axis, string> = {
 };
 
 const TIER_THRESHOLDS: Array<{ min: number; label: string; color: string }> = [
-  { min: 90, label: "Excellent", color: "#22c55e" },
-  { min: 75, label: "Strong", color: "#3b82f6" },
-  { min: 60, label: "Moderate", color: "#f59e0b" },
-  { min: 40, label: "Weak", color: "#f97316" },
-  { min: 0, label: "Critical", color: "#ef4444" },
+  { min: 90, label: "Excellent", color: "var(--tier-excellent)" },
+  { min: 75, label: "Strong", color: "var(--tier-strong)" },
+  { min: 60, label: "Moderate", color: "var(--tier-moderate)" },
+  { min: 40, label: "Weak", color: "var(--tier-weak)" },
+  { min: 0, label: "Critical", color: "var(--tier-critical)" },
 ];
 
 function tierForScore(score: number | null): { label: string; color: string } {

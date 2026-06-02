@@ -71,11 +71,11 @@ const FIXED_WEIGHTS: Record<Axis, number> = {
 // Uses the same thresholds as the scoring engine for visual consistency
 
 function axisTierColor(score: number): string {
-  if (score >= 90) return "#22c55e";
-  if (score >= 75) return "#3b82f6";
-  if (score >= 60) return "#f59e0b";
-  if (score >= 40) return "#f97316";
-  return "#ef4444";
+  if (score >= 90) return "var(--tier-excellent)";
+  if (score >= 75) return "var(--tier-strong)";
+  if (score >= 60) return "var(--tier-moderate)";
+  if (score >= 40) return "var(--tier-weak)";
+  return "var(--tier-critical)";
 }
 
 const NULL_BAR_BG =
