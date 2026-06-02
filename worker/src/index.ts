@@ -1130,9 +1130,9 @@ export default {
           return adminJson({ ok: true, cleaned_at: new Date().toISOString(), results });
         }
 
-        // POST /_/rescore — batch re-score all domains from stored signal_details (admin-only)
+        // POST /api/rescore — batch re-score all domains from stored signal_details (admin-only)
         // Replays current scoring model (weights, IDF penalties, thresholds) without external fetches.
-        if (method === "POST" && path === "/_/rescore") {
+        if (method === "POST" && path === "/api/rescore") {
           const authErr = checkAdminAuth(request, env.ADMIN_KEY);
           if (authErr) return authErr;
 
