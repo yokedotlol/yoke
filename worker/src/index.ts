@@ -33,7 +33,7 @@ import {
 } from "./helpers";
 import { logError } from "./logger";
 import { getApiDocsHtml } from "./pages";
-import { getDistribution, getPercentiles, lookupCompositePercentile } from "./percentiles";
+import { getDistribution, injectPercentiles, lookupCompositePercentile } from "./percentiles";
 import { trackRequest } from "./request-tracking";
 import {
   buildShareUrl,
@@ -561,23 +561,7 @@ export default {
           }
 
           // Inject percentiles (non-blocking lookup, swallow errors)
-          try {
-            if (ds?.composite != null && ds.axes) {
-              const pctile = await getPercentiles(env, {
-                composite: ds.composite,
-                security: (ds.axes as Record<string, { score?: number }>).security?.score,
-                speed: (ds.axes as Record<string, { score?: number }>).speed?.score,
-                foundations: (ds.axes as Record<string, { score?: number }>).foundations?.score,
-                reputation: (ds.axes as Record<string, { score?: number }>).reputation?.score,
-                discoverability: (ds.axes as Record<string, { score?: number }>).discoverability?.score,
-              });
-              if (pctile) {
-                resultData.percentiles = pctile;
-              }
-            }
-          } catch {
-            /* percentile injection is non-critical */
-          }
+          await injectPercentiles(resultData, env);
 
           const resp = new Response(JSON.stringify(resultData), {
             headers: { "Content-Type": "application/json", ...CORS_HEADERS },

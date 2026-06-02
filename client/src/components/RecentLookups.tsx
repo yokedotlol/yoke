@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ordinal } from "../utils/format";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -55,12 +56,6 @@ function tierFor(score: number | null | undefined): { label: string; color: stri
 
 // ─── Percentile helpers ──────────────────────────────────────────────
 
-function ordinal(n: number): string {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
-
 function pctilePipStyle(pctile: number): { bg: string; color: string } {
   if (pctile >= 90) return { bg: "rgba(34, 197, 94, 0.12)", color: "#4ade80" }; // green — top 10
   if (pctile >= 75) return { bg: "rgba(99, 102, 241, 0.12)", color: "#a5b4fc" }; // indigo — top 25
@@ -68,7 +63,7 @@ function pctilePipStyle(pctile: number): { bg: string; color: string } {
 }
 
 function pctilePipText(pctile: number): string {
-  if (pctile >= 90) return `Top ${100 - pctile}%`;
+  if (pctile >= 90) return `Top ${Math.max(1, 100 - pctile)}%`;
   return ordinal(pctile);
 }
 

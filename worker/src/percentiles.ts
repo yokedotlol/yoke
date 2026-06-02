@@ -2,7 +2,7 @@
 //
 // Histogram-based: 101 buckets per axis (index = score 0–100, value = domain count).
 // Scales to any number of domains with fixed ~2.8KB storage.
-// Cached in KV for 24h. Percentile = prefix-sum lookup, no sorting needed.
+// Cached in KV for 6h (shorter during seeder sprint). Percentile = prefix-sum lookup, no sorting needed.
 
 import type { Env } from "./helpers";
 
@@ -22,7 +22,7 @@ export interface PercentileDistribution {
   computed_at: string;
 }
 
-export interface PercentileResult {
+export interface PercentileData {
   composite: number;
   axes: {
     security: number | null;
@@ -160,7 +160,7 @@ async function cacheDistribution(kv: KVNamespace, dist: PercentileDistribution):
 
 // ─── Public API ─────────────────────────────────────────────────────
 
-/** Get or compute the percentile distribution (cached 24h in KV). */
+/** Get or compute the percentile distribution (cached in KV). */
 export async function getDistribution(env: Env): Promise<PercentileDistribution | null> {
   if (!env.REFERENCE_DATA) return computeDistribution(env.STATS_DB);
 
@@ -187,7 +187,7 @@ export function lookupPercentiles(
     reputation?: number | null;
     discoverability?: number | null;
   },
-): PercentileResult {
+): PercentileData {
   return {
     composite: percentileRank(dist.composite, scores.composite),
     axes: {
@@ -215,7 +215,7 @@ export async function getPercentiles(
     reputation?: number | null;
     discoverability?: number | null;
   },
-): Promise<PercentileResult | null> {
+): Promise<PercentileData | null> {
   const dist = await getDistribution(env);
   if (!dist) return null;
   return lookupPercentiles(dist, scores);
@@ -224,4 +224,26 @@ export async function getPercentiles(
 /** Look up composite percentile only (for recent feed). */
 export function lookupCompositePercentile(dist: PercentileDistribution, composite: number): number {
   return percentileRank(dist.composite, composite);
+}
+
+/** Inject percentile data into an analysis result object. Non-blocking, swallows errors. */
+export async function injectPercentiles(data: Record<string, unknown>, env: Env): Promise<void> {
+  try {
+    const ds = data.domain_score as { composite?: number; axes?: Record<string, { score?: number }> } | undefined;
+    if (ds?.composite != null && ds.axes) {
+      const pctile = await getPercentiles(env, {
+        composite: ds.composite,
+        security: ds.axes.security?.score,
+        speed: ds.axes.speed?.score,
+        foundations: ds.axes.foundations?.score,
+        reputation: ds.axes.reputation?.score,
+        discoverability: ds.axes.discoverability?.score,
+      });
+      if (pctile) {
+        data.percentiles = pctile;
+      }
+    }
+  } catch {
+    /* percentile injection is non-critical */
+  }
 }

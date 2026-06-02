@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ordinal, percentileLabel } from "../utils/format";
 import { severityColor, severityIcon, tierColor } from "../utils/severity";
 import type { AnalysisResult, ArchetypeName, Axis, AxisScoreData, PercentileData } from "../utils/types";
 import { Tooltip } from "./Tooltip";
@@ -81,17 +82,6 @@ const NULL_BAR_BG =
   "repeating-linear-gradient(-45deg, var(--border) 0px, var(--border) 3px, transparent 3px, transparent 6px)";
 
 // ─── Percentile Helpers ──────────────────────────────────────────────
-
-function ordinal(n: number): string {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
-
-function percentileLabel(pctile: number): string {
-  if (pctile >= 90) return `Top ${100 - pctile}%`;
-  return `${ordinal(pctile)} percentile`;
-}
 
 function axisPctileColor(pctile: number): string {
   if (pctile >= 80) return "#818cf8"; // indigo
