@@ -1,0 +1,86 @@
+name: "False Positive: Signal exists but wasn't detected"
+description: Yoke reports a signal as missing or absent, but it actually exists on your site.
+title: "[Detection] False positive: "
+labels: ["detection", "false-positive", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Yoke didn't detect something that exists on your site
+
+        This form is for reporting cases where Yoke says a signal is missing or absent, but you believe it **does** exist. For example: "Yoke says I don't have HSTS, but I do."
+
+  - type: input
+    id: domain
+    attributes:
+      label: Domain scanned
+      description: The domain you scanned on yoke.lol.
+      placeholder: "example.com"
+    validations:
+      required: true
+
+  - type: input
+    id: signal
+    attributes:
+      label: Signal or finding in question
+      description: Which specific signal or detection does Yoke get wrong?
+      placeholder: "e.g., HSTS, CDN, WAF, HTTP/2, robots.txt, etc."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: axis
+    attributes:
+      label: Scoring axis
+      description: Which scoring axis does this signal belong to?
+      options:
+        - Security
+        - Speed
+        - Foundations
+        - Reputation
+        - Discoverability
+        - Email
+        - Not sure
+      default: 6
+    validations:
+      required: false
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence that the signal exists
+      description: |
+        Help us verify. Paste relevant headers, DNS records, config, or link to proof.
+        Examples: `curl -I` output showing the header, a screenshot, DNS lookup results, etc.
+      placeholder: |
+        $ curl -sI https://example.com | grep -i strict-transport
+        strict-transport-security: max-age=31536000; includeSubDomains
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: yoke-output
+    attributes:
+      label: What Yoke reported
+      description: Copy the relevant section from your Yoke scan results, or describe what Yoke shows.
+      placeholder: "Yoke shows 'HSTS not enabled' in the Security axis with a deduction of -3.2"
+    validations:
+      required: false
+
+  - type: input
+    id: scan-url
+    attributes:
+      label: Yoke scan URL
+      description: Direct link to your scan result (if available).
+      placeholder: "https://yoke.lol/?q=example.com"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Anything else that might help us investigate? CDN configuration, hosting provider, special setup, etc.
+    validations:
+      required: false

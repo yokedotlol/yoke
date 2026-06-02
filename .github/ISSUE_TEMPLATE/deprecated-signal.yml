@@ -1,0 +1,69 @@
+name: "Deprecated or Invalid Signal"
+description: A signal Yoke checks for is outdated, deprecated, or no longer considered best practice.
+title: "[Signal] Deprecated/invalid: "
+labels: ["signal-review", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### A signal Yoke scores may be outdated or invalid
+
+        Web standards evolve. If you believe a signal Yoke checks for is deprecated, superseded by a newer standard, or no longer considered best practice, let us know.
+
+  - type: input
+    id: signal
+    attributes:
+      label: Signal name
+      description: Which signal do you believe is outdated or should be reconsidered?
+      placeholder: "e.g., X-XSS-Protection header, Public-Key-Pins, etc."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: axis
+    attributes:
+      label: Scoring axis
+      options:
+        - Security
+        - Speed
+        - Foundations
+        - Reputation
+        - Discoverability
+        - Email
+        - Not sure
+      default: 6
+    validations:
+      required: false
+
+  - type: dropdown
+    id: concern
+    attributes:
+      label: Type of concern
+      options:
+        - Signal has been deprecated by its specification body
+        - Signal is superseded by a newer standard
+        - Signal is no longer considered best practice
+        - Signal scoring weight is disproportionate
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference or source
+      description: |
+        Link to an RFC, MDN page, blog post, specification, or other authoritative source that supports your claim.
+      placeholder: |
+        MDN: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
+        "This feature is non-standard and is not on a standards track."
+    validations:
+      required: true
+
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: What should Yoke do instead?
+      description: Should the signal be removed, downweighted, or replaced with a different check?
+    validations:
+      required: false

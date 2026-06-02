@@ -1,0 +1,53 @@
+name: "Feature Request"
+description: Suggest a new signal, feature, or improvement for Yoke.
+title: "[Feature] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Suggest something new for Yoke
+
+        Have an idea for a new signal Yoke should check, a feature that would make it more useful, or an improvement to existing functionality? We'd love to hear it.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: What kind of request?
+      options:
+        - New signal to check (e.g., a header, DNS record, performance metric)
+        - New scoring axis or category
+        - UI / UX improvement
+        - API enhancement
+        - Integration (Chrome extension, CLI, CI/CD, etc.)
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the feature
+      description: What would you like Yoke to do? Be as specific as possible.
+      placeholder: |
+        Yoke should check for the Permissions-Policy header and score it under Security.
+        This header controls which browser features (camera, mic, geolocation) a site allows.
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why is this valuable?
+      description: Who benefits and how? Is this an industry best practice, an emerging standard, or something you'd find useful?
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to specifications, documentation, blog posts, or examples of other tools that implement this.
+    validations:
+      required: false

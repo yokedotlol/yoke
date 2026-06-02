@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "💬 Discussions"
+    url: https://github.com/yokedotlol/yoke/discussions
+    about: Ask questions, share feedback, or discuss Yoke with the community.
+  - name: "📖 API Documentation"
+    url: https://yoke.lol/api
+    about: Check the API docs before reporting an API issue.
+  - name: "🔍 Try a scan"
+    url: https://yoke.lol
+    about: Scan your domain on yoke.lol to see your current results.

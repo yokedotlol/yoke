@@ -1,0 +1,63 @@
+name: "Bug Report"
+description: Something isn't working correctly in the Yoke website, API, or tools.
+title: "[Bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Something isn't working right
+
+        Use this for general bugs — UI glitches, broken features, API errors, rendering issues, etc. For scan-specific failures (timeouts, rate limits), use the "Scan Error" template instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly. What did you do, what did you expect, and what actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Go to yoke.lol
+        2. Scan 'example.com'
+        3. Click on the Speed axis
+        4. See error in console
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area affected
+      options:
+        - Website (yoke.lol)
+        - API
+        - Chrome Extension
+        - CLI
+        - Compare feature
+        - Score display / visualization
+        - Other
+    validations:
+      required: false
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: "Chrome 125 on macOS, Safari on iPad, etc."
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or console errors
+      description: Paste screenshots or browser console output if relevant.
+    validations:
+      required: false

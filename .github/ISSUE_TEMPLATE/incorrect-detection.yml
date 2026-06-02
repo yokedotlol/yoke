@@ -1,0 +1,72 @@
+name: "Incorrect Detection: Signal detected but shouldn't be"
+description: Yoke reports a positive detection for a signal that is wrong, outdated, or doesn't apply to your site.
+title: "[Detection] Incorrect detection: "
+labels: ["detection", "false-negative", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Yoke detected something that isn't accurate
+
+        This form is for cases where Yoke **positively detects** a signal but gets it wrong. For example: "Yoke says I'm using Cloudflare CDN, but I'm actually behind Fastly" or "Yoke says I have a WAF but it's just rate limiting."
+
+  - type: input
+    id: domain
+    attributes:
+      label: Domain scanned
+      placeholder: "example.com"
+    validations:
+      required: true
+
+  - type: input
+    id: signal
+    attributes:
+      label: Signal or finding in question
+      description: Which specific detection is wrong?
+      placeholder: "e.g., CDN provider identification, WAF detection, tech stack, etc."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: axis
+    attributes:
+      label: Scoring axis
+      options:
+        - Security
+        - Speed
+        - Foundations
+        - Reputation
+        - Discoverability
+        - Email
+        - Not sure
+      default: 6
+    validations:
+      required: false
+
+  - type: textarea
+    id: what-yoke-says
+    attributes:
+      label: What Yoke detected
+      description: What does Yoke report for this signal?
+      placeholder: "Yoke detects 'CDN: Cloudflare' in the Speed axis"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-is-correct
+    attributes:
+      label: What is actually correct
+      description: What should Yoke report instead? Include evidence if possible (headers, config, DNS records).
+      placeholder: |
+        My site is behind Fastly, not Cloudflare. Here are my response headers:
+        $ curl -sI https://example.com | grep -i 'x-served-by\|x-cache\|server'
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+    validations:
+      required: false
