@@ -2734,7 +2734,8 @@ export function calculateDomainScore(opts: {
     });
   }
 
-  // Asset CDN — only fires if main site is NOT already behind a full-site CDN
+  // Asset CDN — fires as good if detected without full-site CDN,
+  // or as info if full-site CDN already covers asset delivery
   if (opts.assetCdn?.detected && !opts.hosting?.cdn) {
     const providerNames = opts.assetCdn.providers.map((p) => p.name).join(", ");
     findings.push({
@@ -2744,6 +2745,17 @@ export function calculateDomainScore(opts: {
       label: providerNames ? `Assets served via CDN: ${providerNames}` : "Assets served via CDN subdomain",
       tradeoff: null,
       weight: 2,
+    });
+  } else if (opts.hosting?.cdn) {
+    // Full-site CDN already covers asset delivery — mark as info so it's
+    // excluded from the absent-signal penalty pool
+    findings.push({
+      signal: "asset_cdn",
+      axis: "speed",
+      severity: "info",
+      label: `Asset delivery covered by ${opts.hosting.cdn}`,
+      tradeoff: null,
+      weight: 0,
     });
   }
 
