@@ -126,6 +126,8 @@ export interface DomainScoreResult {
   archetype: ArchetypeResult;
   /** Detected context flags — signals gated by requiresContext only count when their context is present */
   scoringContext?: ScoringContext;
+  /** Full scored signal vector for D1 storage — enables retrospective re-weighting analysis */
+  signalDetails?: string;
 }
 
 // ─── Severity → Score mapping ────────────────────────────────────────
@@ -389,6 +391,136 @@ export function computeComposite(axisScores: Record<Axis, number>, _archetype: A
   }
 
   return score;
+}
+
+// ─── Signal Details Builder ──────────────────────────────────────────
+// Builds a JSON blob capturing the full scored signal vector for a scan.
+// Stored in D1 `domain_scores.signal_details` to enable retrospective
+// re-weighting analysis, prevalence studies, and correlation checks.
+
+/** Shape of the signal_details JSON blob stored in D1. */
+export interface SignalDetailsBlob {
+  /** Schema version for forward compatibility */
+  v: 1;
+  composite: number;
+  archetype: string;
+  archetypeConfidence: number;
+  scoringContext?: ScoringContext;
+  axes: Record<
+    string,
+    {
+      score: number | null;
+      maxGoodWeight: number;
+      notMeasured?: boolean;
+      findings: Array<{
+        signal: string;
+        severity: string;
+        weight: number;
+        share: number;
+        deduction: number;
+      }>;
+      absent: Array<{
+        signal: string;
+        weight: number;
+        share: number;
+        deduction: number;
+      }>;
+      absentDeduction: number;
+    }
+  >;
+}
+
+export function buildSignalDetails(
+  axisScores: Record<Axis, AxisScore>,
+  composite: number,
+  archetype: ArchetypeResult,
+  scoringCtx?: ScoringContext,
+): string {
+  const effectiveMaxGoodWeight = scoringCtx ? computeEffectiveMaxGoodWeight(scoringCtx) : AXIS_MAX_GOOD_WEIGHT;
+  const axes: SignalDetailsBlob["axes"] = {};
+
+  for (const axis of Object.keys(AXIS_WEIGHTS) as Axis[]) {
+    const as = axisScores[axis];
+    const maxGoodWeight = effectiveMaxGoodWeight[axis];
+
+    // Build findings array from deductions (fired signals with actual deductions)
+    const findings: SignalDetailsBlob["axes"][string]["findings"] = [];
+    const absent: SignalDetailsBlob["axes"][string]["absent"] = [];
+    let absentDeduction = 0;
+
+    if (as.deductions) {
+      for (const d of as.deductions) {
+        if (d.signal === "_absent") {
+          // Expand individual absent signals
+          absentDeduction = d.deduction;
+          if (d.absentSignals) {
+            // Distribute the total absent deduction proportionally by weight
+            const totalAbsentWeight = d.absentSignals.reduce((sum, s) => sum + s.weight, 0);
+            for (const s of d.absentSignals) {
+              const share = totalAbsentWeight > 0 ? (s.weight / maxGoodWeight) * 100 : 0;
+              const ded = totalAbsentWeight > 0 ? (s.weight / totalAbsentWeight) * d.deduction : 0;
+              absent.push({
+                signal: s.signal,
+                weight: s.weight,
+                share: Math.round(share * 10) / 10,
+                deduction: Math.round(ded * 10) / 10,
+              });
+            }
+          }
+        } else {
+          findings.push({
+            signal: d.signal,
+            severity: d.severity,
+            weight: d.weight,
+            share: d.share,
+            deduction: d.deduction,
+          });
+        }
+      }
+    }
+
+    // Also include findings that fired with severity good/info (deduction = 0)
+    // These won't be in deductions[] but are in findings[] — they represent passed checks
+    if (as.findings) {
+      const deductionSignals = new Set(findings.map((f) => f.signal));
+      for (const f of as.findings) {
+        if (deductionSignals.has(f.signal)) continue; // already captured via deductions
+        if (f.signal.startsWith("http_blocked_") || f.signal.startsWith("site_unreachable_")) continue;
+        const share = maxGoodWeight > 0 ? (Math.max(f.weight, 1) / maxGoodWeight) * 100 : 0;
+        findings.push({
+          signal: f.signal,
+          severity: f.severity,
+          weight: f.weight,
+          share: Math.round(share * 10) / 10,
+          deduction: 0,
+        });
+      }
+    }
+
+    axes[axis] = {
+      score: as.score,
+      maxGoodWeight,
+      findings,
+      absent,
+      absentDeduction,
+    };
+    if (as.not_measured) {
+      axes[axis].notMeasured = true;
+    }
+  }
+
+  const blob: SignalDetailsBlob = {
+    v: 1,
+    composite,
+    archetype: archetype.detected,
+    archetypeConfidence: archetype.confidence,
+    axes,
+  };
+  if (scoringCtx) {
+    blob.scoringContext = scoringCtx;
+  }
+
+  return JSON.stringify(blob);
 }
 
 export function tierFromComposite(score: number): string {
@@ -4294,5 +4426,7 @@ export function calculateDomainScore(opts: {
     }
   }
 
-  return { composite, tier, axes: axisScores, archetype, scoringContext: scoringCtx };
+  const signalDetails = buildSignalDetails(axisScores, composite, archetype, scoringCtx);
+
+  return { composite, tier, axes: axisScores, archetype, scoringContext: scoringCtx, signalDetails };
 }

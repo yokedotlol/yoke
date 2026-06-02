@@ -1030,8 +1030,8 @@ async function runAnalysisCore(
 
         try {
           await env.STATS_DB.prepare(
-            `INSERT OR REPLACE INTO domain_scores (domain, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, email_score, archetype, archetype_confidence, scored_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT OR REPLACE INTO domain_scores (domain, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, email_score, archetype, archetype_confidence, scored_at, signal_details)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
             .bind(
               domain,
@@ -1045,6 +1045,7 @@ async function runAnalysisCore(
               domainScore.archetype.detected,
               domainScore.archetype.confidence,
               scoredAt,
+              domainScore.signalDetails ?? null,
             )
             .run();
         } catch {
@@ -1066,6 +1067,12 @@ async function runAnalysisCore(
               .catch(() => {
                 /* column already exists */
               });
+            // Add signal_details column (no-op if already present)
+            await env.STATS_DB.prepare(`ALTER TABLE domain_scores ADD COLUMN signal_details TEXT`)
+              .run()
+              .catch(() => {
+                /* column already exists */
+              });
             await env.STATS_DB.prepare(
               `CREATE INDEX IF NOT EXISTS idx_domain_scores_domain ON domain_scores(domain)`,
             ).run();
@@ -1073,8 +1080,8 @@ async function runAnalysisCore(
               `CREATE INDEX IF NOT EXISTS idx_domain_scores_scored_at ON domain_scores(scored_at)`,
             ).run();
             await env.STATS_DB.prepare(
-              `INSERT OR REPLACE INTO domain_scores (domain, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, email_score, archetype, archetype_confidence, scored_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              `INSERT OR REPLACE INTO domain_scores (domain, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, email_score, archetype, archetype_confidence, scored_at, signal_details)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             )
               .bind(
                 domain,
@@ -1088,6 +1095,7 @@ async function runAnalysisCore(
                 domainScore.archetype.detected,
                 domainScore.archetype.confidence,
                 scoredAt,
+                domainScore.signalDetails ?? null,
               )
               .run();
           } catch {

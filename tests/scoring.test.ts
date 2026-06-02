@@ -1,11 +1,14 @@
 import {
   type ArchetypeName,
   AXIS_WEIGHTS,
+  type AxisScore,
   applyHardCaps,
+  buildSignalDetails,
   computeAxisScore,
   computeComposite,
   contextualSeverity,
   type Finding,
+  type SignalDetailsBlob,
   tierFromComposite,
 } from "@worker/actions/analyze/contextual-scoring";
 
@@ -435,5 +438,251 @@ describe("Not Assessed Threshold", () => {
       (f) => !f.signal.startsWith("http_blocked_") && !f.signal.startsWith("site_unreachable_"),
     ).length;
     expect(scoreableCount).toBe(1);
+  });
+});
+
+// ─── buildSignalDetails Tests ────────────────────────────────────────
+
+describe("buildSignalDetails", () => {
+  const makeAxisScore = (
+    score: number | null,
+    findings: Finding[] = [],
+    deductions: AxisScore["deductions"] = [],
+    notMeasured = false,
+  ): AxisScore => ({
+    score,
+    weight: 0.18,
+    findings,
+    deductions,
+    not_measured: notMeasured,
+  });
+
+  const emptyAxes: Record<string, AxisScore> = {
+    security: makeAxisScore(100),
+    speed: makeAxisScore(100),
+    foundations: makeAxisScore(100),
+    reputation: makeAxisScore(100),
+    discoverability: makeAxisScore(100),
+    email: makeAxisScore(100),
+  };
+
+  const mockArchetype = {
+    detected: "technology" as ArchetypeName,
+    confidence: 0.85,
+    secondary: null,
+    signals: ["tech_stack"],
+    platform: null,
+    weights: AXIS_WEIGHTS,
+  };
+
+  it("should produce valid JSON with version 1 schema", () => {
+    const json = buildSignalDetails(
+      emptyAxes as Record<"security" | "speed" | "foundations" | "reputation" | "discoverability" | "email", AxisScore>,
+      95,
+      mockArchetype,
+    );
+    const blob: SignalDetailsBlob = JSON.parse(json);
+    expect(blob.v).toBe(1);
+    expect(blob.composite).toBe(95);
+    expect(blob.archetype).toBe("technology");
+    expect(blob.archetypeConfidence).toBe(0.85);
+  });
+
+  it("should include all 6 axes", () => {
+    const json = buildSignalDetails(
+      emptyAxes as Record<"security" | "speed" | "foundations" | "reputation" | "discoverability" | "email", AxisScore>,
+      90,
+      mockArchetype,
+    );
+    const blob: SignalDetailsBlob = JSON.parse(json);
+    const axisNames = Object.keys(blob.axes);
+    expect(axisNames).toContain("security");
+    expect(axisNames).toContain("speed");
+    expect(axisNames).toContain("foundations");
+    expect(axisNames).toContain("reputation");
+    expect(axisNames).toContain("discoverability");
+    expect(axisNames).toContain("email");
+    expect(axisNames).toHaveLength(6);
+  });
+
+  it("should capture findings from deductions", () => {
+    const axes = {
+      ...emptyAxes,
+      security: makeAxisScore(
+        87,
+        [
+          {
+            signal: "csp_missing",
+            axis: "security" as const,
+            severity: "medium" as const,
+            label: "CSP Missing",
+            tradeoff: null,
+            weight: 3,
+          },
+        ],
+        [
+          {
+            signal: "csp_missing",
+            label: "CSP Missing",
+            severity: "medium",
+            weight: 3,
+            share: 7.1,
+            deduction: 5.4,
+            category: "fixable" as const,
+          },
+        ],
+      ),
+    };
+    const json = buildSignalDetails(
+      axes as Record<"security" | "speed" | "foundations" | "reputation" | "discoverability" | "email", AxisScore>,
+      90,
+      mockArchetype,
+    );
+    const blob: SignalDetailsBlob = JSON.parse(json);
+    const secFindings = blob.axes.security.findings;
+    expect(secFindings.some((f) => f.signal === "csp_missing")).toBe(true);
+    const csp = secFindings.find((f) => f.signal === "csp_missing");
+    expect(csp?.severity).toBe("medium");
+    expect(csp?.deduction).toBe(5.4);
+  });
+
+  it("should capture absent signals individually", () => {
+    const axes = {
+      ...emptyAxes,
+      security: makeAxisScore(
+        70,
+        [],
+        [
+          {
+            signal: "_absent",
+            label: "2 signals not detected in scan",
+            severity: "absent",
+            weight: 5,
+            share: 12.0,
+            deduction: 3.6,
+            category: "not_detected" as const,
+            absentSignals: [
+              { signal: "ct_scts", label: "CT SCTs", weight: 2, actionable: true },
+              { signal: "hsts", label: "HSTS", weight: 3, actionable: true },
+            ],
+          },
+        ],
+      ),
+    };
+    const json = buildSignalDetails(
+      axes as Record<"security" | "speed" | "foundations" | "reputation" | "discoverability" | "email", AxisScore>,
+      85,
+      mockArchetype,
+    );
+    const blob: SignalDetailsBlob = JSON.parse(json);
+    expect(blob.axes.security.absent).toHaveLength(2);
+    expect(blob.axes.security.absent.some((a) => a.signal === "ct_scts")).toBe(true);
+    expect(blob.axes.security.absent.some((a) => a.signal === "hsts")).toBe(true);
+    expect(blob.axes.security.absentDeduction).toBe(3.6);
+  });
+
+  it("should include good/info findings (zero deduction)", () => {
+    const axes = {
+      ...emptyAxes,
+      security: makeAxisScore(
+        95,
+        [
+          {
+            signal: "ssl_grade",
+            axis: "security" as const,
+            severity: "good" as const,
+            label: "SSL A+",
+            tradeoff: null,
+            weight: 3,
+          },
+        ],
+        [], // no deductions — signal passed
+      ),
+    };
+    const json = buildSignalDetails(
+      axes as Record<"security" | "speed" | "foundations" | "reputation" | "discoverability" | "email", AxisScore>,
+      95,
+      mockArchetype,
+    );
+    const blob: SignalDetailsBlob = JSON.parse(json);
+    const ssl = blob.axes.security.findings.find((f) => f.signal === "ssl_grade");
+    expect(ssl).toBeDefined();
+    expect(ssl?.severity).toBe("good");
+    expect(ssl?.deduction).toBe(0);
+  });
+
+  it("should mark not_measured axes", () => {
+    const axes = {
+      ...emptyAxes,
+      email: makeAxisScore(null, [], [], true),
+    };
+    const json = buildSignalDetails(
+      axes as Record<"security" | "speed" | "foundations" | "reputation" | "discoverability" | "email", AxisScore>,
+      80,
+      mockArchetype,
+    );
+    const blob: SignalDetailsBlob = JSON.parse(json);
+    expect(blob.axes.email.notMeasured).toBe(true);
+    expect(blob.axes.email.score).toBeNull();
+  });
+
+  it("should include scoringContext when present", () => {
+    const json = buildSignalDetails(
+      emptyAxes as Record<"security" | "speed" | "foundations" | "reputation" | "discoverability" | "email", AxisScore>,
+      90,
+      mockArchetype,
+      { cookies: true, wordpress: true },
+    );
+    const blob: SignalDetailsBlob = JSON.parse(json);
+    expect(blob.scoringContext).toBeDefined();
+    expect(blob.scoringContext?.cookies).toBe(true);
+    expect(blob.scoringContext?.wordpress).toBe(true);
+  });
+
+  it("should omit scoringContext when not present", () => {
+    const json = buildSignalDetails(
+      emptyAxes as Record<"security" | "speed" | "foundations" | "reputation" | "discoverability" | "email", AxisScore>,
+      90,
+      mockArchetype,
+    );
+    const blob: SignalDetailsBlob = JSON.parse(json);
+    expect(blob.scoringContext).toBeUndefined();
+  });
+
+  it("should exclude http_blocked_ and site_unreachable_ meta-signals", () => {
+    const axes = {
+      ...emptyAxes,
+      speed: makeAxisScore(
+        80,
+        [
+          {
+            signal: "http_blocked_performance",
+            axis: "speed" as const,
+            severity: "info" as const,
+            label: "Blocked",
+            tradeoff: null,
+            weight: 4,
+          },
+          {
+            signal: "perf_score",
+            axis: "speed" as const,
+            severity: "good" as const,
+            label: "Perf",
+            tradeoff: null,
+            weight: 5,
+          },
+        ],
+        [],
+      ),
+    };
+    const json = buildSignalDetails(
+      axes as Record<"security" | "speed" | "foundations" | "reputation" | "discoverability" | "email", AxisScore>,
+      85,
+      mockArchetype,
+    );
+    const blob: SignalDetailsBlob = JSON.parse(json);
+    const speedFindings = blob.axes.speed.findings;
+    expect(speedFindings.some((f) => f.signal === "http_blocked_performance")).toBe(false);
+    expect(speedFindings.some((f) => f.signal === "perf_score")).toBe(true);
   });
 });
