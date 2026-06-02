@@ -40,7 +40,7 @@ export interface PercentileResult {
 
 const BUCKET_COUNT = 101; // scores 0–100 inclusive
 const KV_KEY = "percentiles:distribution";
-const KV_TTL_SECS = 86400; // 24h
+const KV_TTL_SECS = 21600; // 6h — shorter while seeder is filling the pool
 const MIN_SAMPLE_SIZE = 10; // don't show percentiles with fewer domains
 
 // D1 column → axis mapping
