@@ -977,12 +977,6 @@ function scoreColor(score: number): string {
   return "var(--danger)";
 }
 
-function deltaDisplay(delta: number): { text: string; color: string } {
-  if (delta > 0) return { text: `+${delta}`, color: "var(--success)" };
-  if (delta < 0) return { text: `${delta}`, color: "var(--danger)" };
-  return { text: "", color: "var(--dim)" };
-}
-
 // ─── Compact Score Card ──────────────────────────────────────────────
 
 function ScoreCard({
@@ -1316,107 +1310,6 @@ export function CompareView({ initialDomain }: { initialDomain?: string }) {
           {/* Score grid — heatmap comparison */}
           <CompareScoreGrid data={data} ds1={ds1} ds2={ds2} />
 
-          {/* Axis comparison bars */}
-          <div className="panel p-4">
-            <div
-              style={{
-                fontFamily: "var(--font-ui)",
-                fontSize: "10px",
-                fontWeight: 600,
-                color: "var(--dim)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                marginBottom: 10,
-              }}
-            >
-              Per-Axis Breakdown
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {data.comparison.axes.map((ax) => {
-                const d = deltaDisplay(ax.delta);
-                const isBigDiff = ax.absDelta >= 15;
-                return (
-                  <div key={ax.axis} className="flex items-center gap-2" style={{ minHeight: 20 }}>
-                    {/* Axis label + delta */}
-                    <div
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        color: isBigDiff ? "var(--text)" : "var(--dim)",
-                        minWidth: 82,
-                        flexShrink: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      {AXIS_LABELS[ax.axis]}
-                      {isBigDiff && <span style={{ fontSize: "9px", color: "var(--warning)" }}>★</span>}
-                      {d.text && (
-                        <span
-                          style={{ fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, color: d.color }}
-                        >
-                          {d.text}
-                        </span>
-                      )}
-                    </div>
-                    {/* Score 1 */}
-                    <span
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        color: "var(--accent)",
-                        fontWeight: 600,
-                        fontSize: "11px",
-                        minWidth: 22,
-                        textAlign: "right",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {ax.score1 ?? "N/A"}
-                    </span>
-                    {/* Bars */}
-                    <div className="flex-1 relative" style={{ height: 8, borderRadius: 4 }}>
-                      <div className="absolute inset-0 rounded" style={{ background: "var(--border)", opacity: 0.5 }} />
-                      <div
-                        className="absolute top-0 left-0 rounded"
-                        style={{
-                          height: 4,
-                          width: `${ax.score1 ?? 0}%`,
-                          background: "var(--accent)",
-                          transition: "width 0.6s ease-out",
-                        }}
-                      />
-                      <div
-                        className="absolute bottom-0 left-0 rounded"
-                        style={{
-                          height: 4,
-                          width: `${ax.score2 ?? 0}%`,
-                          background: "#f97316",
-                          transition: "width 0.6s ease-out",
-                        }}
-                      />
-                    </div>
-                    {/* Score 2 */}
-                    <span
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        color: "#f97316",
-                        fontWeight: 600,
-                        fontSize: "11px",
-                        minWidth: 22,
-                        textAlign: "left",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {ax.score2 ?? "N/A"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Key differences */}
           <KeyDifferences data={data} />
         </div>
@@ -1466,11 +1359,13 @@ function tierForScore(score: number | null): { label: string; color: string } {
 function CompareScoreGrid({ data, ds1, ds2 }: { data: CompareResult; ds1: DomainScoreData; ds2: DomainScoreData }) {
   let winsA = 0;
   let winsB = 0;
+  const axisDeltas: Record<string, { delta: number; absDelta: number }> = {};
   for (const ax of data.comparison.axes) {
     if (ax.score1 != null && ax.score2 != null) {
       if (ax.score1 > ax.score2) winsA++;
       else if (ax.score2 > ax.score1) winsB++;
     }
+    axisDeltas[ax.axis] = { delta: ax.delta, absDelta: ax.absDelta };
   }
 
   return (
@@ -1568,6 +1463,65 @@ function CompareScoreGrid({ data, ds1, ds2 }: { data: CompareResult; ds1: Domain
             })}
           </div>
         ))}
+
+        {/* Delta row */}
+        <div
+          style={{
+            fontFamily: "var(--font-ui)",
+            fontSize: "9px",
+            fontWeight: 600,
+            color: "var(--dim)",
+            padding: "0.25rem 0.5rem 0.25rem 0",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          Δ
+        </div>
+        {AXES.map((axis) => {
+          const ad = axisDeltas[axis];
+          if (!ad || ad.delta === 0) {
+            return (
+              <div
+                key={axis}
+                style={{
+                  textAlign: "center",
+                  padding: "0.2rem 0.15rem",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  color: "var(--dim)",
+                  opacity: 0.4,
+                }}
+              >
+                —
+              </div>
+            );
+          }
+          const isBig = ad.absDelta >= 15;
+          const winnerColor = ad.delta > 0 ? "var(--accent)" : "#f97316";
+          return (
+            <div
+              key={axis}
+              style={{
+                textAlign: "center",
+                padding: "0.2rem 0.15rem",
+                fontFamily: "var(--font-mono)",
+                fontSize: "10px",
+                fontWeight: 700,
+                color: winnerColor,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
+              }}
+            >
+              {isBig && <span style={{ fontSize: "8px", color: "var(--warning)" }}>★</span>}
+              {ad.delta > 0 ? "+" : ""}
+              {ad.delta}
+            </div>
+          );
+        })}
       </div>
 
       {/* Wins summary */}
