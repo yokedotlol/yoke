@@ -5,6 +5,7 @@ import type { Env } from "./helpers";
 import { getBaseUrl, YOKE_VERSION } from "./helpers";
 import { ABOUT_HTML, PRIVACY_HTML, TERMS_HTML } from "./pages";
 import { buildShareUrl } from "./share";
+import { trackUsage } from "./usage-tracking";
 
 // ─── Security Headers ────────────────────────────────────────────────
 // Applied to all HTML responses served by the worker.
@@ -285,6 +286,10 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
     }
 
     const analyzeResp = await analyzeDomain(clean, env, false);
+    // Track usage for the GET /{domain} shortcut — mirrors POST /api/analyze tracking
+    if (env.STATS_DB) {
+      trackUsage(env.STATS_DB, "analyze").catch(() => {});
+    }
     const data = await analyzeResp.json();
 
     // Add _meta field
