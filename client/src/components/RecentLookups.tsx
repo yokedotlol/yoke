@@ -169,7 +169,7 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
             </span>
           ))}
         </div>
-        <div style={{ flex: "0 0 auto", minWidth: 72 }} />
+        <div style={{ flex: "0 0 auto", minWidth: 112 }} />
       </div>
 
       {/* Feed rows */}
@@ -273,7 +273,7 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
             {/* Percentile — fixed-width cell */}
             <span
               style={{
-                flex: "0 0 42px",
+                flex: "0 0 48px",
                 textAlign: "right",
                 display: "flex",
                 alignItems: "center",
@@ -301,7 +301,7 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
             <span
               className="recent-tier-label"
               style={{
-                flex: "0 0 30px",
+                flex: "0 0 64px",
                 textAlign: "right",
                 fontFamily: "var(--font-ui)",
                 fontSize: "10px",
