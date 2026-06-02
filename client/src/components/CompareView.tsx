@@ -1531,6 +1531,7 @@ function CompareScoreGrid({ data, ds1, ds2 }: { data: CompareResult; ds1: Domain
         style={{
           display: "flex",
           justifyContent: "space-between",
+          alignItems: "flex-end",
           marginTop: "0.75rem",
           paddingTop: "0.6rem",
           borderTop: "1px solid var(--border)",
