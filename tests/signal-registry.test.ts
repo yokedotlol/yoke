@@ -204,8 +204,8 @@ describe("Signal Registry", () => {
     expect(tierFromComposite(100)).toBe("Excellent");
     expect(tierFromComposite(90)).toBe("Excellent");
     expect(tierFromComposite(89)).toBe("Strong");
-    expect(tierFromComposite(75)).toBe("Strong");
-    expect(tierFromComposite(74)).toBe("Moderate");
+    expect(tierFromComposite(78)).toBe("Strong");
+    expect(tierFromComposite(77)).toBe("Moderate");
     expect(tierFromComposite(60)).toBe("Moderate");
     expect(tierFromComposite(59)).toBe("Weak");
     expect(tierFromComposite(40)).toBe("Weak");

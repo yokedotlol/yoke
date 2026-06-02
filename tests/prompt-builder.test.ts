@@ -29,7 +29,7 @@ describe("Prompt Builder", () => {
   it("includes tier thresholds from signal registry", () => {
     const prompt = buildSystemPrompt(makeArchetype(), Object.keys(SIGNAL_REGISTRY));
     expect(prompt).toContain("Excellent ≥90");
-    expect(prompt).toContain("Strong ≥75");
+    expect(prompt).toContain("Strong ≥78");
     expect(prompt).toContain("Moderate ≥60");
     expect(prompt).toContain("Weak ≥40");
     expect(prompt).toContain("Critical ≥0");

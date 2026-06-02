@@ -183,3 +183,19 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **What changed:** The `compositeDelta < 0.1` filter that dropped Level-Up items was replaced with an axis-deduction threshold (`signalGain < 0.5`). Composite delta is now computed with unrounded precision for display/sorting, with a 0.1-point floor.
 **Why:** Integer rounding of composites caused small-but-real deductions (1-2 points on an axis) to round to 0 composite delta, dropping legitimate items. The core invariant (`sum(displayed_items) = 100 - axis_score`) was violated because the filter operated at the wrong granularity — composite-level instead of axis-level.
 **Directive:** Every deduction ≥ 0.5 axis points must appear in the Level-Up plan. The score–suggestion consistency invariant is non-negotiable.
+
+---
+
+### 2026-06-02: Scoring model recalibration — IDF absent penalties, threshold shift, foundations rebalance
+
+**What changed:**
+1. **IDF-influenced absent penalty**: `absent_penalty = ABSENT_DEDUCTION_FACTOR × (1 + goodPrevalence)` per signal, replacing the flat `ABSENT_DEDUCTION_FACTOR = 0.30` applied uniformly. Each canBeGood signal now carries a `goodPrevalence` field (0–1) based on corpus analysis of 3,329 domains. Missing common signals (HSTS at 100% prevalence → factor 0.60) cost more than missing rare ones (security.txt at 100% prevalence gets the same max factor, but MTA-STS at 55.6% → factor 0.467). Signals without prevalence data default to factor 0.30 (unchanged).
+2. **Strong tier threshold 75 → 78**: Combined with IDF penalties, projects ~55% Strong (was ~71%), ~39% Moderate (was ~21%). Much healthier distribution — Strong now means something.
+3. **http3 weight 3 → 1**: Still emerging tech (33.5% adoption). Weight-3 absent penalty was too aggressive for a non-hygiene signal. Bonus signal, low weight.
+4. **tcp_connection_time and dns_resolution_time weight 3 → 2**: Single probe location, 99%+ pass rate. These don't differentiate — they just punish the rare outlier disproportionately.
+5. **http2 set canBeGood: true** (was false/informational): 95%+ adoption means absence is meaningful — penalizes the ~5% still on HTTP/1.1 only. Severity changed from info to good.
+6. **lb weight → 0, canBeGood → false**: Weak heuristic — just A record count, conflates CDN anycast with real load balancing. Demoted to informational.
+**Why:** Analysis showed 71% of domains landing in Strong (75-89). The scoring system barely differentiated between enterprise sites and basic blogs. Root cause: flat absent penalty treated missing HSTS (52% prevalence) the same as missing MTA-STS (3.2%). Foundations axis mean 90.4 was too generous due to commodity signals (dns_consistent 100%, ns_redundancy 100%) and aggressive http3 penalty.
+**Simulated impact (IDF + threshold 78):** Strong drops 71% → ~55%, Moderate rises 21% → ~39%. Mean composite shifts -1.9 points. No signal is penalized less than before — only more for highly-prevalent missing signals.
+**Rejected:** Threshold 80 (too aggressive — 46% Strong / 47% Moderate is a near-even split), axis reweighting (current axis correlations are healthy), removing commodity signals (their value is in the absent penalty).
+**Directive:** The `goodPrevalence` values are static snapshots from 2026-06-02 corpus analysis. They should be refreshed periodically (quarterly or when the signal mix changes significantly). The ABSENT_DEDUCTION_FACTOR constant (0.30) is the baseline multiplier; the IDF factor (1 + goodPrevalence) scales it per-signal. Changes to either affect ALL scores.

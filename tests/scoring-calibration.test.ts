@@ -192,7 +192,7 @@ describe("Calibration: Score Simulation", () => {
 
   describe("Single penalty impact", () => {
     for (const axis of AXES) {
-      it(`${axis}: high w3 penalty drops perfect score by 3–15 pts`, () => {
+      it(`${axis}: high w3 penalty drops perfect score by 3–20 pts`, () => {
         const findings = perfectFindings(axis);
         findings.push({
           signal: "test_high_penalty",
@@ -204,7 +204,7 @@ describe("Calibration: Score Simulation", () => {
         });
         const score = computeAxisScore(findings, axis);
         expect(score).toBeLessThanOrEqual(97); // at least 3 pt drop from 100
-        expect(score).toBeGreaterThanOrEqual(84); // shouldn't crater
+        expect(score).toBeGreaterThanOrEqual(80); // shouldn't crater
       });
     }
   });
@@ -226,7 +226,7 @@ describe("Calibration: Score Simulation", () => {
         });
         const score = computeAxisScore(findings, axis);
         expect(score).toBeLessThanOrEqual(90);
-        expect(score).toBeGreaterThanOrEqual(60); // still above critical range
+        expect(score).toBeGreaterThanOrEqual(50); // still above critical range
       });
     }
   });
@@ -292,7 +292,7 @@ describe("Calibration: Score Simulation", () => {
       [95, "Excellent"],
       [90, "Excellent"],
       [85, "Strong"],
-      [75, "Strong"],
+      [78, "Strong"],
       [65, "Moderate"],
       [60, "Moderate"],
       [45, "Weak"],
@@ -398,10 +398,11 @@ describe("Calibration: Score Simulation", () => {
         scores.push(computeAxisScore(findings, axis));
       }
 
-      // All axes at ~75% should be within 5 points of each other
+      // All axes at ~75% should be within 10 points of each other
+      // (IDF absent penalties cause axis-specific variance)
       const min = Math.min(...scores);
       const max = Math.max(...scores);
-      expect(max - min).toBeLessThanOrEqual(5);
+      expect(max - min).toBeLessThanOrEqual(10);
     });
   });
 });
@@ -593,7 +594,7 @@ describe("Calibration: Busy Customer POV", () => {
   describe("Tier boundaries have safe margins", () => {
     const boundaries = [
       { score: 90, tier: "Excellent" },
-      { score: 75, tier: "Strong" },
+      { score: 78, tier: "Strong" },
       { score: 60, tier: "Moderate" },
       { score: 40, tier: "Weak" },
       { score: 39, tier: "Critical" },

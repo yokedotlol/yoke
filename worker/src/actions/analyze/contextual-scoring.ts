@@ -89,6 +89,8 @@ export interface AbsentSignalDetail {
   signal: string;
   label: string;
   weight: number;
+  /** Per-signal deduction (IDF-weighted) */
+  deduction?: number;
   fixDescription?: string;
   effort?: string;
   actionable: boolean;
@@ -210,7 +212,6 @@ export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: 
 
   // Compute deductions from findings that fired
   let totalDeduction = 0;
-  let presentWeight = 0; // weight of canBeGood signals that appeared (any severity)
 
   // Collect signals suppressed from the absent pool by fired bad-variant signals.
   // E.g. referrer_policy_unsafe fires → referrer_policy excluded from absent.
@@ -221,43 +222,30 @@ export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: 
     const factor = SEVERITY_DEDUCTION_FACTOR[f.severity];
     totalDeduction += share * factor;
 
-    // Track weight of canBeGood signals that fired, regardless of severity.
-    // Only canBeGood signals count toward the "present" budget — non-good-only
-    // signals (e.g. canBeGood=false security warnings) don't reduce absent weight.
-    // Use registry max weight (not finding weight) so signals that fire at lower
-    // contextual weights (e.g. DV cert w=1 vs maxW=3) don't create phantom absent
-    // weight — the lower finding weight already reduces their direct bonus.
     const reg = SIGNAL_REGISTRY[f.signal as keyof typeof SIGNAL_REGISTRY];
-    if (reg?.canBeGood) {
-      presentWeight += reg.weightRange[1];
-    }
     // If this finding suppresses a good-variant from the absent pool, track it
     if (reg?.suppressesAbsent) {
       suppressedFromAbsent.add(reg.suppressesAbsent);
     }
   }
 
-  // Add suppressed signals' weights to presentWeight so they're not counted as absent
-  for (const suppId of suppressedFromAbsent) {
-    const suppDef = SIGNAL_REGISTRY[suppId as keyof typeof SIGNAL_REGISTRY];
-    if (suppDef?.canBeGood && suppDef.axis === axis) {
-      // Only add if not already present from a fired finding
-      const alreadyFired = findings.some((f) => f.signal === suppId);
-      if (!alreadyFired) {
-        presentWeight += suppDef.weightRange[1];
-      }
-    }
-  }
-
   // Absent signals: canBeGood signals that didn't fire at all.
-  // Only the gap between totalGoodWeight and the weight of signals that
-  // DID appear represents truly absent signals.
-  // Cap presentWeight at totalGoodWeight to avoid negative absent.
-  const absentWeight = Math.max(0, totalGoodWeight - Math.min(presentWeight, totalGoodWeight));
-  if (absentWeight > 0) {
-    const absentShare = (absentWeight / totalGoodWeight) * 100;
-    totalDeduction += absentShare * ABSENT_DEDUCTION_FACTOR;
+  // IDF-influenced: absent_penalty = weight_share × ABSENT_DEDUCTION_FACTOR × (1 + goodPrevalence)
+  // Missing common signals costs more than missing rare ones.
+  const firedSignalIds = new Set(findings.map((f) => f.signal));
+  let absentDeductionTotal = 0;
+  for (const [id, def] of Object.entries(SIGNAL_REGISTRY)) {
+    if (def.axis !== axis || !def.canBeGood) continue;
+    if (firedSignalIds.has(id)) continue;
+    if (suppressedFromAbsent.has(id)) continue;
+    if (def.requiresContext && scoringCtx && !scoringCtx[def.requiresContext as keyof typeof scoringCtx]) continue;
+    if (def.requiresHttpAccess && scoringCtx?.httpBlocked) continue;
+    const w = def.weightRange[1];
+    const share = (w / totalGoodWeight) * 100;
+    const prevalenceFactor = 1 + (def.goodPrevalence ?? 0);
+    absentDeductionTotal += share * ABSENT_DEDUCTION_FACTOR * prevalenceFactor;
   }
+  totalDeduction += absentDeductionTotal;
 
   return Math.max(0, Math.min(100, Math.round(100 - totalDeduction)));
 }
@@ -280,7 +268,6 @@ export function computeAxisScoreWithDeductions(
 
   const deductions: AxisDeduction[] = [];
   let totalDeduction = 0;
-  let presentWeight = 0;
 
   // Collect signals suppressed from the absent pool by fired bad-variant signals.
   // E.g. referrer_policy_unsafe fires → referrer_policy excluded from absent.
@@ -304,64 +291,50 @@ export function computeAxisScoreWithDeductions(
     }
     totalDeduction += deduction;
 
-    // Only count canBeGood signals toward present weight (see computeAxisScore).
-    // Use registry max weight (not finding weight) so signals that fire at lower
-    // contextual weights (e.g. DV cert w=1 vs maxW=3) don't create phantom absent
-    // weight — the lower finding weight already reduces their direct bonus.
     const reg = SIGNAL_REGISTRY[f.signal as keyof typeof SIGNAL_REGISTRY];
-    if (reg?.canBeGood) {
-      presentWeight += reg.weightRange[1];
-    }
     // If this finding suppresses a good-variant from the absent pool, track it
     if (reg?.suppressesAbsent) {
       suppressedFromAbsent.add(reg.suppressesAbsent);
     }
   }
 
-  // Add suppressed signals' weights to presentWeight so they're not counted as absent
-  for (const suppId of suppressedFromAbsent) {
-    const suppDef = SIGNAL_REGISTRY[suppId as keyof typeof SIGNAL_REGISTRY];
-    if (suppDef?.canBeGood && suppDef.axis === axis) {
-      const alreadyFired = findings.some((f) => f.signal === suppId);
-      if (!alreadyFired) {
-        presentWeight += suppDef.weightRange[1];
-      }
-    }
-  }
-
   // Absent signals: canBeGood signals that didn't fire at all
+  // IDF-influenced: per-signal penalty scaled by goodPrevalence
   const firedSignals = new Set(findings.map((f) => f.signal));
-  const absentWeight = Math.max(0, totalGoodWeight - Math.min(presentWeight, totalGoodWeight));
-  if (absentWeight > 0) {
-    const absentShare = (absentWeight / totalGoodWeight) * 100;
-    const absentDeduction = absentShare * ABSENT_DEDUCTION_FACTOR;
-    if (absentDeduction > 0) {
-      // Enumerate which specific signals are absent for score–suggestion consistency
-      const absentSignals: AbsentSignalDetail[] = [];
-      for (const [id, def] of Object.entries(SIGNAL_REGISTRY)) {
-        if (def.axis !== axis || !def.canBeGood) continue;
-        if (firedSignals.has(id)) continue;
-        // Skip signals suppressed by a fired bad-variant (prevents double-dipping)
-        if (suppressedFromAbsent.has(id)) continue;
-        // Skip signals whose required context isn't present (already excluded from denominator)
-        if (def.requiresContext && scoringCtx && !scoringCtx[def.requiresContext as keyof typeof scoringCtx]) continue;
-        // Skip HTTP-dependent signals when HTTP probe was blocked (excluded from denominator)
-        if (def.requiresHttpAccess && scoringCtx?.httpBlocked) continue;
-        absentSignals.push({
-          signal: id,
-          label: def.label,
-          weight: def.weightRange[1],
-          fixDescription: def.fixDescription,
-          effort: def.effort,
-          actionable: def.actionable,
-        });
-      }
+  {
+    const absentSignals: AbsentSignalDetail[] = [];
+    let absentDeduction = 0;
+    let absentWeightTotal = 0;
+    for (const [id, def] of Object.entries(SIGNAL_REGISTRY)) {
+      if (def.axis !== axis || !def.canBeGood) continue;
+      if (firedSignals.has(id)) continue;
+      if (suppressedFromAbsent.has(id)) continue;
+      if (def.requiresContext && scoringCtx && !scoringCtx[def.requiresContext as keyof typeof scoringCtx]) continue;
+      if (def.requiresHttpAccess && scoringCtx?.httpBlocked) continue;
+      const w = def.weightRange[1];
+      const share = (w / totalGoodWeight) * 100;
+      const prevalenceFactor = 1 + (def.goodPrevalence ?? 0);
+      const signalDeduction = share * ABSENT_DEDUCTION_FACTOR * prevalenceFactor;
+      absentDeduction += signalDeduction;
+      absentWeightTotal += w;
+      absentSignals.push({
+        signal: id,
+        label: def.label,
+        weight: w,
+        deduction: Math.round(signalDeduction * 10) / 10,
+        fixDescription: def.fixDescription,
+        effort: def.effort,
+        actionable: def.actionable,
+      });
+    }
 
+    if (absentDeduction > 0) {
+      const absentShare = (absentWeightTotal / totalGoodWeight) * 100;
       deductions.push({
         signal: "_absent",
         label: `${absentSignals.length} signal${absentSignals.length === 1 ? "" : "s"} not detected in scan`,
         severity: "absent",
-        weight: absentWeight,
+        weight: absentWeightTotal,
         share: Math.round(absentShare * 10) / 10,
         deduction: Math.round(absentDeduction * 10) / 10,
         category: "not_detected",
@@ -2724,13 +2697,13 @@ export function calculateDomainScore(opts: {
         severity: "good",
         label: "HTTP/3 supported",
         tradeoff: null,
-        weight: 3,
+        weight: 1,
       });
     } else if (opts.httpProtocols.http2) {
       findings.push({
         signal: "http2",
         axis: "foundations",
-        severity: "info",
+        severity: "good",
         label: "HTTP/2 supported",
         tradeoff: null,
         weight: 2,
@@ -2844,16 +2817,16 @@ export function calculateDomainScore(opts: {
     weight: 1,
   });
 
-  // Multiple A records (load balancing)
+  // Multiple A records (load balancing) — informational only, weak heuristic
   const aCount = dns.filter((r) => r.type === "A").length;
   if (aCount >= 2) {
     findings.push({
       signal: "lb",
       axis: "foundations",
-      severity: "good",
+      severity: "info",
       label: `${aCount} A records (load balanced)`,
       tradeoff: null,
-      weight: 1,
+      weight: 0,
     });
   }
 
@@ -2898,7 +2871,7 @@ export function calculateDomainScore(opts: {
         severity: "good",
         label: `TCP connect: ${Math.round(tcpMs)}ms`,
         tradeoff: null,
-        weight: 3,
+        weight: 2,
       });
     } else if (tcpMs < 500) {
       findings.push({
@@ -2907,7 +2880,7 @@ export function calculateDomainScore(opts: {
         severity: "info",
         label: `TCP connect: ${Math.round(tcpMs)}ms`,
         tradeoff: null,
-        weight: 3,
+        weight: 2,
       });
     } else if (tcpMs < 1000) {
       findings.push({
@@ -2916,7 +2889,7 @@ export function calculateDomainScore(opts: {
         severity: "low",
         label: `TCP connect: ${Math.round(tcpMs)}ms — above average`,
         tradeoff: "Connection timing depends on server location relative to probe.",
-        weight: 3,
+        weight: 2,
       });
     } else {
       findings.push({
@@ -2925,7 +2898,7 @@ export function calculateDomainScore(opts: {
         severity: "medium",
         label: `TCP connect: ${Math.round(tcpMs)}ms — very slow`,
         tradeoff: "Connection timing depends on server location relative to probe.",
-        weight: 3,
+        weight: 2,
       });
     }
   }
@@ -2941,7 +2914,7 @@ export function calculateDomainScore(opts: {
         severity: "good",
         label: `DNS resolution: ${Math.round(dnsMs)}ms`,
         tradeoff: null,
-        weight: 3,
+        weight: 2,
       });
     } else if (dnsMs < 200) {
       findings.push({
@@ -2950,7 +2923,7 @@ export function calculateDomainScore(opts: {
         severity: "info",
         label: `DNS resolution: ${Math.round(dnsMs)}ms`,
         tradeoff: null,
-        weight: 3,
+        weight: 2,
       });
     } else if (dnsMs < 500) {
       findings.push({
@@ -2959,7 +2932,7 @@ export function calculateDomainScore(opts: {
         severity: "low",
         label: `DNS resolution: ${Math.round(dnsMs)}ms — slow`,
         tradeoff: null,
-        weight: 3,
+        weight: 2,
       });
     } else {
       findings.push({
@@ -2968,7 +2941,7 @@ export function calculateDomainScore(opts: {
         severity: "medium",
         label: `DNS resolution: ${Math.round(dnsMs)}ms — very slow`,
         tradeoff: null,
-        weight: 3,
+        weight: 2,
       });
     }
   }
