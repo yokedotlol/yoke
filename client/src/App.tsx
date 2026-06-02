@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftRight, CheckCircle2, Circle, Loader2, RotateCcw, Search, XCircle, Zap } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { analyzeStream, type RateLimitInfo, type StreamEvent } from "./api";
+import AboutPage from "./components/AboutPage";
 import CliPage from "./components/CliPage";
 import { ApiTeaser, CurlBar } from "./components/CurlShowcase";
 import { DomainScore } from "./components/DomainScore";
@@ -677,6 +678,11 @@ export function App() {
   // Route: /cli → dedicated CLI landing page
   if (window.location.pathname === "/cli") {
     return <CliPage />;
+  }
+
+  // Route: /about → About page
+  if (window.location.pathname === "/about") {
+    return <AboutPage />;
   }
 
   const [domain, setDomain] = useState("");
