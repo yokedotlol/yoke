@@ -243,6 +243,17 @@ Yoke is designed to be self-hosted on Cloudflare's free/paid tiers. You'll need 
 
 > **Why not the free tier?** The free plan caps CPU time at 10ms per request. A single domain analysis runs ~30 external API calls, parses HTML, scores 155 signals, and writes results to KV/D1 — that needs hundreds of milliseconds of CPU time minimum. The free tier also limits subrequests to 50/request (compare mode alone exceeds that) and KV writes to 1,000/day (a few hundred analyses would exhaust it). The $5/mo paid plan removes all three constraints.
 
+### Running Costs
+
+| Service | Monthly Cost | Notes |
+|---------|-------------|-------|
+| Cloudflare Workers Paid | ~$5 | Base plan — includes 10M requests, 1M KV reads, 25M D1 rows |
+| Fly.io proxy (optional) | ~$6 | Always-on shared-cpu-1x VM for HTTP probes + GeoIP |
+| All external APIs | $0 | PageSpeed, WHOIS, Shodan, etc. — free tiers |
+| **Total** | **~$11/mo** | **~$5/mo without Fly proxy** |
+
+This holds steady at scale — you'd need ~750K scans/month before Google PageSpeed API costs kick in, and ~10M requests/month before Cloudflare Workers overages start. The Fly proxy is a fixed cost regardless of scan volume.
+
 ### Prerequisites
 
 - [Bun](https://bun.sh/) — client + worker builds
