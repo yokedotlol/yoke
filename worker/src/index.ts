@@ -2,7 +2,17 @@
 // Replaces Hono with a tiny hand-rolled router for zero-dependency deployment
 
 import { buildAIPrompt, getAIAnalysis } from "./actions/ai-analysis";
-import { AXIS_WEIGHTS } from "./actions/analyze/contextual-scoring";
+import {
+  type ArchetypeResult,
+  AXIS_WEIGHTS,
+  type Axis,
+  type AxisScore,
+  buildSignalDetails,
+  computeAxisScoreWithDeductions,
+  computeComposite,
+  type Finding,
+  type SignalDetailsBlob,
+} from "./actions/analyze/contextual-scoring";
 import { runAnalysis } from "./actions/analyze/core";
 import { analyzeDomainStream } from "./actions/analyze-stream";
 import { checkGlobalAvailability } from "./actions/availability";
@@ -16,7 +26,13 @@ import { getSubdomains } from "./actions/subdomains";
 import { getDomainSuggestions } from "./actions/suggestions";
 import { getApiHealth } from "./api-errors";
 import { ALL_THRESHOLDS, SEVERITY_SCORES } from "./config/scoring-thresholds";
-import { EFFORT_MAP, FIX_DESC_MAP, NON_ACTIONABLE_SIGNALS, TIER_THRESHOLDS } from "./config/signal-registry";
+import {
+  EFFORT_MAP,
+  FIX_DESC_MAP,
+  NON_ACTIONABLE_SIGNALS,
+  SIGNAL_REGISTRY,
+  TIER_THRESHOLDS,
+} from "./config/signal-registry";
 import { loadData } from "./data/kv-loader";
 import type { VulnerableLibrary } from "./data/vulnerable-libraries";
 import { scanForVulnerableLibraries, VULNERABLE_LIBRARIES } from "./data/vulnerable-libraries";
@@ -1112,6 +1128,174 @@ export default {
           }
           // request_meta: infinite retention — no pruning
           return adminJson({ ok: true, cleaned_at: new Date().toISOString(), results });
+        }
+
+        // POST /_/rescore — batch re-score all domains from stored signal_details (admin-only)
+        // Replays current scoring model (weights, IDF penalties, thresholds) without external fetches.
+        if (method === "POST" && path === "/_/rescore") {
+          const authErr = checkAdminAuth(request, env.ADMIN_KEY);
+          if (authErr) return authErr;
+
+          const startMs = Date.now();
+          let total = 0;
+          let rescored = 0;
+          let skipped = 0;
+          let errors = 0;
+          const errorDetails: string[] = [];
+
+          try {
+            // Fetch all domains with signal_details
+            const allRows = await env.STATS_DB.prepare(
+              "SELECT domain, signal_details, archetype, archetype_confidence, scored_at FROM domain_scores",
+            ).all();
+
+            const rows = allRows.results ?? [];
+            total = rows.length;
+
+            // Process in batches to respect D1 limits
+            const BATCH_SIZE = 50;
+            for (let batchStart = 0; batchStart < rows.length; batchStart += BATCH_SIZE) {
+              const batch = rows.slice(batchStart, batchStart + BATCH_SIZE);
+              const stmts: D1PreparedStatement[] = [];
+
+              for (const row of batch) {
+                const r = row as Record<string, unknown>;
+                const domain = r.domain as string;
+                const rawDetails = r.signal_details as string | null;
+
+                if (!rawDetails) {
+                  skipped++;
+                  continue;
+                }
+
+                try {
+                  const blob: SignalDetailsBlob = JSON.parse(rawDetails);
+                  if (blob.v !== 1) {
+                    skipped++;
+                    continue;
+                  }
+
+                  const scoringCtx = blob.scoringContext;
+                  const archetypeName = blob.archetype || (r.archetype as string) || "unknown";
+                  const archetypeConf = blob.archetypeConfidence ?? (r.archetype_confidence as number) ?? 0;
+
+                  // Reconstruct ArchetypeResult (minimal — only fields scoring needs)
+                  const archetype: ArchetypeResult = {
+                    detected: archetypeName as ArchetypeResult["detected"],
+                    confidence: archetypeConf,
+                    secondary: null,
+                    signals: [],
+                    platform: null,
+                    weights: { ...AXIS_WEIGHTS },
+                  };
+
+                  // Rebuild findings per axis from stored signal data with CURRENT weights
+                  const axisScores: Record<string, AxisScore> = {};
+                  const axes = Object.keys(AXIS_WEIGHTS) as Axis[];
+
+                  for (const axis of axes) {
+                    const axisData = blob.axes[axis];
+                    if (!axisData || axisData.notMeasured) {
+                      axisScores[axis] = { score: null, weight: AXIS_WEIGHTS[axis], findings: [], not_measured: true };
+                      continue;
+                    }
+
+                    // Rebuild Finding[] from stored findings with current registry weights
+                    const findings: Finding[] = [];
+                    for (const f of axisData.findings) {
+                      const reg = SIGNAL_REGISTRY[f.signal];
+                      const currentWeight = reg?.weightRange?.[1] ?? f.weight;
+                      findings.push({
+                        signal: f.signal,
+                        axis,
+                        severity: f.severity as Finding["severity"],
+                        label: reg?.label ?? f.signal,
+                        tradeoff: null,
+                        weight: currentWeight,
+                      });
+                    }
+
+                    // Re-score this axis with current model
+                    const result = computeAxisScoreWithDeductions(findings, axis, scoringCtx);
+                    axisScores[axis] = {
+                      score: result.score,
+                      weight: AXIS_WEIGHTS[axis],
+                      findings,
+                      deductions: result.deductions,
+                    };
+                  }
+
+                  // Compute new composite
+                  const numericScores: Record<string, number> = {};
+                  for (const axis of axes) {
+                    numericScores[axis] = axisScores[axis].score ?? 0;
+                  }
+                  const composite = computeComposite(numericScores as Record<Axis, number>, archetype.detected);
+
+                  // Build new signal_details
+                  const newDetails = buildSignalDetails(
+                    axisScores as Record<Axis, AxisScore>,
+                    composite,
+                    archetype,
+                    scoringCtx,
+                  );
+
+                  // Prepare UPDATE statement
+                  stmts.push(
+                    env.STATS_DB.prepare(
+                      `UPDATE domain_scores SET composite_score = ?, security_score = ?, performance_score = ?,
+                       reliability_score = ?, trust_score = ?, visibility_score = ?, email_score = ?,
+                       signal_details = ? WHERE domain = ?`,
+                    ).bind(
+                      composite,
+                      axisScores.security?.score ?? 0,
+                      axisScores.speed?.score ?? 0,
+                      axisScores.foundations?.score ?? 0,
+                      axisScores.reputation?.score ?? 0,
+                      axisScores.discoverability?.score ?? 0,
+                      axisScores.email?.score ?? 0,
+                      newDetails,
+                      domain,
+                    ),
+                  );
+
+                  rescored++;
+                } catch (e) {
+                  errors++;
+                  if (errorDetails.length < 10) {
+                    errorDetails.push(`${domain}: ${e instanceof Error ? e.message : String(e)}`);
+                  }
+                }
+              }
+
+              // Execute batch
+              if (stmts.length > 0) {
+                await env.STATS_DB.batch(stmts);
+              }
+            }
+
+            // Invalidate percentile cache so it recomputes from new scores
+            if (env.REFERENCE_DATA) {
+              try {
+                await env.REFERENCE_DATA.delete("percentiles:distribution");
+              } catch {
+                /* non-critical */
+              }
+            }
+          } catch (e) {
+            return adminJson({ ok: false, error: e instanceof Error ? e.message : String(e) }, 500);
+          }
+
+          const elapsedMs = Date.now() - startMs;
+          return adminJson({
+            ok: true,
+            total,
+            rescored,
+            skipped,
+            errors,
+            elapsed_ms: elapsedMs,
+            ...(errorDetails.length > 0 ? { error_samples: errorDetails } : {}),
+          });
         }
 
         // GET /api/docs — serve HTML for browsers, JSON for API clients
