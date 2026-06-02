@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { severityColor, severityIcon, tierColor } from "../utils/severity";
-import type { AnalysisResult, ArchetypeName, Axis, AxisScoreData } from "../utils/types";
+import type { AnalysisResult, ArchetypeName, Axis, AxisScoreData, PercentileData } from "../utils/types";
 import { Tooltip } from "./Tooltip";
 
 // ─── Constants ───────────────────────────────────────────────────────
@@ -80,9 +80,38 @@ function axisTierColor(score: number): string {
 const NULL_BAR_BG =
   "repeating-linear-gradient(-45deg, var(--border) 0px, var(--border) 3px, transparent 3px, transparent 6px)";
 
+// ─── Percentile Helpers ──────────────────────────────────────────────
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function percentileLabel(pctile: number): string {
+  if (pctile >= 90) return `Top ${100 - pctile}%`;
+  return `${ordinal(pctile)} percentile`;
+}
+
+function axisPctileColor(pctile: number): string {
+  if (pctile >= 80) return "#818cf8"; // indigo
+  if (pctile >= 60) return "#a5b4fc"; // lighter indigo
+  if (pctile <= 20) return "#f97316"; // orange
+  if (pctile <= 40) return "#f59e0b"; // amber
+  return "#94a3b8"; // neutral
+}
+
 // ─── Animated Axis Bars ──────────────────────────────────────────────
 
-function AnimatedAxisBars({ axes, animKey }: { axes: Record<Axis, AxisScoreData>; animKey: number }) {
+function AnimatedAxisBars({
+  axes,
+  animKey,
+  percentiles,
+}: {
+  axes: Record<Axis, AxisScoreData>;
+  animKey: number;
+  percentiles?: PercentileData | null;
+}) {
   const [progress, setProgress] = useState<number[]>(AXES.map(() => 0));
   const [showScores, setShowScores] = useState<boolean[]>(AXES.map(() => false));
   const rafRef = useRef<number>(0);
@@ -199,6 +228,25 @@ function AnimatedAxisBars({ axes, animKey }: { axes: Record<Axis, AxisScoreData>
             >
               {nm ? "N/A" : a.score}
             </span>
+            {/* Per-axis percentile pip */}
+            {percentiles && !nm && percentiles.axes[axis] != null && (
+              <span
+                style={{
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "9px",
+                  fontWeight: 500,
+                  color: axisPctileColor(percentiles.axes[axis] as number),
+                  minWidth: 44,
+                  textAlign: "right",
+                  opacity: scoreVisible ? 1 : 0,
+                  transition: "opacity 0.3s ease-out",
+                  fontVariantNumeric: "tabular-nums",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {(percentiles.axes[axis] as number) >= 50 ? "▲" : "▼"} {ordinal(percentiles.axes[axis] as number)}
+              </span>
+            )}
           </div>
         );
       })}
@@ -684,13 +732,34 @@ export function DomainScore({ data }: { data: AnalysisResult }) {
               </div>
             </div>
 
+            {/* Composite percentile badge */}
+            {data.percentiles && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "4px 12px",
+                  borderRadius: "16px",
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--accent) 18%, transparent)",
+                  color: "var(--accent)",
+                }}
+              >
+                📊 {percentileLabel(data.percentiles.composite)} of scanned domains
+              </div>
+            )}
+
             {/* Weight summary */}
             <p style={{ fontFamily: "var(--font-ui)", fontSize: "12px", color: "var(--dim)", lineHeight: "18px" }}>
               {weightSummary(weightsTable)}
             </p>
 
             {/* Animated axis breakdown bars */}
-            <AnimatedAxisBars axes={ds.axes} animKey={animKey} />
+            <AnimatedAxisBars axes={ds.axes} animKey={animKey} percentiles={data.percentiles} />
 
             {/* Replay button */}
             <div style={{ display: "flex", justifyContent: "center", marginTop: "0.75rem" }}>
@@ -736,6 +805,32 @@ export function DomainScore({ data }: { data: AnalysisResult }) {
             )}
           </div>
         </div>
+
+        {/* Percentile context */}
+        {data.percentiles && (
+          <div
+            style={{
+              marginTop: "0.75rem",
+              padding: "8px 12px",
+              borderRadius: "8px",
+              background: "color-mix(in srgb, var(--accent) 4%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--accent) 10%, transparent)",
+              fontFamily: "var(--font-ui)",
+              fontSize: "11px",
+              color: "var(--dim)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ fontSize: "13px" }}>📊</span>
+            <span>
+              Percentiles based on{" "}
+              <strong style={{ color: "var(--text)" }}>{data.percentiles.sample_size.toLocaleString()}</strong> unique
+              domains scanned
+            </span>
+          </div>
+        )}
 
         {/* Top findings */}
         <TopFindings axes={ds.axes} />

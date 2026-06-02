@@ -33,6 +33,7 @@ import {
 } from "./helpers";
 import { logError } from "./logger";
 import { getApiDocsHtml } from "./pages";
+import { getDistribution, getPercentiles, lookupCompositePercentile } from "./percentiles";
 import { trackRequest } from "./request-tracking";
 import {
   buildShareUrl,
@@ -451,7 +452,20 @@ export default {
           archetype: string | null;
           axes?: Record<string, number | null>;
         }>;
-        return json({ lookups: entries.slice(0, 12) });
+
+        // Enrich with composite percentile
+        const dist = await getDistribution(env);
+        const enriched = entries.slice(0, 12).map((e) => {
+          if (dist && e.score != null) {
+            return { ...e, composite_percentile: lookupCompositePercentile(dist, e.score) };
+          }
+          return e;
+        });
+
+        return json({
+          lookups: enriched,
+          ...(dist ? { percentile_sample_size: dist.sample_size } : {}),
+        });
       } catch {
         return json({ lookups: [] });
       }
@@ -544,6 +558,25 @@ export default {
                 share_url: shareUrl,
               };
             }
+          }
+
+          // Inject percentiles (non-blocking lookup, swallow errors)
+          try {
+            if (ds?.composite != null && ds.axes) {
+              const pctile = await getPercentiles(env, {
+                composite: ds.composite,
+                security: (ds.axes as Record<string, { score?: number }>).security?.score,
+                speed: (ds.axes as Record<string, { score?: number }>).speed?.score,
+                foundations: (ds.axes as Record<string, { score?: number }>).foundations?.score,
+                reputation: (ds.axes as Record<string, { score?: number }>).reputation?.score,
+                discoverability: (ds.axes as Record<string, { score?: number }>).discoverability?.score,
+              });
+              if (pctile) {
+                resultData.percentiles = pctile;
+              }
+            }
+          } catch {
+            /* percentile injection is non-critical */
           }
 
           const resp = new Response(JSON.stringify(resultData), {

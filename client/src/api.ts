@@ -338,6 +338,9 @@ export interface AnalysisResult {
   // Contextual scoring
   domain_score: DomainScoreData | null;
 
+  // Percentile rankings (optional — present when sufficient seed data exists)
+  percentiles?: PercentileData | null;
+
   // Structured data validation
   structured_data: StructuredDataValidationResult | null;
 
@@ -790,6 +793,22 @@ export interface DomainScoreData {
   archetype: ArchetypeData;
   /** Detected context flags for context-aware normalization */
   scoringContext?: { cookies?: boolean; wordpress?: boolean; httpBlocked?: boolean };
+}
+
+// ─── Percentile types ────────────────────────────────────────────────
+
+export interface PercentileData {
+  composite: number;
+  axes: {
+    security: number | null;
+    speed: number | null;
+    foundations: number | null;
+    reputation: number | null;
+    discoverability: number | null;
+    email: number | null;
+  };
+  sample_size: number;
+  computed_at: string;
 }
 
 // ─── Subdomain scan types ────────────────────────────────────────────

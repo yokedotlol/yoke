@@ -42,6 +42,7 @@ export type {
   NetworkHealthData,
   NewsResult,
   OutageLinksData,
+  PercentileData,
   RedirectHop,
   ResolvedSubdomain,
   ReverseIPResult,
