@@ -315,6 +315,26 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
       ...(shareUrl ? { share_url: shareUrl } : {}),
     };
 
+    // Inject percentiles (non-blocking, swallow errors)
+    try {
+      if (domainScore?.composite != null && domainScore.axes) {
+        const { getPercentiles } = await import("./percentiles");
+        const pctile = await getPercentiles(env, {
+          composite: domainScore.composite,
+          security: domainScore.axes.security?.score,
+          speed: domainScore.axes.speed?.score,
+          foundations: domainScore.axes.foundations?.score,
+          reputation: domainScore.axes.reputation?.score,
+          discoverability: domainScore.axes.discoverability?.score,
+        });
+        if (pctile) {
+          dataRecord.percentiles = pctile;
+        }
+      }
+    } catch {
+      /* percentile injection is non-critical */
+    }
+
     const body = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
     const isCached = !!(data as Record<string, unknown>).cached;
 
