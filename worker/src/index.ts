@@ -820,6 +820,74 @@ export default {
           });
         }
 
+        // GET /api/stats — public aggregate stats for dashboards
+        if (method === "GET" && path === "/api/stats") {
+          // Serve from KV cache if fresh (15 min TTL)
+          const STATS_CACHE_KEY = "api:stats:v1";
+          if (env.REFERENCE_DATA) {
+            const cached = await env.REFERENCE_DATA.get(STATS_CACHE_KEY, "text");
+            if (cached) {
+              return new Response(cached, {
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Yoke-Cache": "HIT",
+                  "Cache-Control": "public, max-age=900",
+                  ...CORS_HEADERS,
+                },
+              });
+            }
+          }
+          try {
+            const [totals, last24h, tiers] = await Promise.all([
+              env.STATS_DB.prepare(
+                "SELECT COUNT(*) as total_scans, COUNT(DISTINCT domain) as unique_domains FROM domain_scores",
+              ).first<{ total_scans: number; unique_domains: number }>(),
+              env.STATS_DB.prepare(
+                "SELECT COUNT(*) as scans, COUNT(DISTINCT domain) as uniq, AVG(composite_score) as avg_score FROM domain_scores WHERE scored_at >= datetime('now', '-1 day')",
+              ).first<{ scans: number; uniq: number; avg_score: number | null }>(),
+              env.STATS_DB.prepare(
+                "SELECT tier, ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM domain_scores WHERE scored_at >= datetime('now', '-7 days')), 0) as pct FROM domain_scores WHERE scored_at >= datetime('now', '-7 days') GROUP BY tier",
+              ).all<{ tier: string; pct: number }>(),
+            ]);
+            const tierDist: Record<string, number> = {
+              Excellent: 0,
+              Strong: 0,
+              Moderate: 0,
+              Weak: 0,
+              Critical: 0,
+            };
+            for (const row of tiers.results) {
+              if (row.tier in tierDist) tierDist[row.tier] = row.pct;
+            }
+            const stats = {
+              total_scans: totals?.total_scans ?? 0,
+              unique_domains: totals?.unique_domains ?? 0,
+              last_24h: {
+                scans: last24h?.scans ?? 0,
+                unique: last24h?.uniq ?? 0,
+                avg_score: last24h?.avg_score != null ? Math.round(last24h.avg_score * 10) / 10 : null,
+              },
+              tier_distribution: tierDist,
+              updated_at: new Date().toISOString(),
+            };
+            const body = JSON.stringify(stats);
+            // Cache in KV for 15 minutes
+            if (env.REFERENCE_DATA) {
+              await env.REFERENCE_DATA.put(STATS_CACHE_KEY, body, { expirationTtl: 900 });
+            }
+            return new Response(body, {
+              headers: {
+                "Content-Type": "application/json",
+                "X-Yoke-Cache": "MISS",
+                "Cache-Control": "public, max-age=900",
+                ...CORS_HEADERS,
+              },
+            });
+          } catch {
+            return json({ error: "Stats temporarily unavailable" }, 503);
+          }
+        }
+
         // POST /api/share-sign — sign a share card payload
         if (method === "POST" && path === "/api/share-sign") {
           return handleShareSign(request, env);
@@ -1132,6 +1200,11 @@ export default {
               },
               "GET /api/health": {
                 description: "Health check — basic status. Admin auth returns detailed error metrics.",
+                rate_limit: "none",
+              },
+              "GET /api/stats": {
+                description:
+                  "Aggregate scan statistics — total scans, unique domains, 24h activity, tier distribution. Cached for 15 minutes.",
                 rate_limit: "none",
               },
               "GET /api/scoring": {
