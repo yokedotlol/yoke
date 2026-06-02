@@ -218,14 +218,17 @@ function AnimatedAxisBars({
             >
               {nm ? "N/A" : a.score}
             </span>
-            {/* Per-axis percentile pip */}
-            {percentiles && !nm && percentiles.axes[axis] != null && (
+            {/* Per-axis percentile pip — always reserve space for layout consistency */}
+            {percentiles && (
               <span
                 style={{
                   fontFamily: "var(--font-ui)",
                   fontSize: "9px",
                   fontWeight: 500,
-                  color: axisPctileColor(percentiles.axes[axis] as number),
+                  color:
+                    !nm && percentiles.axes[axis] != null
+                      ? axisPctileColor(percentiles.axes[axis] as number)
+                      : "transparent",
                   minWidth: 44,
                   textAlign: "right",
                   opacity: scoreVisible ? 1 : 0,
@@ -234,7 +237,9 @@ function AnimatedAxisBars({
                   whiteSpace: "nowrap",
                 }}
               >
-                {(percentiles.axes[axis] as number) >= 50 ? "▲" : "▼"} {ordinal(percentiles.axes[axis] as number)}
+                {!nm && percentiles.axes[axis] != null
+                  ? `${(percentiles.axes[axis] as number) >= 50 ? "▲" : "▼"} ${ordinal(percentiles.axes[axis] as number)}`
+                  : "\u00A0"}
               </span>
             )}
           </div>

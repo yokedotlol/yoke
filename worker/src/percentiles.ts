@@ -18,6 +18,7 @@ export interface PercentileDistribution {
   foundations: Histogram;
   reputation: Histogram;
   discoverability: Histogram;
+  email: Histogram;
   sample_size: number;
   computed_at: string;
 }
@@ -30,7 +31,7 @@ export interface PercentileData {
     foundations: number | null;
     reputation: number | null;
     discoverability: number | null;
-    email: number | null; // always null — not tracked in D1
+    email: number | null;
   };
   sample_size: number;
   computed_at: string;
@@ -77,12 +78,12 @@ async function computeDistribution(db: D1Database): Promise<PercentileDistributi
       .prepare(
         `WITH latest AS (
           SELECT domain, composite_score, security_score, performance_score,
-                 reliability_score, trust_score, visibility_score,
+                 reliability_score, trust_score, visibility_score, email_score,
                  ROW_NUMBER() OVER (PARTITION BY domain ORDER BY scored_at DESC) AS rn
           FROM domain_scores
         )
         SELECT composite_score, security_score, performance_score,
-               reliability_score, trust_score, visibility_score
+               reliability_score, trust_score, visibility_score, email_score
         FROM latest WHERE rn = 1`,
       )
       .all();
@@ -95,6 +96,7 @@ async function computeDistribution(db: D1Database): Promise<PercentileDistributi
     const foundations = emptyHistogram();
     const reputation = emptyHistogram();
     const discoverability = emptyHistogram();
+    const email = emptyHistogram();
 
     let sampleSize = 0;
 
@@ -119,6 +121,9 @@ async function computeDistribution(db: D1Database): Promise<PercentileDistributi
       if (typeof r.visibility_score === "number") {
         discoverability[Math.max(0, Math.min(100, Math.round(r.visibility_score)))]++;
       }
+      if (typeof r.email_score === "number") {
+        email[Math.max(0, Math.min(100, Math.round(r.email_score)))]++;
+      }
     }
 
     if (sampleSize < MIN_SAMPLE_SIZE) return null;
@@ -130,6 +135,7 @@ async function computeDistribution(db: D1Database): Promise<PercentileDistributi
       foundations,
       reputation,
       discoverability,
+      email,
       sample_size: sampleSize,
       computed_at: new Date().toISOString(),
     };
@@ -186,6 +192,7 @@ export function lookupPercentiles(
     foundations?: number | null;
     reputation?: number | null;
     discoverability?: number | null;
+    email?: number | null;
   },
 ): PercentileData {
   return {
@@ -197,7 +204,7 @@ export function lookupPercentiles(
       reputation: scores.reputation != null ? percentileRank(dist.reputation, scores.reputation) : null,
       discoverability:
         scores.discoverability != null ? percentileRank(dist.discoverability, scores.discoverability) : null,
-      email: null, // not tracked in D1
+      email: scores.email != null && dist.email ? percentileRank(dist.email, scores.email) : null,
     },
     sample_size: dist.sample_size,
     computed_at: dist.computed_at,
@@ -214,6 +221,7 @@ export async function getPercentiles(
     foundations?: number | null;
     reputation?: number | null;
     discoverability?: number | null;
+    email?: number | null;
   },
 ): Promise<PercentileData | null> {
   const dist = await getDistribution(env);
@@ -238,6 +246,7 @@ export async function injectPercentiles(data: Record<string, unknown>, env: Env)
         foundations: ds.axes.foundations?.score,
         reputation: ds.axes.reputation?.score,
         discoverability: ds.axes.discoverability?.score,
+        email: ds.axes.email?.score,
       });
       if (pctile) {
         data.percentiles = pctile;

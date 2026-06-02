@@ -1030,8 +1030,8 @@ async function runAnalysisCore(
 
         try {
           await env.STATS_DB.prepare(
-            `INSERT OR REPLACE INTO domain_scores (domain, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, archetype, archetype_confidence, scored_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT OR REPLACE INTO domain_scores (domain, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, email_score, archetype, archetype_confidence, scored_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
             .bind(
               domain,
@@ -1041,6 +1041,7 @@ async function runAnalysisCore(
               domainScore.axes.foundations.score,
               domainScore.axes.reputation.score,
               domainScore.axes.discoverability.score,
+              domainScore.axes.email.score,
               domainScore.archetype.detected,
               domainScore.archetype.confidence,
               scoredAt,
@@ -1054,11 +1055,17 @@ async function runAnalysisCore(
               composite_score INTEGER NOT NULL, security_score INTEGER NOT NULL,
               performance_score INTEGER NOT NULL, reliability_score INTEGER NOT NULL,
               trust_score INTEGER NOT NULL, visibility_score INTEGER NOT NULL,
-              archetype TEXT NOT NULL, archetype_confidence REAL NOT NULL,
+              email_score INTEGER, archetype TEXT NOT NULL, archetype_confidence REAL NOT NULL,
               scored_at TEXT NOT NULL DEFAULT (datetime('now')),
               UNIQUE(domain, scored_at)
             )`,
             ).run();
+            // Add email_score column to existing tables (no-op if already present)
+            await env.STATS_DB.prepare(`ALTER TABLE domain_scores ADD COLUMN email_score INTEGER`)
+              .run()
+              .catch(() => {
+                /* column already exists */
+              });
             await env.STATS_DB.prepare(
               `CREATE INDEX IF NOT EXISTS idx_domain_scores_domain ON domain_scores(domain)`,
             ).run();
@@ -1066,8 +1073,8 @@ async function runAnalysisCore(
               `CREATE INDEX IF NOT EXISTS idx_domain_scores_scored_at ON domain_scores(scored_at)`,
             ).run();
             await env.STATS_DB.prepare(
-              `INSERT OR REPLACE INTO domain_scores (domain, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, archetype, archetype_confidence, scored_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              `INSERT OR REPLACE INTO domain_scores (domain, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, email_score, archetype, archetype_confidence, scored_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             )
               .bind(
                 domain,
@@ -1077,6 +1084,7 @@ async function runAnalysisCore(
                 domainScore.axes.foundations.score,
                 domainScore.axes.reputation.score,
                 domainScore.axes.discoverability.score,
+                domainScore.axes.email.score,
                 domainScore.archetype.detected,
                 domainScore.archetype.confidence,
                 scoredAt,
@@ -1090,8 +1098,8 @@ async function runAnalysisCore(
         // Daily snapshot: one row per domain per day, overwrites with latest score + findings
         try {
           await env.STATS_DB.prepare(
-            `INSERT OR REPLACE INTO daily_snapshots (domain, score_date, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, archetype, findings_summary, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT OR REPLACE INTO daily_snapshots (domain, score_date, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, email_score, archetype, findings_summary, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
             .bind(
               domain,
@@ -1102,6 +1110,7 @@ async function runAnalysisCore(
               domainScore.axes.foundations.score,
               domainScore.axes.reputation.score,
               domainScore.axes.discoverability.score,
+              domainScore.axes.email.score,
               domainScore.archetype.detected,
               findingsSummary,
               scoredAt,
@@ -1115,11 +1124,18 @@ async function runAnalysisCore(
               score_date TEXT NOT NULL, composite_score INTEGER NOT NULL,
               security_score INTEGER NOT NULL, performance_score INTEGER NOT NULL,
               reliability_score INTEGER NOT NULL, trust_score INTEGER NOT NULL,
-              visibility_score INTEGER NOT NULL, archetype TEXT NOT NULL,
+              visibility_score INTEGER NOT NULL, email_score INTEGER,
+              archetype TEXT NOT NULL,
               findings_summary TEXT, updated_at TEXT NOT NULL,
               UNIQUE(domain, score_date)
             )`,
             ).run();
+            // Add email_score column to existing tables (no-op if already present)
+            await env.STATS_DB.prepare(`ALTER TABLE daily_snapshots ADD COLUMN email_score INTEGER`)
+              .run()
+              .catch(() => {
+                /* column already exists */
+              });
             await env.STATS_DB.prepare(
               `CREATE INDEX IF NOT EXISTS idx_daily_snapshots_domain ON daily_snapshots(domain)`,
             ).run();
@@ -1127,8 +1143,8 @@ async function runAnalysisCore(
               `CREATE INDEX IF NOT EXISTS idx_daily_snapshots_date ON daily_snapshots(score_date)`,
             ).run();
             await env.STATS_DB.prepare(
-              `INSERT OR REPLACE INTO daily_snapshots (domain, score_date, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, archetype, findings_summary, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              `INSERT OR REPLACE INTO daily_snapshots (domain, score_date, composite_score, security_score, performance_score, reliability_score, trust_score, visibility_score, email_score, archetype, findings_summary, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             )
               .bind(
                 domain,
@@ -1139,6 +1155,7 @@ async function runAnalysisCore(
                 domainScore.axes.foundations.score,
                 domainScore.axes.reputation.score,
                 domainScore.axes.discoverability.score,
+                domainScore.axes.email.score,
                 domainScore.archetype.detected,
                 findingsSummary,
                 scoredAt,
