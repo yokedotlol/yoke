@@ -93,6 +93,8 @@ export interface AbsentSignalDetail {
   /** Per-signal deduction (IDF-weighted) */
   deduction?: number;
   fixDescription?: string;
+  /** Clean label for when signal is absent (e.g., "CDN not detected") */
+  absentLabel?: string;
   effort?: string;
   actionable: boolean;
 }
@@ -324,6 +326,7 @@ export function computeAxisScoreWithDeductions(
         weight: w,
         deduction: Math.round(signalDeduction * 10) / 10,
         fixDescription: def.fixDescription,
+        absentLabel: def.absentLabel,
         effort: def.effort,
         actionable: def.actionable,
       });

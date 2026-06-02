@@ -60,6 +60,9 @@ export interface SignalDef {
   effort?: string;
   /** Level-Up fix description (when actionable and canBeNonGood) */
   fixDescription?: string;
+  /** Clean label to show when this signal is absent/not-detected (e.g., "CDN not detected").
+   *  Falls back to "{label} not detected" if not specified. */
+  absentLabel?: string;
   /** Weight range [min, max] used in scoring */
   weightRange: [number, number];
   /** AI prompt calibration guidance for this signal */
@@ -175,7 +178,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   ssl_certificate_transparency: {
     axis: "security",
     label: "Certificate Transparency SCTs",
-    fixDescription: "Detected automatically — Certificate Transparency SCTs enable public audit of issued certificates",
+    absentLabel: "CT logs not detected",
+    fixDescription: "Certificate Transparency logs verify issued certificates publicly",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -187,7 +191,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   hsts: {
     axis: "security",
     label: "HSTS Enabled",
-    fixDescription: "Detected automatically — HSTS forces browsers to use HTTPS, preventing downgrade attacks",
+    absentLabel: "HSTS not enabled",
+    fixDescription: "HSTS enforces HTTPS connections, preventing protocol downgrade attacks",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -244,7 +249,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   csp: {
     axis: "security",
     label: "Content Security Policy Present",
-    fixDescription: "Detected automatically — Content Security Policy restricts resource loading to prevent XSS",
+    absentLabel: "CSP header not found",
+    fixDescription: "CSP restricts resource loading to prevent cross-site scripting",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -356,6 +362,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   dnssec: {
     axis: "security",
     label: "DNSSEC",
+    absentLabel: "DNSSEC not enabled",
     actionable: true,
     canBeNonGood: true,
     canBeGood: true,
@@ -383,7 +390,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   email_auth: {
     axis: "email",
     label: "Email Authentication",
-    fixDescription: "Detected automatically — combined SPF + DKIM + DMARC alignment for email authentication",
+    absentLabel: "Email authentication incomplete",
+    fixDescription: "Full email authentication (SPF + DKIM + DMARC) verified",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -420,7 +428,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   waf_detected: {
     axis: "security",
     label: "WAF Detected",
-    fixDescription: "Detected automatically — Web Application Firewall protects against common web attacks",
+    absentLabel: "WAF not detected",
+    fixDescription: "WAF protects against common web attacks",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -432,8 +441,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   caa_records: {
     axis: "security",
     label: "CAA Records Present",
-    fixDescription:
-      "Detected automatically — CAA DNS records restrict which Certificate Authorities can issue certificates",
+    absentLabel: "CAA records not found",
+    fixDescription: "CAA records restrict which CAs can issue certificates",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -531,7 +540,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   referrer_policy: {
     axis: "security",
     label: "Referrer-Policy Configured",
-    fixDescription: "Detected automatically — a safe Referrer-Policy limits information leaked in HTTP headers",
+    absentLabel: "Referrer-Policy not set",
+    fixDescription: "Referrer-Policy limits information leaked in HTTP headers",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -572,7 +582,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   permissions_policy: {
     axis: "security",
     label: "Permissions-Policy Configured",
-    fixDescription: "Detected automatically — Permissions-Policy restricts browser features like camera and microphone",
+    absentLabel: "Permissions-Policy not set",
+    fixDescription: "Permissions-Policy restricts browser feature access",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -645,7 +656,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   subresource_integrity: {
     axis: "security",
     label: "Subresource Integrity",
-    fixDescription: "Detected automatically — SRI ensures third-party scripts have not been tampered with",
+    absentLabel: "SRI not detected",
+    fixDescription: "SRI verifies third-party script integrity",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -696,6 +708,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   mta_sts: {
     axis: "email",
     label: "MTA-STS",
+    absentLabel: "MTA-STS not configured",
     actionable: true,
     canBeNonGood: true,
     canBeGood: true,
@@ -949,7 +962,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   wp_security_plugin_detected: {
     axis: "security",
     label: "WordPress Security Plugin Active",
-    fixDescription: "Detected automatically — WordPress security plugin providing additional hardening",
+    absentLabel: "No security plugin detected",
+    fixDescription: "WordPress security plugin provides additional hardening",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -961,7 +975,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   wp_caching_plugin_detected: {
     axis: "speed",
     label: "WordPress Caching Plugin Active",
-    fixDescription: "Detected automatically — WordPress caching plugin improving page load performance",
+    absentLabel: "No caching plugin detected",
+    fixDescription: "WordPress caching plugin improves page load performance",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1078,7 +1093,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   cdn: {
     axis: "foundations",
     label: "CDN Detected",
-    fixDescription: "Detected automatically — CDN distributes content across global edge servers for faster delivery",
+    absentLabel: "CDN not detected",
+    fixDescription: "CDN distributes content across global edge servers",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1090,6 +1106,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   asset_cdn: {
     axis: "speed",
     label: "Asset CDN",
+    absentLabel: "No asset CDN detected",
     fixDescription: "Third-party CDN hostnames detected in page source for static assets",
     actionable: false,
     canBeNonGood: false,
@@ -1102,6 +1119,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   http2: {
     axis: "foundations",
     label: "HTTP/2 Enabled",
+    absentLabel: "HTTP/2 not enabled",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1113,7 +1131,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   http3: {
     axis: "foundations",
     label: "HTTP/3 Enabled",
-    fixDescription: "Detected automatically — HTTP/3 uses QUIC protocol for faster, more reliable connections",
+    absentLabel: "HTTP/3 not enabled",
+    fixDescription: "HTTP/3 enables faster connections via QUIC protocol",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1136,6 +1155,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   cache_headers: {
     axis: "speed",
     label: "Cache Headers",
+    absentLabel: "Cache headers not configured",
     actionable: true,
     canBeNonGood: true,
     canBeGood: true,
@@ -1177,7 +1197,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   render_blocking_scripts: {
     axis: "speed",
     label: "Render-Blocking Scripts",
-    fixDescription: "Detected automatically — no third-party scripts blocking page rendering",
+    absentLabel: "Render-blocking scripts present",
+    fixDescription: "No render-blocking third-party scripts detected",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1214,8 +1235,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   resource_hints: {
     axis: "speed",
     label: "Resource Hints",
-    fixDescription:
-      "Detected automatically — preload, prefetch, preconnect, and modulepreload link hints improve loading",
+    absentLabel: "No resource hints detected",
+    fixDescription: "Resource hints (preload, prefetch, preconnect) improve loading",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1260,7 +1281,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   ns_redundancy: {
     axis: "foundations",
     label: "Nameserver Count",
-    fixDescription: "Detected automatically — multiple nameservers ensure DNS availability",
+    absentLabel: "Limited nameserver redundancy",
+    fixDescription: "Multiple nameservers ensure DNS availability",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1271,6 +1293,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   ipv6: {
     axis: "foundations",
     label: "IPv6 Support",
+    absentLabel: "No IPv6 (AAAA) records",
     actionable: true,
     canBeNonGood: true,
     canBeGood: true,
@@ -1283,7 +1306,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   lb: {
     axis: "foundations",
     label: "DNS Redundancy",
-    fixDescription: "Detected automatically — multiple A records indicate redundant hosting infrastructure",
+    absentLabel: "Single A record (no DNS redundancy)",
+    fixDescription: "Multiple A records provide IP-level redundancy",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1329,7 +1353,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   dns_resolution_time: {
     axis: "foundations",
     label: "DNS Resolution Time",
-    fixDescription: "Detected automatically — fast DNS resolution from authoritative nameservers",
+    absentLabel: "DNS resolution time not measured",
+    fixDescription: "Fast DNS resolution from authoritative nameservers",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1350,7 +1375,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   mx_redundancy: {
     axis: "email",
     label: "MX Redundancy",
-    fixDescription: "Detected automatically — multiple MX records ensure email delivery reliability",
+    absentLabel: "Single MX record (no redundancy)",
+    fixDescription: "Multiple MX records ensure email delivery reliability",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1405,7 +1431,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   dns_consistent: {
     axis: "foundations",
     label: "DNS Consistent",
-    fixDescription: "Detected automatically — DNS records consistent across global resolvers",
+    fixDescription: "DNS records consistent across global resolvers",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1473,7 +1499,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   tranco_rank: {
     axis: "reputation",
     label: "Tranco Rank",
-    fixDescription: "Detected automatically — Tranco measures web traffic popularity among the top 1M sites",
+    absentLabel: "Not ranked in Tranco top 1M",
+    fixDescription: "Tranco ranking measures web traffic popularity",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1518,6 +1545,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   security_txt: {
     axis: "security",
     label: "security.txt",
+    absentLabel: "No security.txt",
     actionable: true,
     canBeNonGood: true,
     canBeGood: true,
@@ -1536,6 +1564,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   bimi_record: {
     axis: "email",
     label: "BIMI Record",
+    absentLabel: "BIMI record not found",
     fixDescription: "Add a BIMI DNS record with your brand logo SVG for display in email clients",
     actionable: false,
     canBeNonGood: false,
@@ -1599,6 +1628,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   dmarc_subdomain_policy: {
     axis: "email",
     label: "DMARC Subdomain Policy",
+    absentLabel: "DMARC subdomain policy not set",
     fixDescription: "Add sp=reject to your DMARC record to protect subdomains from email spoofing",
     actionable: false,
     canBeNonGood: false,
@@ -1624,6 +1654,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   tls_rpt: {
     axis: "email",
     label: "TLS-RPT",
+    absentLabel: "TLS-RPT not configured",
     fixDescription: "Add a TLS-RPT DNS record (_smtp._tls.domain TXT) to receive TLS delivery failure reports",
     actionable: false,
     canBeNonGood: false,
@@ -1647,7 +1678,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   cert_validation_type: {
     axis: "foundations",
     label: "Certificate Validation Type",
-    fixDescription: "Detected automatically — certificate validation level (DV, OV, or EV)",
+    absentLabel: "Certificate type not determined",
+    fixDescription: "Certificate validation level (DV, OV, or EV)",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1686,7 +1718,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   ops_transparency: {
     axis: "foundations",
     label: "Operational Transparency",
-    fixDescription: "Detected automatically — public status pages, uptime monitoring, or incident tracking",
+    fixDescription: "Public status page or uptime monitoring detected",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1754,7 +1786,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   blocklist_trust: {
     axis: "reputation",
     label: "Blocklist Trust Impact",
-    fixDescription: "Detected automatically — domain and IP checked against major security and email blocklists",
+    absentLabel: "Blocklist status not checked",
+    fixDescription: "Domain and IP clear on major security blocklists",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1768,7 +1801,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   domain_popularity: {
     axis: "discoverability",
     label: "Domain Popularity",
-    fixDescription: "Detected automatically — web popularity ranking from Tranco and other sources",
+    absentLabel: "Domain popularity not ranked",
+    fixDescription: "Web popularity ranking from Tranco and other sources",
     actionable: false,
     canBeNonGood: true,
     canBeGood: true,
@@ -1779,7 +1813,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   structured_data: {
     axis: "discoverability",
     label: "Structured Data Present",
-    fixDescription: "Detected automatically — JSON-LD or microdata structured data for rich search results",
+    absentLabel: "No structured data detected",
+    fixDescription: "Structured data (JSON-LD/microdata) enables rich search results",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1831,6 +1866,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   robots_txt: {
     axis: "discoverability",
     label: "robots.txt",
+    absentLabel: "No robots.txt",
     actionable: true,
     canBeNonGood: true,
     canBeGood: true,
@@ -1845,6 +1881,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   sitemap: {
     axis: "discoverability",
     label: "Sitemap",
+    absentLabel: "No sitemap.xml",
     actionable: true,
     canBeNonGood: true,
     canBeGood: true,
@@ -1876,7 +1913,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   social_accounts: {
     axis: "discoverability",
     label: "Social Accounts",
-    fixDescription: "Detected automatically — verified social media accounts linked via rel=me attributes",
+    absentLabel: "No linked social accounts",
+    fixDescription: "Verified social media accounts linked via rel=me",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -1925,7 +1963,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   canonical_url: {
     axis: "discoverability",
     label: "Canonical URL",
-    fixDescription: "Detected automatically — canonical URL properly set for SEO deduplication",
+    absentLabel: "Canonical URL not set",
+    fixDescription: "Canonical URL properly set for SEO deduplication",
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
@@ -2056,6 +2095,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   accessibility: {
     axis: "discoverability",
     label: "Accessibility",
+    absentLabel: "Accessibility issues detected",
     actionable: true,
     canBeNonGood: true,
     canBeGood: true,

@@ -752,6 +752,7 @@ export interface AbsentSignalDetailData {
   label: string;
   weight: number;
   fixDescription?: string;
+  absentLabel?: string;
   effort?: string;
   actionable: boolean;
 }

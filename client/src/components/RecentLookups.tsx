@@ -270,14 +270,14 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
               })}
             </div>
 
-            {/* Percentile — fixed-width cell */}
-            <span
+            {/* Right column — single fixed-width wrapper for percentile + tier */}
+            <div
               style={{
-                flex: "0 0 48px",
-                textAlign: "right",
+                flex: "0 0 112px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-end",
+                gap: "4px",
               }}
             >
               {entry.composite_percentile != null && (
@@ -296,24 +296,23 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
                   {pctilePipText(entry.composite_percentile)}
                 </span>
               )}
-            </span>
-            {/* Tier label — fixed-width cell */}
-            <span
-              className="recent-tier-label"
-              style={{
-                flex: "0 0 64px",
-                textAlign: "right",
-                fontFamily: "var(--font-ui)",
-                fontSize: "10px",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.04em",
-                color: tierFor(entry.score).color,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {entry.tier ?? ""}
-            </span>
+              <span
+                className="recent-tier-label"
+                style={{
+                  minWidth: "60px",
+                  textAlign: "right",
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  color: tierFor(entry.score).color,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {entry.tier ?? ""}
+              </span>
+            </div>
           </button>
         ))}
       </div>
