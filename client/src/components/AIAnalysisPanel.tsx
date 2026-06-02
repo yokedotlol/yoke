@@ -30,6 +30,7 @@ import type { AbsentSignalDetailData, Axis, ScoreFinding, Severity } from "../ap
 import { severityBg, severityColor, severityIcon } from "../utils/severity";
 import type { AnalysisResult } from "../utils/types";
 import { findReferenceLink } from "./DomainSignals";
+import { ScoreWaterfall } from "./ScoreWaterfall";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -709,6 +710,7 @@ interface ScoreFactorItem {
     label: string;
     weight: number;
     fixDescription?: string;
+    absentLabel?: string;
     effort?: string;
     actionable: boolean;
   }>;
@@ -2506,74 +2508,8 @@ function LevelUpPlan({ data }: { data: AnalysisResult }) {
         </div>
       )}
 
-      {/* Score Factors — residual gap explained */}
-      {plan.scoreFactors.length > 0 && (
-        <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              marginBottom: "8px",
-            }}
-          >
-            <Eye size={11} style={{ color: "var(--muted)" }} />
-            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--muted)" }}>Score factors</span>
-            <span style={{ fontSize: "10px", color: "var(--dim)" }}>
-              −{plan.scoreFactors.reduce((s, f) => s + f.compositeImpact, 0).toFixed(1)} pts
-            </span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            {plan.scoreFactors.map((factor) => (
-              <div
-                key={factor.axis}
-                style={{
-                  padding: "6px 8px",
-                  borderRadius: "4px",
-                  background: "rgba(255,255,255,0.02)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
-                    <span
-                      style={{
-                        width: "6px",
-                        height: "6px",
-                        borderRadius: "50%",
-                        background: axisColors[factor.axis] || "var(--muted)",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ fontSize: "11px", color: "var(--muted)" }}>{factor.reason}</span>
-                  </div>
-                  <span style={{ fontSize: "10px", color: "var(--dim)", flexShrink: 0 }}>
-                    −{factor.axisDeduction.toFixed(1)} on {axisLabels[factor.axis] || factor.axis}
-                  </span>
-                </div>
-                {factor.signals.length > 0 && (
-                  <div
-                    style={{
-                      marginTop: "4px",
-                      paddingLeft: "12px",
-                      fontSize: "10px",
-                      color: "var(--dim)",
-                      lineHeight: "1.5",
-                    }}
-                  >
-                    {factor.signals.map((s) => (
-                      <div key={s.signal} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        <span style={{ opacity: 0.5 }}>·</span>
-                        <span>{s.fixDescription || s.label}</span>
-                        {s.effort && <span style={{ opacity: 0.5, marginLeft: "2px" }}>({s.effort})</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Score Breakdown — axis-grouped deduction waterfall */}
+      <ScoreWaterfall data={data} />
     </div>
   );
 }

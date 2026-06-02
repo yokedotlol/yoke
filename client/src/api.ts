@@ -751,6 +751,8 @@ export interface AbsentSignalDetailData {
   signal: string;
   label: string;
   weight: number;
+  /** Per-signal deduction (IDF-weighted) */
+  deduction?: number;
   fixDescription?: string;
   absentLabel?: string;
   effort?: string;
