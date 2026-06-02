@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: "📊 Score seems wrong?"
+    url: https://yoke.lol/about
+    about: "Learn how scoring works — every deduction is visible in the Score Breakdown. If a specific signal is wrong, use the False Positive template instead."
+  - name: "🔧 Scan failed or blocked?"
+    url: https://yoke.lol/about
+    about: "See our scanner identity, IP ranges, and troubleshooting guide. Most scan issues can be resolved by whitelisting Cloudflare IP ranges."
   - name: "💬 Discussions"
     url: https://github.com/yokedotlol/yoke/discussions
     about: Ask questions, share feedback, or discuss Yoke with the community.

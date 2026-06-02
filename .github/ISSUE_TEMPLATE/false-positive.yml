@@ -45,13 +45,43 @@ body:
     validations:
       required: false
 
+  - type: markdown
+    attributes:
+      value: |
+        ### How to gather evidence
+
+        The type of evidence depends on the signal. Here are common methods:
+
+        **For HTTP header signals** (HSTS, CSP, X-Frame-Options, etc.):
+        ```bash
+        curl -sI https://your-domain.com | grep -i "header-name"
+        ```
+
+        **For DNS signals** (DNSSEC, CAA, multiple A records, etc.):
+        ```bash
+        dig your-domain.com ANY +short
+        dig your-domain.com CAA
+        ```
+
+        **For file-based signals** (robots.txt, ads.txt, security.txt, sitemap.xml):
+        ```
+        Visit https://your-domain.com/robots.txt in your browser and paste or screenshot the content.
+        ```
+
+        **For SSL/TLS signals** (certificate, protocols):
+        ```bash
+        echo | openssl s_client -connect your-domain.com:443 2>/dev/null | openssl x509 -noout -text | head -20
+        ```
+
+        **For other signals**: A screenshot from browser DevTools (Network tab → Headers) works well.
+
   - type: textarea
     id: evidence
     attributes:
       label: Evidence that the signal exists
       description: |
         Help us verify. Paste relevant headers, DNS records, config, or link to proof.
-        Examples: `curl -I` output showing the header, a screenshot, DNS lookup results, etc.
+        See the guidance above for how to gather evidence for different signal types.
       placeholder: |
         $ curl -sI https://example.com | grep -i strict-transport
         strict-transport-security: max-age=31536000; includeSubDomains

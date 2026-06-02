@@ -53,7 +53,7 @@ body:
     attributes:
       label: Reference or source
       description: |
-        Link to an RFC, MDN page, blog post, specification, or other authoritative source that supports your claim.
+        Link to an RFC, MDN deprecation notice, browser vendor announcement, or W3C specification. Blog posts alone are not sufficient — we need an authoritative source.
       placeholder: |
         MDN: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
         "This feature is non-standard and is not on a standards track."
