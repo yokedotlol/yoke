@@ -250,11 +250,12 @@ function addHeaders(resp: Response, extra: Record<string, string>): Response {
   return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: h });
 }
 
-/** JSON response without CORS headers — used for admin-only endpoints. */
+/** JSON response without broad CORS — used for admin-only endpoints.
+ *  Still includes CORS allow-origin so authenticated cross-origin requests work. */
 function adminJson(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json", "X-Content-Type-Options": "nosniff" },
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
 }
 
@@ -275,13 +276,13 @@ function checkAdminAuth(request: Request, adminKey: string | undefined): Respons
   if (!adminKey)
     return new Response(JSON.stringify({ error: "Admin key not configured" }), {
       status: 503,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   const authHeader = request.headers.get("Authorization") || "";
   if (!authHeader.startsWith("Basic ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"' },
+      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"', ...CORS_HEADERS },
     });
   }
   let pass: string;
@@ -291,13 +292,13 @@ function checkAdminAuth(request: Request, adminKey: string | undefined): Respons
   } catch {
     return new Response(JSON.stringify({ error: "Malformed credentials" }), {
       status: 401,
-      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"' },
+      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"', ...CORS_HEADERS },
     });
   }
   if (!pass || !timingSafeEq(pass, adminKey)) {
     return new Response(JSON.stringify({ error: "Invalid credentials" }), {
       status: 401,
-      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"' },
+      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"', ...CORS_HEADERS },
     });
   }
   return null; // auth passed

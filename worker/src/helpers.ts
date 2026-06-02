@@ -164,7 +164,7 @@ export const CORS_HEADERS: Record<string, string> = {
   // (e.g., DELETE /api/cache) should not be callable cross-origin from browsers.
   // Non-browser clients (curl, scripts) ignore CORS and can still use DELETE with auth.
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-OpenRouter-Key",
+  "Access-Control-Allow-Headers": "Content-Type, X-OpenRouter-Key, Authorization",
   "Access-Control-Expose-Headers": "X-Yoke-Version, X-Yoke-Min-Client",
   "X-Content-Type-Options": "nosniff",
   "Content-Security-Policy": "frame-ancestors 'self' https://*.chromiumapp.org chrome-extension://*",
