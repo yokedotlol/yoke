@@ -2488,9 +2488,13 @@ export function calculateDomainScore(opts: {
 
   // ─── Speed Axis Findings ───────────────────────────────────
 
-  const perf = opts.performance; // PSI mobile (always present)
-  const perfDesktop = opts.performanceDesktop; // PSI desktop (new)
-  const crux = opts.crux; // CrUX field data (new)
+  // If the site is DOWN (DNS resolves but HTTP unreachable and NOT merely blocked),
+  // don't trust any PageSpeed/CrUX data — it may be measuring a parked/squatter page.
+  const siteIsDown = opts.statusResult != null && !opts.statusResult.is_up && !opts.statusResult.http_blocked;
+
+  const perf = siteIsDown ? null : opts.performance; // PSI mobile (always present)
+  const perfDesktop = siteIsDown ? null : opts.performanceDesktop; // PSI desktop (new)
+  const crux = siteIsDown ? null : opts.crux; // CrUX field data (new)
 
   // Determine the primary performance score source
   // Priority: CrUX field data > blended lab > mobile-only lab
@@ -2632,7 +2636,7 @@ export function calculateDomainScore(opts: {
     });
 
     // Use mobile metrics as primary when available (mobile-first), fallback to desktop
-    const primaryPerf = hasMobile ? perf! : perfDesktop!;
+    const primaryPerf = hasMobile ? perf : perfDesktop;
 
     // LCP
     if (primaryPerf.lcp != null) {
@@ -3553,9 +3557,9 @@ export function calculateDomainScore(opts: {
   // ─── Organizational Identity (Trust) ────────────────────────────
   if (opts.legal && !opts.httpBlocked) {
     const pages = opts.legal.pages_found ?? [];
-    const hasPrivacy = pages.some((p: any) => /privacy/i.test(p.name ?? p));
-    const hasTerms = pages.some((p: any) => /terms|tos|conditions/i.test(p.name ?? p));
-    const hasAbout = pages.some((p: any) => /about|company|team/i.test(p.name ?? p));
+    const hasPrivacy = pages.some((p: { name?: string }) => /privacy/i.test(p.name ?? ""));
+    const hasTerms = pages.some((p: { name?: string }) => /terms|tos|conditions/i.test(p.name ?? ""));
+    const hasAbout = pages.some((p: { name?: string }) => /about|company|team/i.test(p.name ?? ""));
     const orgCount = [hasPrivacy, hasTerms, hasAbout].filter(Boolean).length;
     if (orgCount >= 3) {
       findings.push({
@@ -4200,7 +4204,7 @@ export function calculateDomainScore(opts: {
           signal: "dns_consistent",
           axis: "foundations",
           severity: "good",
-          label: `DNS varies across resolvers (expected: ${opts.hosting!.cdn} anycast)`,
+          label: `DNS varies across resolvers (expected: ${opts.hosting?.cdn} anycast)`,
           tradeoff: null,
           weight: 1,
         });
@@ -4419,12 +4423,16 @@ export function calculateDomainScore(opts: {
 
   // Build scoring context for context-aware normalization.
   // Excludes inapplicable signals from the max achievable score denominator.
-  // Detect HTTP-blocked scans (403/etc.) — scanner limitation, not site fault.
+  // Detect HTTP-blocked or site-unreachable scans — absent requiresHttpAccess signals
+  // should not pile on when we couldn't reach the server at all.
   const httpBlocked = findings.some(
     (f) =>
       f.signal === "http_blocked_security" ||
       f.signal === "http_blocked_performance" ||
-      f.signal === "http_error_response",
+      f.signal === "http_error_response" ||
+      f.signal === "site_unreachable" ||
+      f.signal === "site_unreachable_performance" ||
+      f.signal === "site_unreachable_visibility",
   );
 
   const scoringCtx: ScoringContext = {
