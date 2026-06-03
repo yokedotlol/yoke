@@ -471,62 +471,29 @@ async function runAnalysisCore(
     /* DNS check failed, proceed with full analysis */
   }
 
-  // ── Phase 1: DNS + HTTP ──────────────────────────────────────────
+  // ── Phase 1: DNS + HTTP (HTTP runs concurrently with Phase 2) ────
   await onPhase("dns", "running", "Resolving DNS…");
 
-  let dnsRecords: DnsRecord[];
-  let httpAnalysis: HttpAnalysis | null;
-  {
-    // Fire both in parallel but update the phase label once DNS resolves
-    const dnsPromise = checkDns(domain);
-    const httpPromise = analyzeHttpWithFallback(domain, instanceHost, env);
+  const dnsPromise = checkDns(domain);
+  const httpPromise = analyzeHttpWithFallback(domain, instanceHost, env);
 
-    // Wait for DNS first (fast) and update label
-    const dnsResult = await dnsPromise.catch(() => [] as DnsRecord[]);
-    dnsRecords = dnsResult;
-    await onResult("dns", { records: dnsRecords });
-    await onPhase("http", "running", "Probing site…");
+  // Wait for DNS first (fast) — HTTP probe continues in background
+  const dnsRecords: DnsRecord[] = await dnsPromise.catch(() => [] as DnsRecord[]);
+  await onResult("dns", { records: dnsRecords });
 
-    // Now wait for HTTP probe (may be slow if site blocks)
-    const httpResult = await httpPromise.catch(() => null);
-    httpAnalysis = httpResult;
-  }
-
-  const httpStatusCode = httpAnalysis?.status_code ?? 0;
-  const httpProbeSucceeded = httpStatusCode >= 200 && httpStatusCode < 400;
-  const html = httpProbeSucceeded ? (httpAnalysis?.html ?? "") : "";
-  const rawHeadersOriginal = httpProbeSucceeded ? (httpAnalysis?.headers?.raw ?? null) : null;
-
-  // Stream Phase 1 results
-  if (httpAnalysis) {
-    await onResult("redirects", httpProbeSucceeded ? (httpAnalysis.redirects ?? []) : []);
-    if (httpProbeSucceeded && httpAnalysis.headers) {
-      await onResult("headers", {
-        raw: httpAnalysis.headers.raw ?? {},
-        security_audit: httpAnalysis.headers.security_audit ?? [],
-        security_grade: httpAnalysis.headers.security_grade ?? "F",
-      });
-    }
-    if (httpProbeSucceeded && httpAnalysis.tech_stack) {
-      await onResult("tech_stack", httpAnalysis.tech_stack);
-    }
-    if (httpProbeSucceeded && httpAnalysis.meta) {
-      await onResult("meta_partial", httpAnalysis.meta);
-    }
-  }
-
-  // ── Phase 2: All parallel checks ─────────────────────────────────
+  // ── Phase 2: Launch checks immediately — don't wait for HTTP ─────
   const ip = dnsRecords.find((r) => r.type === "A")?.data;
   const domainIsSubdomain = isSubdomain(domain);
 
-  // Build check context from Phase 1 results for the registry
+  // Build check context — httpResponseTimeMs is null until probe finishes;
+  // only the performance check uses it and already handles null.
   const checkCtx: CheckContext = {
     domain,
     env,
     instanceHost,
     dnsRecords,
     ip,
-    httpResponseTimeMs: httpAnalysis?.response_time_ms ?? null,
+    httpResponseTimeMs: null,
     skipCache,
   };
 
@@ -576,7 +543,10 @@ async function runAnalysisCore(
         completed++;
         const sendPromise = onResult(key, value, completed, totalWithPostChecks, label);
 
-        // When _status arrives, compute and send early enhanced status
+        // When _status arrives, compute and send early enhanced status.
+        // NOTE: HTTP probe may still be in-flight at this point (runs concurrently
+        // with Phase 2), so early status uses DNS + the status check's own result only.
+        // The final assembly will incorporate HTTP probe data for the definitive status.
         if (key === "_status") {
           const sr = value as StatusShape | null;
           const statusVal: StatusShape = sr ?? {
@@ -589,19 +559,7 @@ async function runAnalysisCore(
           };
           const dnsOk = dnsRecords.some((r) => r.type === "A" || r.type === "AAAA");
           let earlyStatus: StatusShape = { ...statusVal };
-          if (httpProbeSucceeded && httpAnalysis) {
-            const fc = httpAnalysis.redirects?.[httpAnalysis.redirects.length - 1]?.status_code;
-            if (fc && fc >= 200 && fc < 400) {
-              earlyStatus = {
-                ...statusVal,
-                is_up: true,
-                status_code: fc,
-                status_label: "UP",
-                http_blocked: false,
-                error: null,
-              };
-            }
-          } else if (!statusVal.is_up && dnsOk) {
+          if (!statusVal.is_up && dnsOk) {
             earlyStatus = {
               ...statusVal,
               is_up: true,
@@ -653,6 +611,31 @@ async function runAnalysisCore(
 
   // Probabilistic prune of old error rows (~5% of requests) — non-blocking
   if (Math.random() < 0.05) backgroundWork(env, pruneApiErrors(env.STATS_DB));
+
+  // ── Resolve HTTP probe (ran concurrently with Phase 2 checks) ────
+  const httpAnalysis: HttpAnalysis | null = await httpPromise.catch(() => null);
+  const httpStatusCode = httpAnalysis?.status_code ?? 0;
+  const httpProbeSucceeded = httpStatusCode >= 200 && httpStatusCode < 400;
+  const html = httpProbeSucceeded ? (httpAnalysis?.html ?? "") : "";
+  const rawHeadersOriginal = httpProbeSucceeded ? (httpAnalysis?.headers?.raw ?? null) : null;
+
+  // Stream HTTP results
+  if (httpAnalysis) {
+    await onResult("redirects", httpProbeSucceeded ? (httpAnalysis.redirects ?? []) : []);
+    if (httpProbeSucceeded && httpAnalysis.headers) {
+      await onResult("headers", {
+        raw: httpAnalysis.headers.raw ?? {},
+        security_audit: httpAnalysis.headers.security_audit ?? [],
+        security_grade: httpAnalysis.headers.security_grade ?? "F",
+      });
+    }
+    if (httpProbeSucceeded && httpAnalysis.tech_stack) {
+      await onResult("tech_stack", httpAnalysis.tech_stack);
+    }
+    if (httpProbeSucceeded && httpAnalysis.meta) {
+      await onResult("meta_partial", httpAnalysis.meta);
+    }
+  }
 
   // ── Assemble final result ────────────────────────────────────────
 
