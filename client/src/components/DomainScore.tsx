@@ -731,6 +731,9 @@ export function DomainScore({ data }: { data: AnalysisResult }) {
             </div>
 
             {/* Composite percentile badge */}
+            {/* Balance + At-risk modifier */}
+            <CompositeModifier balance={ds.balance} atRiskAxis={ds.atRiskAxis} />
+
             {data.percentiles && (
               <div
                 style={{

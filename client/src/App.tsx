@@ -341,7 +341,7 @@ function OverviewTab({ data, streaming }: { data: AnalysisResult; streaming?: bo
   const techBadges = (data.tech_stack ?? []).slice(0, 8);
 
   const quickInfoPanels: PanelDef[] = [
-    { id: "screenshot", node: <ScreenshotPanel data={data} /> },
+    { id: "screenshot", node: <ScreenshotPanel data={data} streaming={streaming} /> },
     { id: "tranco", node: <TrancoPanel data={data} /> },
   ];
 

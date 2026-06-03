@@ -5,6 +5,7 @@ export type {
   AnalysisResult,
   ArchetypeData,
   ArchetypeName,
+  AtRiskAxisData,
   AvailabilityResult,
   Axis,
   AxisDelta,

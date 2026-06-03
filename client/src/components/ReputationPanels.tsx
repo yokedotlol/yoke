@@ -296,11 +296,15 @@ export function EmailAuthPanel({ data }: { data: AnalysisResult }) {
   );
 }
 
-export function ScreenshotPanel({ data }: { data: AnalysisResult }) {
+export function ScreenshotPanel({ data, streaming }: { data: AnalysisResult; streaming?: boolean }) {
   const lighthouseScreenshot = data.performance?.screenshot;
-  const microlink = data.domain
-    ? `https://api.microlink.io?url=https://${encodeURIComponent(data.domain)}&screenshot=true&meta=false&embed=screenshot.url`
-    : null;
+  // Only use microlink fallback when not streaming — during streaming,
+  // domain is set before real data arrives and microlink would screenshot
+  // error pages on slow/down sites.
+  const microlink =
+    !streaming && data.domain
+      ? `https://api.microlink.io?url=https://${encodeURIComponent(data.domain)}&screenshot=true&meta=false&embed=screenshot.url`
+      : null;
   const [imgError, setImgError] = useState(false);
 
   const src = lighthouseScreenshot || microlink;

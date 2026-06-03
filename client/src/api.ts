@@ -789,9 +789,21 @@ export interface ArchetypeData {
   weights?: Record<Axis, number>;
 }
 
+export interface AtRiskAxisData {
+  axis: Axis;
+  score: number;
+  tier: string;
+}
+
 export interface DomainScoreData {
   composite: number;
   tier: string;
+  /** Cross-axis consistency: balanced (σ<8), uneven (σ 8-15), lopsided (σ>15). */
+  balance?: "balanced" | "uneven" | "lopsided";
+  /** Axis whose tier is ≥2 tiers below the composite tier (lowest if multiple). */
+  atRiskAxis?: AtRiskAxisData | null;
+  /** Human-readable composite summary, e.g. "Strong 88, Balanced" or "Strong 88 — Security at risk (55)". */
+  compositeLabel?: string;
   axes: Record<Axis, AxisScoreData>;
   archetype: ArchetypeData;
   /** Detected context flags for context-aware normalization */
