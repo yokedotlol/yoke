@@ -126,7 +126,7 @@ describe("Calibration: Registry Lint", () => {
       it(`${id}: weightRange [${def.weightRange}] is valid`, () => {
         expect(def.weightRange[0]).toBeLessThanOrEqual(def.weightRange[1]);
         expect(def.weightRange[0]).toBeGreaterThanOrEqual(0);
-        expect(def.weightRange[1]).toBeLessThanOrEqual(5);
+        expect(def.weightRange[1]).toBeLessThanOrEqual(10);
       });
     }
   });

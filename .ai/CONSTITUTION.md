@@ -34,6 +34,18 @@ Open-source domain intelligence tool at [yoke.lol](https://yoke.lol). Users ente
 - **Context-aware**: 7 archetypes adjust severity per domain type. Denominator excludes inapplicable signals.
 - **Score Breakdown (Waterfall)**: Unified view showing penalty removals AND positive canBeGood opportunities, grouped by axis with deduction bars, effort badges, tooltips, and "What if?" simulation mode. Formerly "Level-Up Plan" — merged into Score Waterfall June 2026.
 
+### Credibility Principle
+
+**A customer should never look at Yoke's output and think the tool is broken or the score is wrong.** If the presentation creates that impression — even when the underlying math is technically correct — that's a product failure. Credibility is the product.
+
+This means:
+- **No visible double-counting.** If a concept (HSTS, CSP, etc.) appears in multiple signals, the user must never see it penalized more than once. Use `suppressesAbsent` to collapse dependent signals when the parent is missing.
+- **Labels must read correctly to non-experts.** "X not detected" must not sound like "the problem X wasn't found" (good). If a signal is absent, the label should convey absence, not successful detection.
+- **Sections must be self-explanatory.** A user should understand why an item is in "Issues" vs "Improvements" vs "Not Assessed" without reading documentation.
+- **Scores should match intuition.** A site with one real problem shouldn't score like a site with five. If the math produces a result that looks wrong to a reasonable person, the math needs to change.
+
+Every feature, signal addition, and UI change should be stress-tested against: "Would a skeptical first-time user trust this output?"
+
 ### Score–Suggestion Consistency (Core Directive)
 
 **Every point deducted must be explained to the user.** If an axis scores less than 100, the Score Breakdown waterfall must account for every point of the deficit. A score of 93 with no suggestions is a broken product — it tells the user they're doing something wrong and refuses to say what.

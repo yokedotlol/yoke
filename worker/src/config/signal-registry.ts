@@ -210,7 +210,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: false,
     effort: "~10 min — add one response header",
     fixDescription: "Add Strict-Transport-Security header",
-    weightRange: [4, 4],
+    weightRange: [9, 9],
     suppressesAbsent: ["hsts", "hsts_max_age", "hsts_preload"],
     promptGuidance:
       "Missing HSTS allows protocol downgrade attacks (SSL stripping). High-impact single header to add. Weight 4.",
@@ -271,7 +271,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: false,
     effort: "~1-2 hours — requires auditing scripts/styles",
     fixDescription: "Add Content-Security-Policy header",
-    weightRange: [3, 3],
+    weightRange: [7, 7],
     suppressesAbsent: ["csp", "csp_quality"],
     promptGuidance:
       "Many sites lack CSP, but absence is a real XSS risk for sites handling user input. Hard to retrofit — recommend starting with report-only mode. Don't cite specific adoption percentages.",
@@ -1983,7 +1983,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: false,
     effort: "~5 min — add link rel=canonical",
     fixDescription: "Add canonical URL link tag",
-    weightRange: [1, 1],
+    weightRange: [2, 2],
     suppressesAbsent: "canonical_url",
     promptGuidance: "Risks duplicate content indexing. More important for content sites.",
     archetypeNotes: { content: "Content sites should have canonical URLs." },
