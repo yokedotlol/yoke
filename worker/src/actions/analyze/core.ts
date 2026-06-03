@@ -855,7 +855,13 @@ async function runAnalysisCore(
   // These three async operations are independent — run them concurrently
   // and tick the progress bar as each resolves.
 
-  const legalPromise = detectLegalPages(html, domain, env);
+  const legalPromise = httpProbeSucceeded
+    ? detectLegalPages(html, domain, env)
+    : Promise.resolve({
+        pages_found: [],
+        cookie_consent_detected: false,
+        consent_provider: null,
+      } as Awaited<ReturnType<typeof detectLegalPages>>);
   const wpPromise = wpDetails
     ? probeWordPressSecurity(domain, fetchWithTimeout).catch(() => null)
     : Promise.resolve(null);
