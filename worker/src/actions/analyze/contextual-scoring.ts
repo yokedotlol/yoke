@@ -2637,6 +2637,7 @@ export function calculateDomainScore(opts: {
 
     // Use mobile metrics as primary when available (mobile-first), fallback to desktop
     const primaryPerf = hasMobile ? perf : perfDesktop;
+    if (!primaryPerf) throw new Error("unreachable: hasMobile || hasDesktop but no perf data");
 
     // LCP
     if (primaryPerf.lcp != null) {
