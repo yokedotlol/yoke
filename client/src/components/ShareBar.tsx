@@ -1,4 +1,4 @@
-import { Link2, Share2 } from "lucide-react";
+import { FileDown, Link2, Share2 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import type { Axis, AxisScoreData } from "../api";
 
@@ -58,9 +58,10 @@ interface ShareBarProps {
   tier?: string;
   axes?: Record<Axis, AxisScoreData>;
   analyzedAt?: string;
+  pdfUrl?: string;
 }
 
-export function ShareBar({ domain, composite, tier, axes, analyzedAt }: ShareBarProps) {
+export function ShareBar({ domain, composite, tier, axes, analyzedAt, pdfUrl }: ShareBarProps) {
   const [copied, setCopied] = useState(false);
   const signedUrlRef = useRef<string | null>(null);
   const signingRef = useRef<Promise<string> | null>(null);
@@ -162,6 +163,18 @@ export function ShareBar({ domain, composite, tier, axes, analyzedAt }: ShareBar
         <Link2 size={12} aria-hidden="true" />
         <span>{copied ? "Copied!" : "Copy link"}</span>
       </button>
+
+      {pdfUrl && (
+        <button
+          type="button"
+          className="share-btn"
+          onClick={() => window.open(pdfUrl, "_blank")}
+          aria-label="Download PDF report"
+        >
+          <FileDown size={12} aria-hidden="true" />
+          <span>PDF</span>
+        </button>
+      )}
 
       <button type="button" className="share-btn" onClick={shareToX} aria-label="Share on X">
         <XIcon />

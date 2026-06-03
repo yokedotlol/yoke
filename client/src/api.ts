@@ -361,6 +361,12 @@ export interface AnalysisResult {
 
   // Network health
   network_health: NetworkHealthData | null;
+
+  // Injected metadata (share URL, PDF URL, etc.)
+  _meta?: {
+    share_url?: string;
+    pdf_url?: string;
+  };
 }
 
 export interface DnsRecord {

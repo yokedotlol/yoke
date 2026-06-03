@@ -46,7 +46,7 @@ jobs:
         run: |
           bun install --frozen-lockfile
           cd client && bun install --frozen-lockfile && cd ..
-          cd worker && bun install --frozen-lockfile && cd ..
+          cd worker && bun install && cd ..
 
       - name: Audit dependencies for known vulnerabilities
         working-directory: client
@@ -118,7 +118,7 @@ jobs:
         run: |
           bun install --frozen-lockfile
           cd client && bun install --frozen-lockfile && cd ..
-          cd worker && bun install --frozen-lockfile && cd ..
+          cd worker && bun install && cd ..
 
       - name: Build client
         working-directory: client
@@ -163,10 +163,6 @@ jobs:
           [[routes]]
           pattern = "mta-sts.yoke.lol/*"
           zone_name = "yoke.lol"
-
-          [[services]]
-          binding = "OG_WORKER"
-          service = "yoke-og"
           EOF
           # Remove leading whitespace from heredoc
           sed -i 's/^          //' wrangler.toml
@@ -192,7 +188,7 @@ jobs:
 
       - name: Install worker dependencies (for wrangler rollback)
         run: |
-          cd worker && bun install --frozen-lockfile && cd ..
+          cd worker && bun install && cd ..
 
       - name: Wait for edge propagation
         run: sleep 15
@@ -275,10 +271,6 @@ jobs:
           [[routes]]
           pattern = "mta-sts.yoke.lol/*"
           zone_name = "yoke.lol"
-
-          [[services]]
-          binding = "OG_WORKER"
-          service = "yoke-og"
           EOF
           sed -i 's/^          //' wrangler.toml
 

@@ -49,6 +49,7 @@ import {
 } from "./helpers";
 import { logError } from "./logger";
 import { getApiDocsHtml } from "./pages";
+import { buildPdfUrl, handleReportDownload, matchReportPath } from "./pdf-route";
 import { getDistribution, injectPercentiles, lookupCompositePercentile } from "./percentiles";
 import { trackRequest } from "./request-tracking";
 import {
@@ -85,6 +86,7 @@ function getRateLimits(env: Env): Record<string, { limit: number; windowSecs: nu
     "/api/track-tab": { limit: 100, windowSecs: 3600 },
     "/api/suggestions": { limit: 20, windowSecs: 3600 },
     "/api/ai-prompt": { limit: 20, windowSecs: 3600 },
+    "/report": { limit: 20, windowSecs: 3600 },
   };
 }
 
@@ -446,6 +448,27 @@ export default {
       return handleCompareOgImage(request, env, compareOgMatch);
     }
 
+    // GET /report/:domain — PDF report download
+    const reportDomain = method === "GET" ? matchReportPath(path) : null;
+    if (reportDomain) {
+      const reportIP =
+        request.headers.get("cf-connecting-ip") ||
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        "unknown";
+      const rl = await checkRateLimit(env.STATS_DB, reportIP, "/report", env);
+      if (rl.blocked) {
+        trackRequest(env, request, { endpoint: "report", domain: reportDomain, status: 429, latencyMs: 0 });
+        return rl.blocked;
+      }
+      const reportResponse = await handleReportDownload(request, env, reportDomain);
+      // Only consume rate-limit credit when a PDF was actually generated (200)
+      if (reportResponse.status === 200) {
+        await rl.record();
+      }
+      trackRequest(env, request, { endpoint: "report", domain: reportDomain, status: reportResponse.status, latencyMs: 0 });
+      return reportResponse;
+    }
+
     // ── Method guard: reject DELETE/PUT/PATCH on domain paths ──
     if ((method === "DELETE" || method === "PUT" || method === "PATCH") && matchDomainPath(path)) {
       return json({ error: "Method not allowed", code: "METHOD_NOT_ALLOWED" }, 405);
@@ -573,6 +596,15 @@ export default {
               resultData._meta = {
                 ...((resultData._meta as Record<string, unknown>) || {}),
                 share_url: shareUrl,
+              };
+            }
+
+            // Inject pdf_url alongside share_url
+            const pdfUrl = await buildPdfUrl(domain, analyzedAt, getBaseUrl(request, env), env);
+            if (pdfUrl) {
+              resultData._meta = {
+                ...((resultData._meta as Record<string, unknown>) || {}),
+                pdf_url: pdfUrl,
               };
             }
           }

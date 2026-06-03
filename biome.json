@@ -7,7 +7,14 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["worker/src/**", "client/src/**", "tests/**", "client/build.ts", "!**/*.css"]
+    "includes": [
+      "worker/src/**",
+      "client/src/**",
+      "tests/**",
+      "client/build.ts",
+      "!**/*.css",
+      "!worker/src/og/resvg.cjs"
+    ]
   },
   "formatter": {
     "enabled": true,

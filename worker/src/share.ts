@@ -4,6 +4,7 @@
 
 import type { Env } from "./helpers";
 import { getBaseUrl } from "./helpers";
+import { svgToPng } from "./og/png-render";
 import { getHtmlSecurityHeaders } from "./spa";
 
 // ─── Ox Mark Logo (base64 PNG) ───────────────────────────────────────
@@ -83,13 +84,13 @@ async function getHmacKey(env: Env): Promise<CryptoKey> {
   ]);
 }
 
-async function signPayload(payload: string, env: Env): Promise<string> {
+export async function signPayload(payload: string, env: Env): Promise<string> {
   const key = await getHmacKey(env);
   const sig = await crypto.subtle.sign("HMAC", key, textToBytes(payload));
   return base64urlEncode(new Uint8Array(sig));
 }
 
-async function verifyPayload(payload: string, signature: string, env: Env): Promise<boolean> {
+export async function verifyPayload(payload: string, signature: string, env: Env): Promise<boolean> {
   const key = await getHmacKey(env);
   try {
     const sigBytes = base64urlDecode(signature);
@@ -556,29 +557,21 @@ export async function handleOgImage(_request: Request, env: Env, token: string):
 
   const svg = generateOgSvg(parsed.data);
 
-  // Render SVG→PNG via the yoke-og service binding (isolates 2.4MB resvg-wasm)
-  if (!env.OG_WORKER) {
-    return new Response("OG rendering service not configured", { status: 503 });
-  }
-  const ogResponse = await env.OG_WORKER.fetch("http://og/render", {
-    method: "POST",
-    body: JSON.stringify({ svg, width: 1200, height: 630 }),
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!ogResponse.ok) {
-    const errText = await ogResponse.text();
-    console.error("[yoke:og] OG worker render failed:", errText);
+  // Render SVG→PNG inline (resvg-wasm)
+  try {
+    const png = await svgToPng(svg);
+    return new Response(png, {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=604800, immutable",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown rendering error";
+    console.error("[yoke:og] OG render failed:", message);
     return new Response("OG image rendering failed", { status: 500 });
   }
-  const png = await ogResponse.arrayBuffer();
-
-  return new Response(png, {
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": "public, max-age=604800, immutable",
-      "Access-Control-Allow-Origin": "*",
-    },
-  });
 }
 
 // ─── Compare share routes ────────────────────────────────────────────
@@ -928,26 +921,18 @@ export async function handleCompareOgImage(_request: Request, env: Env, token: s
 
   const svg = generateCompareOgSvg(parsed.data);
 
-  if (!env.OG_WORKER) {
-    return new Response("OG rendering service not configured", { status: 503 });
-  }
-  const ogResponse = await env.OG_WORKER.fetch("http://og/render", {
-    method: "POST",
-    body: JSON.stringify({ svg, width: 1200, height: 630 }),
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!ogResponse.ok) {
-    const errText = await ogResponse.text();
-    console.error("[yoke:og] Compare OG worker render failed:", errText);
+  try {
+    const png = await svgToPng(svg);
+    return new Response(png, {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=604800, immutable",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown rendering error";
+    console.error("[yoke:og] Compare OG render failed:", message);
     return new Response("OG image rendering failed", { status: 500 });
   }
-  const png = await ogResponse.arrayBuffer();
-
-  return new Response(png, {
-    headers: {
-      "Content-Type": "image/png",
-      "Cache-Control": "public, max-age=604800, immutable",
-      "Access-Control-Allow-Origin": "*",
-    },
-  });
 }

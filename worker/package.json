@@ -4,9 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "bun build src/index.ts --outfile=dist/worker.js --target=browser --minify --loader:.txt=text --external=*.wasm",
+    "build": "bun build src/index.ts --outfile=dist/worker.js --target=browser --minify --loader:.txt=text --external=*.wasm && cp src/og/resvg_bg.wasm dist/",
     "typecheck": "bun x tsc --noEmit",
     "dev": "npx wrangler dev"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "@pdf-lib/fontkit": "^1.1.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250516.0",

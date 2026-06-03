@@ -28,8 +28,5 @@ binding = "REFERENCE_DATA"
 # pattern = "yourdomain.com/*"
 # zone_name = "yourdomain.com"
 
-# OG image rendering worker (SVG→PNG via resvg-wasm service binding)
-# Deploy og-worker/ first, then uncomment:
-# [[services]]
-# binding = "OG_WORKER"
-# service = "yoke-og"
+# OG image rendering is now built into the main worker (og/ directory).
+# The separate og-worker service binding is no longer needed.

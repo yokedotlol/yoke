@@ -1072,6 +1072,7 @@ export function App() {
                   tier={analyze.data.domain_score?.tier}
                   axes={analyze.data.domain_score?.axes}
                   analyzedAt={analyze.data.analyzed_at}
+                  pdfUrl={analyze.data._meta?.pdf_url}
                 />
                 <ErrorBoundary fallbackLabel="This tab encountered an error" key={activeTab}>
                   <TabContent tab={activeTab} data={cleanTechStack(analyze.data)} />

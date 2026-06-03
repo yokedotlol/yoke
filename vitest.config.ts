@@ -18,8 +18,20 @@ function rawTextPlugin() {
   };
 }
 
+// Plugin to handle .wasm imports (return a mock module for tests)
+function wasmPlugin() {
+  return {
+    name: 'wasm-mock',
+    load(id: string) {
+      if (id.endsWith('.wasm')) {
+        return 'export default {};';
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [rawTextPlugin()],
+  plugins: [rawTextPlugin(), wasmPlugin()],
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',

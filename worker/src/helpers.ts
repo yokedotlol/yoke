@@ -19,8 +19,6 @@ export interface Env {
   RATE_LIMIT_RECURSIVE_DNS?: string;
   /** HMAC secret for signing share card URLs */
   SHARE_SECRET?: string;
-  /** OG image rendering worker (service binding — zero-latency, zero-cost) */
-  OG_WORKER?: { fetch: (input: RequestInfo, init?: RequestInit) => Promise<Response> };
   /** KV namespace for reference data (retire.js DB, third-party patterns, etc.) */
   REFERENCE_DATA?: KVNamespace;
   /** Analysis cache TTL override in hours (default: 1) */
