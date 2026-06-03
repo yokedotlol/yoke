@@ -707,9 +707,9 @@ function buildPage1(doc: PDFDocument, fonts: Fonts, data: AnalysisData): PDFPage
 
   // ── Score Badge (right side) — tier name + score ──
   const badgeW = 90;
-  const badgeH = 80;
+  const badgeH = 72;
   const badgeX = PAGE_W - MARGIN - badgeW;
-  const badgeY = y - badgeH + 24;
+  const badgeY = y - badgeH + 16;
 
   // Badge background (12% tier color fill)
   drawRect(page, badgeX, badgeY, badgeW, badgeH, {
@@ -1326,18 +1326,13 @@ function buildPage5_ScoreBreakdown(doc: PDFDocument, fonts: Fonts, data: Analysi
     const ax = ds.axes[axis];
     if (!ax) continue;
     const w = AXIS_WEIGHTS[axis];
-    formulaParts.push(`${ax.score}×${w.toFixed(2)}`);
+    formulaParts.push(`${AXIS_ABBR[axis]} ${ax.score}×${w.toFixed(2)}`);
   }
-  const formulaStr = `${formulaParts.join(" + ")} = ${composite}`;
+  const formulaStr = `${formulaParts.join("  +  ")} = ${composite}`;
 
   // Draw formula in mono — may be long, so truncate if needed
-  drawText(page, formulaStr, MARGIN, y, fonts.mono, 8, COLORS.text, { maxWidth: CONTENT_W });
-  y -= 8;
-
-  // Axis abbreviation key
-  const abbrParts = AXIS_ORDER.map((a) => `${AXIS_ABBR[a]}=${AXIS_LABELS[a]}`);
-  drawText(page, abbrParts.join("  "), MARGIN, y, fonts.regular, 6.5, COLORS.dim, { maxWidth: CONTENT_W });
-  y -= 16;
+  drawText(page, formulaStr, MARGIN, y, fonts.mono, 7.5, COLORS.text, { maxWidth: CONTENT_W });
+  y -= 18;
 
   // ── Tier Progress Bar ──
   const barW = CONTENT_W;
@@ -1360,8 +1355,8 @@ function buildPage5_ScoreBreakdown(doc: PDFDocument, fonts: Fonts, data: Analysi
   // Score indicator — small triangle above
   const indicatorX = MARGIN + (composite / 100) * barW;
   // Draw a triangle pointing down
-  const triSize = 5;
-  const triTop = barY + barH + triSize + 2;
+  const triSize = 4;
+  const triTop = barY + barH + triSize + 1;
   page.drawSvgPath(`M 0,0 L ${triSize},-${triSize * 1.5} L ${-triSize},-${triSize * 1.5} Z`, {
     x: indicatorX,
     y: triTop,
@@ -1370,7 +1365,8 @@ function buildPage5_ScoreBreakdown(doc: PDFDocument, fonts: Fonts, data: Analysi
   // Score label above indicator
   const scoreLabel = `${composite} · ${tier}`;
   const slW = textWidth(fonts.bold, scoreLabel, 8);
-  drawText(page, scoreLabel, indicatorX - slW / 2, triTop + 2, fonts.bold, 8, color);
+  const labelX = Math.max(MARGIN, Math.min(indicatorX - slW / 2, PAGE_W - MARGIN - slW));
+  drawText(page, scoreLabel, labelX, triTop + 6, fonts.bold, 8, color);
 
   y = barY - 12;
 
@@ -1489,29 +1485,12 @@ function buildPage5_ScoreBreakdown(doc: PDFDocument, fonts: Fonts, data: Analysi
         const deductStr = item.deduction > 0 ? `-${item.deduction.toFixed(1)}` : "0";
         const deductW = textWidth(fonts.mono, deductStr, 8);
 
-        // Effort badge
-        let effortStr = "";
-        if (item.effort) {
-          if (item.effort.includes("min")) effortStr = "Quick";
-          else if (item.effort.includes("hour")) effortStr = "Moderate";
-          else effortStr = "Major";
-        }
-        const effortW = effortStr ? textWidth(fonts.regular, effortStr, 7) + 8 : 0;
-
-        const labelMaxW = CONTENT_W - 32 - deductW - effortW - 20;
+        const labelMaxW = CONTENT_W - 32 - deductW - 12;
         drawText(page, label, MARGIN + 24, y - 4, fonts.regular, 8.5, COLORS.text, { maxWidth: labelMaxW });
 
         // Deduction amount (right-aligned, monospace)
-        const dedX = PAGE_W - MARGIN - deductW - effortW - 8;
+        const dedX = PAGE_W - MARGIN - deductW;
         drawText(page, deductStr, dedX, y - 4, fonts.mono, 8, item.deduction > 0 ? COLORS.weak : COLORS.dim);
-
-        // Effort badge
-        if (effortStr) {
-          const ebX = PAGE_W - MARGIN - effortW;
-          const ebColor =
-            effortStr === "Quick" ? COLORS.good : effortStr === "Moderate" ? COLORS.moderate : COLORS.weak;
-          drawText(page, effortStr, ebX + 4, y - 4, fonts.regular, 7, ebColor, { maxWidth: effortW });
-        }
 
         y -= 14;
       }
