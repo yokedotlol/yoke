@@ -29,17 +29,17 @@ Open-source domain intelligence tool at [yoke.lol](https://yoke.lol). Users ente
 
 - **6 axes**: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12)
 - **Composite**: Weighted arithmetic mean with outlier floor cap (any axis < 40 → composite capped at Moderate max)
-- **Tiers** (not grades): Excellent ≥90, Strong ≥75, Moderate ≥60, Weak ≥40, Critical <40
+- **Tiers** (not grades): Excellent ≥90, Strong ≥78, Moderate ≥60, Weak ≥40, Critical <40
 - **Severity deduction factors**: good=0, info=0, low=0.5, medium=0.75, high=1.0, critical=1.5
 - **Context-aware**: 7 archetypes adjust severity per domain type. Denominator excludes inapplicable signals.
-- **Level-Up Plan**: Shows both penalty removals AND positive canBeGood opportunities, prioritized by effort vs. gain.
+- **Score Breakdown (Waterfall)**: Unified view showing penalty removals AND positive canBeGood opportunities, grouped by axis with deduction bars, effort badges, tooltips, and "What if?" simulation mode. Formerly "Level-Up Plan" — merged into Score Waterfall June 2026.
 
 ### Score–Suggestion Consistency (Core Directive)
 
-**Every point deducted must be explained to the user.** If an axis scores less than 100, the Level-Up plan (or a visible score explanation) must account for every point of the deficit. A score of 93 with no suggestions is a broken product — it tells the user they're doing something wrong and refuses to say what.
+**Every point deducted must be explained to the user.** If an axis scores less than 100, the Score Breakdown waterfall must account for every point of the deficit. A score of 93 with no suggestions is a broken product — it tells the user they're doing something wrong and refuses to say what.
 
 This means:
-- The scoring engine and the Level-Up plan must stay in sync. If the engine deducts points, the Level-Up plan must surface those deductions as items (actionable fixes), opportunities (things to add), drags (non-actionable costs), or explained residuals (e.g., "3 signals could not be assessed — [reasons]").
+- The scoring engine and the Score Breakdown must stay in sync. If the engine deducts points, the waterfall must surface those deductions as issues (fired findings with deductions), opportunities (absent actionable signals), or not-detected items (informational absent signals).
 - Absent-signal deductions in particular must be enumerated — the user must see WHICH signals were absent and WHY (e.g., "probe failed", "not detected in scan", "requires [feature] not present").
 - Filtering thresholds (e.g., `compositeDelta < 0.1`) must never create unexplained gaps. If filtering removes items, a residual explanation must cover the remainder.
 - **The invariant: for every axis, `sum(displayed_items) = 100 - axis_score`.** No silent deductions.

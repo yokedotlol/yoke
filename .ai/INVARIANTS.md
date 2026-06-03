@@ -23,14 +23,14 @@
 - [ ] **Outlier floor cap:** Any axis < 40 → composite capped at ≤ 74 (Moderate maximum).
   - _Verify:_ Search for `hasLowOutlier` in `contextual-scoring.ts`.
 
-- [ ] **Tier thresholds:** Excellent ≥90, Strong ≥75, Moderate ≥60, Weak ≥40, Critical <40.
+- [ ] **Tier thresholds:** Excellent ≥90, Strong ≥78, Moderate ≥60, Weak ≥40, Critical <40.
   - _Verify:_ `TIER_THRESHOLDS` in `signal-registry.ts`.
 
 - [ ] **All-green-signals = 100.** A domain with every assessed signal at `good` must score exactly 100.
   - _Verify:_ Calibration test: "all-green = perfect 100 on every axis".
 
-- [ ] **Score–suggestion consistency.** Every axis with score < 100 must have its full deficit accounted for in the Level-Up plan. `sum(displayed items + opportunities + drags + explained residuals) = 100 - axis_score`. No silent deductions.
-  - _Verify:_ For any domain, check that axes with only `_absent` deductions still surface those absent signals as enumerated opportunities or explained residuals in the Level-Up UI.
+- [ ] **Score–suggestion consistency.** Every axis with score < 100 must have its full deficit accounted for in the Score Breakdown waterfall. `sum(displayed items + opportunities + not-detected) = 100 - axis_score`. No silent deductions.
+  - _Verify:_ For any domain, check that axes with only `_absent` deductions still surface those absent signals as enumerated opportunities or not-detected items in the Score Breakdown UI.
 
 ## Signal Integrity
 
