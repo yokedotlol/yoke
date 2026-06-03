@@ -1,8 +1,55 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { AtRiskAxisData } from "../api";
 import { ordinal, percentileLabel } from "../utils/format";
 import { severityColor, severityIcon, tierColor } from "../utils/severity";
 import type { AnalysisResult, ArchetypeName, Axis, AxisScoreData, PercentileData } from "../utils/types";
 import { Tooltip } from "./Tooltip";
+
+const AXIS_DISPLAY: Record<string, string> = {
+  security: "Security",
+  speed: "Speed",
+  foundations: "Foundations",
+  reputation: "Reputation",
+  discoverability: "Discoverability",
+  email: "Email",
+};
+
+function CompositeModifier({
+  balance,
+  atRiskAxis,
+}: {
+  balance?: "balanced" | "uneven" | "lopsided";
+  atRiskAxis?: AtRiskAxisData | null;
+}) {
+  if (!balance || balance === "balanced") return null;
+
+  const isAtRisk = !!atRiskAxis;
+  const label = isAtRisk
+    ? `${AXIS_DISPLAY[atRiskAxis.axis] ?? atRiskAxis.axis} at risk (${atRiskAxis.score})`
+    : balance.charAt(0).toUpperCase() + balance.slice(1);
+
+  const color = isAtRisk ? "var(--red, #e53e3e)" : "var(--yellow, #d69e2e)";
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "3px 10px",
+        borderRadius: "14px",
+        fontFamily: "var(--font-ui)",
+        fontSize: "11px",
+        fontWeight: 600,
+        background: `color-mix(in srgb, ${color} 10%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
+        color,
+      }}
+    >
+      {isAtRisk ? "⚠️" : "↕️"} {label}
+    </div>
+  );
+}
 
 // ─── Constants ───────────────────────────────────────────────────────
 
