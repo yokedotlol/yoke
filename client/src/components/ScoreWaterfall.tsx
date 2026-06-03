@@ -939,6 +939,51 @@ const ISSUE_CATEGORIES = [
   },
 ];
 
+function ProbeBlockedBanner({ siteUnreachable }: { siteUnreachable: boolean }) {
+  // Count how many signals require HTTP access
+  const suppressed = Object.values(SIGNAL_REGISTRY).filter((s) => s.requiresHttpAccess && s.canBeGood).length;
+
+  const title = siteUnreachable ? "Site unreachable — limited analysis" : "HTTP probe blocked — limited analysis";
+  const description = siteUnreachable
+    ? `DNS resolves but the site didn't respond to HTTP requests. ${suppressed} signals that require page access were excluded from scoring to avoid unfair penalties.`
+    : `This site's bot protection blocked our automated probe. ${suppressed} signals that require page access were excluded from scoring to avoid unfair penalties.`;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "8px",
+        padding: "10px 12px",
+        margin: "8px 0 4px",
+        borderRadius: "8px",
+        background: "var(--warning-bg, rgba(234, 179, 8, 0.06))",
+        border: "1px solid var(--warning-border, rgba(234, 179, 8, 0.2))",
+        fontSize: "11px",
+        lineHeight: 1.5,
+        color: "var(--muted)",
+      }}
+    >
+      <span style={{ flexShrink: 0, fontSize: "13px" }} aria-hidden="true">
+        ⚠
+      </span>
+      <div>
+        <div style={{ fontWeight: 600, color: "var(--text)", marginBottom: "2px" }}>{title}</div>
+        <div>
+          {description} Scores reflect only DNS, SSL, WHOIS, and email authentication data.{" "}
+          <a
+            href="/about"
+            style={{ color: "var(--accent)", textDecoration: "none" }}
+            onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+            onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+          >
+            Learn more →
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReportIssueWidget({ domain }: { domain: string }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
@@ -1305,6 +1350,9 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
 
       {/* Tier progress bar */}
       <TierProgressBar currentScore={currentComposite} simulatedScore={simComposite} showSimulated={simulateActive} />
+
+      {/* Probe failure banner */}
+      {data.http_probe_blocked && <ProbeBlockedBanner siteUnreachable={data.status?.is_up === false} />}
 
       {/* Axis sections */}
       <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>

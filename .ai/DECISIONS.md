@@ -208,3 +208,12 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **Why:** The HSTS/CSP triple-dip bug (missing `suppressesAbsent` wiring) produced technically-correct math that looked completely wrong to users — three line items for one missing header. The underlying math was valid, but the presentation destroyed trust. This principle codifies that user perception of correctness is as important as actual correctness. If it looks broken, it is broken.
 **Directive:** Every new signal, UI change, or scoring adjustment must be stress-tested against: "Would a skeptical first-time user trust this output?"
 
+
+---
+
+### 2026-06-03 — Email axis applies to ALL domains, not just email-sending domains
+
+**What changed:** No code change — this is a rationale decision to NOT add an "email domain" gating check.
+**Why:** Email security (SPF, DKIM, DMARC) protects EVERY domain, not just domains that actively send email. Without SPF/DMARC, anyone can spoof `From: ceo@yourdomain.com` and send phishing emails that damage your domain's reputation. Spoofed emails from unprotected domains can get the domain blocklisted by email providers. Blocklists typically operate on sender IP ranges, but domain reputation scoring by ESPs (Gmail, Outlook) also factors in the From domain's authentication posture.
+**Rejected:** Skipping email axis scoring for "no-email domains" → this would leave domains unprotected and unaware of the spoofing risk. A domain with no MX records but also no SPF `v=spf1 -all` is MORE vulnerable, not less.
+**Directive:** The email axis scores all domains. The absence of email infrastructure (no MX, no SPF, no DMARC) is a real security gap, not a "not applicable" condition.
