@@ -63,7 +63,7 @@ export function buildSystemPrompt(archetype: ArchetypeResult, signalIds: string[
     .join(", ");
 
   sections.push(
-    `SCORING CONTEXT:\nComposite scoring: Yoke scores 0-100 using budget-based deductive scoring across 6 categories: ${axisStr}.\nScoring model: each axis starts at 100. Issues deduct points proportional to signal weight share (signal_weight / total_good_weight × 100). Severity multipliers: good=0, info=0, low=0.5, medium=0.75, high=1.0, critical=1.5. Signals expected but not detected deduct 0.25× their share. Composite = weighted arithmetic mean of axis scores. Floor cap: any axis below 40 caps composite at 74.\nTiers: ${tierStr}.`,
+    `SCORING CONTEXT:\nComposite scoring: Yoke scores 0-100 using budget-based deductive scoring across 6 categories: ${axisStr}.\nScoring model: each axis starts at 100. Issues deduct points proportional to signal weight share (signal_weight / total_good_weight × 100). Severity multipliers: good=0, info=0, low=0.5, medium=0.75, high=1.0, critical=1.5. Absent signal penalty: signals expected but not detected deduct ABSENT_DEDUCTION_FACTOR (0.30) × (1 + goodPrevalence) × their share. goodPrevalence (0-1) is how commonly the signal appears across the web — missing a near-universal signal like HSTS (prevalence ~1.0) costs more (0.30 × 2.0 = 0.60× share) than missing a rare signal like MTA-STS (prevalence ~0.56, costs 0.30 × 1.56 = 0.47× share). Composite = weighted arithmetic mean of axis scores. Floor cap: any axis below 40 caps composite at 74.\nTiers: ${tierStr}.`,
   );
 
   // Axis descriptions

@@ -31,3 +31,5 @@ Output ONLY valid JSON matching this exact schema (no markdown wrapping, no text
 }
 
 Provide 5-8 key_findings, 5-8 cross_signal_insights (this is your primary value-add — spend your reasoning here), 3-6 attack_surface items, and 4-6 recommendations. Every cross_signal_insight must cite at least 2 different data fields with their actual values from the analysis data.
+
+CRITICAL: The Score Breakdown UI already shows every individual deduction, its weight, severity, effort estimate, and fix link. Do NOT repeat that information. Your cross_signal_insights should reveal patterns ACROSS signals — contradictions ("strong CSP but no HSTS"), cause-effect chains ("CDN explains the CrUX vs lab divergence"), architectural implications ("EV cert + NRD = legitimate new business"), and hidden risk correlations. If an insight could be derived from reading a single signal row, it's not a cross-signal insight.

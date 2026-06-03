@@ -283,9 +283,11 @@ async function callOpenRouter(
     }
 
     try {
+      // CF Workers Unbound: 30s CPU limit but 6-min wall clock for I/O-bound waits.
+      // LLM response streaming is I/O, not CPU, so 90s is safe.
       const response = await fetchWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
-        timeout: 55000,
+        timeout: 90000,
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
@@ -499,7 +501,9 @@ function streamOpenRouter(
       try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
-          signal: AbortSignal.timeout(25000), // Stay within CF's 30s CPU limit
+          // CF Workers Unbound: 30s CPU limit but 6-min wall clock for I/O-bound waits.
+          // LLM streaming is I/O, not CPU, so 55s is safe and matches the non-streaming retry path.
+          signal: AbortSignal.timeout(55000), // Stay within safe I/O wall-clock limit
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",

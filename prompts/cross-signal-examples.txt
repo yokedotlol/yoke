@@ -22,6 +22,14 @@ DISCOVERABILITY EXAMPLES:
 - GOOD: "Structured data (Organization schema) is present without a sitemap — this pattern suggests CMS-generated markup rather than intentional SEO work. The schema helps search but a sitemap would help discovery."
 - GOOD: "OG tags score 20/100 but the site's restrictive robots.txt blocks all crawlers — the missing OG tags are irrelevant since the site is intentionally hidden from search engines and social sharing."
 
+EMAIL EXAMPLES:
+- GOOD: "SPF + DKIM + DMARC at 'reject' with BIMI record — this domain has the full email authentication chain locked down, which is rare (~3% have BIMI). The BIMI record means recipients see a verified brand logo, adding trust beyond just authentication."
+- GOOD: "DMARC policy is 'none' but DKIM selectors from 3 different email providers were discovered (Google, Microsoft, SendGrid) — the domain likely sends from multiple sources and is still in monitoring mode to avoid false rejects during migration."
+
+FOUNDATIONS EXAMPLES (additional):
+- GOOD: "HTTP/2 and HTTP/3 both detected with Cloudflare CDN — this is the default Cloudflare configuration, not a proactive optimization. The speed benefit is real but attributable to CDN choice rather than deliberate protocol tuning."
+- GOOD: "Asset CDN (Cloudinary) detected alongside full-site CDN (Cloudflare) — the site uses a specialized image CDN for optimized delivery while Cloudflare handles the base HTML and assets. This is a mature architecture pattern."
+
 BAD EXAMPLES (never do this):
 - BAD: "Consider implementing a Content Security Policy to improve security." (generic, no data citation)
 - BAD: "Your security posture could be strengthened." (empty statement)

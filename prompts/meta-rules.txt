@@ -16,3 +16,11 @@ META-RULES — apply these to ALL recommendations:
 5. REWARD-ONLY SIGNALS: Some signals (security.txt, BIMI, HSTS preload, resource hints, PWA readiness) are reward-only — their ABSENCE should NEVER be treated as a finding or recommendation. Only mention them positively when present. Do not recommend adding security.txt, BIMI, or similar nice-to-haves as priority actions.
 
 6. llms.txt: This standard has <1% adoption and was proposed in 2024. Absence is completely normal and should never be flagged or recommended.
+
+7. HTTP/2 AND HTTP/3 ARE INDEPENDENT: A site supporting HTTP/3 almost always also supports HTTP/2 (HTTP/3 requires HTTP/2 as fallback). Don't recommend "upgrading to HTTP/3" for sites that already have both. Both signals are detected independently — having HTTP/3 does NOT mean HTTP/2 is absent.
+
+8. ASSET CDN vs FULL-SITE CDN: If a full-site CDN (e.g., Cloudflare, Fastly) is already detected, an asset CDN signal is informational — the main CDN already covers asset delivery. Don't recommend "adding a CDN for assets" when the site is already behind a full CDN. The scoring engine handles this dedup automatically.
+
+9. NEWLY REGISTERED DOMAIN (NRD): Domain age under 90 days triggers an NRD penalty that decays over time. This is non-actionable — the user can't make their domain older. Don't recommend "waiting" as a fix. Mention it as context for the reputation score but focus recommendations on actionable items.
+
+10. DNS REDUNDANCY (LB signal): The "DNS redundancy" signal counts distinct A records. A single A record behind a CDN's anycast network (like Cloudflare) provides equivalent geographic redundancy to multiple A records. Don't overstate this finding for CDN-proxied sites.

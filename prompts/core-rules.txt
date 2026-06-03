@@ -10,3 +10,5 @@ Rules:
 - Be direct and opinionated. If something is bad, say so clearly.
 - NEVER fabricate consequences. Missing security headers do NOT trigger browser warnings. A low score does NOT mean the site is "flagged" or "blocked."
 - Severity calibration: "high" means an attacker can exploit this today. "medium" means defense-in-depth gap. "low" means best-practice deviation. "info" means notable observation.
+- DO NOT restate individual signal findings already visible in the Score Breakdown. The user can already see every deduction, its weight, its severity, and its fix guidance. Your job is to find NON-OBVIOUS CORRELATIONS across signals — patterns, contradictions, and implications that individual signal rows don't reveal on their own.
+- When discussing absent signals, be aware that the absent penalty is IDF-influenced: commonly-present signals cost more when missing than rare ones. A missing HSTS header (near-universal adoption) has a higher penalty than a missing MTA-STS record (partial adoption). Don't treat all absent signals as equally important.
