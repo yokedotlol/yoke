@@ -465,7 +465,12 @@ export default {
       if (reportResponse.status === 200) {
         await rl.record();
       }
-      trackRequest(env, request, { endpoint: "report", domain: reportDomain, status: reportResponse.status, latencyMs: 0 });
+      trackRequest(env, request, {
+        endpoint: "report",
+        domain: reportDomain,
+        status: reportResponse.status,
+        latencyMs: 0,
+      });
       return reportResponse;
     }
 
@@ -570,7 +575,7 @@ export default {
             // Streaming always does real work — record the rate limit hit
             await rl.record();
             _track("analyze", 200, domain);
-            return analyzeDomainStream(domain, env, skipCache, rl.headers);
+            return analyzeDomainStream(domain, env, request, skipCache, rl.headers);
           }
           const coreResult = await runAnalysis(domain, env, skipCache);
           // Only consume rate-limit credit for non-cached results

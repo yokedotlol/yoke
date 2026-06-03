@@ -2,8 +2,10 @@
 // Streams analysis results as Server-Sent Events as each check completes.
 // Delegates all analysis logic to the shared core pipeline.
 
-import { CORS_HEADERS, type Env, normalizeDomain } from "../helpers";
+import { CORS_HEADERS, type Env, getBaseUrl, normalizeDomain } from "../helpers";
+import { buildPdfUrl } from "../pdf-route";
 import { injectPercentiles } from "../percentiles";
+import { buildShareUrl } from "../share";
 import { type AnalysisCallbacks, runAnalysis } from "./analyze/core";
 
 // SSE helper: format an event
@@ -14,6 +16,7 @@ function sseEvent(event: string, data: unknown): string {
 export async function analyzeDomainStream(
   domain: string,
   env: Env,
+  request: Request,
   skipCache = false,
   extraHeaders?: Record<string, string>,
 ): Promise<Response> {
@@ -58,6 +61,25 @@ export async function analyzeDomainStream(
       };
 
       const result = await runAnalysis(domain, env, skipCache, callbacks);
+
+      // Inject _meta (share_url, pdf_url) into the final result
+      const resultData = result.data as Record<string, unknown>;
+      const ds = resultData.domain_score as
+        | { composite?: number; tier?: string; axes?: Record<string, { score?: number }> }
+        | undefined;
+      if (ds?.composite != null && ds.tier && ds.axes) {
+        const analyzedAt = (resultData.analyzed_at as string) || new Date().toISOString();
+        const baseUrl = getBaseUrl(request, env);
+        const shareUrl = await buildShareUrl(domain, ds.composite, ds.tier, ds.axes, analyzedAt, baseUrl, env);
+        const pdfUrl = await buildPdfUrl(domain, analyzedAt, baseUrl, env);
+        if (shareUrl || pdfUrl) {
+          resultData._meta = {
+            ...((resultData._meta as Record<string, unknown>) || {}),
+            ...(shareUrl ? { share_url: shareUrl } : {}),
+            ...(pdfUrl ? { pdf_url: pdfUrl } : {}),
+          };
+        }
+      }
 
       // For cached results, just send the done event
       if (result.kind === "cached") {
