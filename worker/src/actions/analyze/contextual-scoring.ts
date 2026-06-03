@@ -124,9 +124,22 @@ export interface AxisScore {
   not_measured?: boolean;
 }
 
+/** Axis flagged as at-risk when its tier is ≥2 tiers below the composite tier. */
+export interface AtRiskAxis {
+  axis: Axis;
+  score: number;
+  tier: string;
+}
+
 export interface DomainScoreResult {
   composite: number;
   tier: string;
+  /** Cross-axis consistency: balanced (σ<8), uneven (σ 8-15), lopsided (σ>15). */
+  balance: "balanced" | "uneven" | "lopsided";
+  /** Axis whose tier is ≥2 tiers below the composite tier (lowest if multiple). */
+  atRiskAxis: AtRiskAxis | null;
+  /** Human-readable composite summary, e.g. "Strong 88, Balanced" or "Strong 88 — Security at risk (55)". */
+  compositeLabel: string;
   axes: Record<Axis, AxisScore>;
   archetype: ArchetypeResult;
   /** Detected context flags — signals gated by requiresContext only count when their context is present */
@@ -504,6 +517,74 @@ export function buildSignalDetails(
 
 export function tierFromComposite(score: number): string {
   return registryTierFromComposite(score);
+}
+
+// ─── Composite Modifier (Balance + At-Risk Detection) ────────────────
+// Surfaces cross-axis spread that the weighted-mean composite hides.
+// CLT compression makes composites cluster; the modifier differentiates.
+
+/** Numeric tier rank for gap comparisons. Higher = better. */
+const TIER_RANK: Record<string, number> = {
+  Excellent: 4,
+  Strong: 3,
+  Moderate: 2,
+  Weak: 1,
+  Critical: 0,
+};
+
+/** Classify cross-axis consistency from standard deviation of assessed axis scores. */
+export function computeBalance(axisScores: Record<Axis, number | null>): "balanced" | "uneven" | "lopsided" {
+  const scores = (Object.values(axisScores) as (number | null)[]).filter((s): s is number => s != null);
+  if (scores.length < 2) return "balanced"; // can't measure spread with <2 axes
+  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const variance = scores.reduce((sum, s) => sum + (s - mean) ** 2, 0) / scores.length;
+  const stdDev = Math.sqrt(variance);
+  if (stdDev < 8) return "balanced";
+  if (stdDev <= 15) return "uneven";
+  return "lopsided";
+}
+
+/** Find the axis whose tier is ≥2 tiers below the composite tier (lowest wins). */
+export function detectAtRiskAxis(compositeTier: string, axisScores: Record<Axis, number | null>): AtRiskAxis | null {
+  const compositeRank = TIER_RANK[compositeTier] ?? 0;
+  let worst: AtRiskAxis | null = null;
+
+  for (const [axis, score] of Object.entries(axisScores) as [Axis, number | null][]) {
+    if (score == null) continue;
+    const axisTier = tierFromComposite(score);
+    const axisRank = TIER_RANK[axisTier] ?? 0;
+    if (compositeRank - axisRank >= 2) {
+      if (worst == null || score < worst.score) {
+        worst = { axis, score, tier: axisTier };
+      }
+    }
+  }
+  return worst;
+}
+
+/** Build the human-readable composite label combining tier + modifier. */
+export function buildCompositeLabel(
+  composite: number,
+  tier: string,
+  balance: "balanced" | "uneven" | "lopsided",
+  atRiskAxis: AtRiskAxis | null,
+): string {
+  const AXIS_DISPLAY: Record<string, string> = {
+    security: "Security",
+    speed: "Speed",
+    foundations: "Foundations",
+    reputation: "Reputation",
+    discoverability: "Discoverability",
+    email: "Email",
+  };
+
+  if (atRiskAxis) {
+    const axisName = AXIS_DISPLAY[atRiskAxis.axis] ?? atRiskAxis.axis;
+    return `${tier} ${composite} — ${axisName} at risk (${atRiskAxis.score})`;
+  }
+
+  const balanceLabel = balance.charAt(0).toUpperCase() + balance.slice(1);
+  return `${tier} ${composite}, ${balanceLabel}`;
 }
 
 // ─── Per-Category Hard Caps ──────────────────────────────────────────
@@ -2696,7 +2777,7 @@ export function calculateDomainScore(opts: {
   }
 
   // HTTP/2 and HTTP/3 are independent signals — a site can (and usually does) support both
-  if (opts.httpProtocols) {
+  if (opts.httpProtocols && !opts.httpBlocked) {
     if (opts.httpProtocols.http2 || opts.httpProtocols.http3) {
       // HTTP/3 implies HTTP/2 fallback; emit both when either is true
       findings.push({
@@ -4435,5 +4516,25 @@ export function calculateDomainScore(opts: {
 
   const signalDetails = buildSignalDetails(axisScores, composite, archetype, scoringCtx);
 
-  return { composite, tier, axes: axisScores, archetype, scoringContext: scoringCtx, signalDetails };
+  // ─── Composite Modifier ──────────────────────────────────────────
+  // Surfaces cross-axis spread that the weighted-mean composite hides.
+  const rawScoresMap: Record<Axis, number | null> = {} as Record<Axis, number | null>;
+  for (const axis of axes) {
+    rawScoresMap[axis] = axisScores[axis].score;
+  }
+  const balance = computeBalance(rawScoresMap);
+  const atRiskAxis = detectAtRiskAxis(tier, rawScoresMap);
+  const compositeLabel = buildCompositeLabel(composite, tier, balance, atRiskAxis);
+
+  return {
+    composite,
+    tier,
+    balance,
+    atRiskAxis,
+    compositeLabel,
+    axes: axisScores,
+    archetype,
+    scoringContext: scoringCtx,
+    signalDetails,
+  };
 }

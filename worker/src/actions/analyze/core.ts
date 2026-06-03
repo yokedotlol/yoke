@@ -477,12 +477,19 @@ async function runAnalysisCore(
   let dnsRecords: DnsRecord[];
   let httpAnalysis: HttpAnalysis | null;
   {
-    const [dnsResult, httpResult] = await Promise.allSettled([
-      checkDns(domain),
-      analyzeHttpWithFallback(domain, instanceHost, env),
-    ]);
-    dnsRecords = dnsResult.status === "fulfilled" ? dnsResult.value : [];
-    httpAnalysis = httpResult.status === "fulfilled" ? httpResult.value : null;
+    // Fire both in parallel but update the phase label once DNS resolves
+    const dnsPromise = checkDns(domain);
+    const httpPromise = analyzeHttpWithFallback(domain, instanceHost, env);
+
+    // Wait for DNS first (fast) and update label
+    const dnsResult = await dnsPromise.catch(() => [] as DnsRecord[]);
+    dnsRecords = dnsResult;
+    await onResult("dns", { records: dnsRecords });
+    await onPhase("http", "running", "Probing site…");
+
+    // Now wait for HTTP probe (may be slow if site blocks)
+    const httpResult = await httpPromise.catch(() => null);
+    httpAnalysis = httpResult;
   }
 
   const httpStatusCode = httpAnalysis?.status_code ?? 0;
@@ -491,7 +498,6 @@ async function runAnalysisCore(
   const rawHeadersOriginal = httpProbeSucceeded ? (httpAnalysis?.headers?.raw ?? null) : null;
 
   // Stream Phase 1 results
-  await onResult("dns", { records: dnsRecords });
   if (httpAnalysis) {
     await onResult("redirects", httpProbeSucceeded ? (httpAnalysis.redirects ?? []) : []);
     if (httpProbeSucceeded && httpAnalysis.headers) {
@@ -777,13 +783,14 @@ async function runAnalysisCore(
     rawHeadersOriginal && !siteIsCloudflareRefined ? sanitizeCfHeaders(rawHeadersOriginal) : rawHeadersOriginal;
 
   // Detect HTTP protocols — prefer Fly probe data from status check, then header detection, then dedicated probe
+  // Skip entirely when HTTP probe failed — protocols are unmeasurable on unreachable sites
   const statusAny = statusResult as unknown as Record<string, unknown>;
   const statusHasProtocols = !!statusAny.http2 || !!statusAny.http3;
   let httpProtocols = statusHasProtocols
     ? { http2: !!statusAny.http2, http3: !!statusAny.http3, alt_svc: (statusAny.alt_svc as string | null) ?? null }
     : detectHttpProtocols(effectiveHeaders);
-  // Fallback: dedicated protocol probe if nothing detected yet
-  if (!httpProtocols.http2 && !httpProtocols.http3) {
+  // Fallback: dedicated protocol probe if nothing detected yet and site was reachable
+  if (!httpProtocols.http2 && !httpProtocols.http3 && httpProbeSucceeded) {
     try {
       const probed = await probeHttpProtocols(domain, env);
       if (probed.http2 || probed.http3) httpProtocols = probed;

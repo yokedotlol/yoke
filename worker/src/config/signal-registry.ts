@@ -1152,6 +1152,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — server/CDN config",
     fixDescription: "Enable HTTP/2 on server",
     weightRange: [2, 2],
+    requiresHttpAccess: true,
     promptGuidance: "HTTP/1.1 only is outdated. Usually old server software. Medium severity.",
   },
   cache_headers: {
