@@ -4,8 +4,8 @@
 
 import fontkit from "@pdf-lib/fontkit";
 import { type Color, PDFDocument, type PDFFont, type PDFPage, rgb } from "pdf-lib";
-import type { PdfFontData } from "./pdf-fonts";
 import { AXIS_WEIGHTS as CANONICAL_AXIS_WEIGHTS, TIER_THRESHOLDS } from "./config/signal-registry";
+import type { PdfFontData } from "./pdf-fonts";
 
 // ─── Self-Hoster Customization ─────────────────────────────────────
 const REPORT_CONFIG = {
@@ -471,7 +471,16 @@ function drawDataTable(
       const cell = row[i];
       const cellMaxW = actualWidths[i] - padding * 2;
       if (cell != null && typeof cell === "object" && "color" in cell) {
-        drawText(page, (cell as DataTableCell).text, cx + padding, cy - 13, fonts.regular, fontSize, (cell as DataTableCell).color, { maxWidth: cellMaxW });
+        drawText(
+          page,
+          (cell as DataTableCell).text,
+          cx + padding,
+          cy - 13,
+          fonts.regular,
+          fontSize,
+          (cell as DataTableCell).color,
+          { maxWidth: cellMaxW },
+        );
       } else {
         drawText(page, String(cell ?? ""), cx + padding, cy - 13, fonts.regular, fontSize, COLORS.text, {
           maxWidth: cellMaxW,
@@ -623,7 +632,14 @@ interface ChecklistItem {
   status: boolean | null;
 }
 
-function drawChecklistGrid(page: PDFPage, fonts: Fonts, x: number, y: number, items: ChecklistItem[], maxWidth: number): number {
+function drawChecklistGrid(
+  page: PDFPage,
+  fonts: Fonts,
+  x: number,
+  y: number,
+  items: ChecklistItem[],
+  maxWidth: number,
+): number {
   const colW = maxWidth / 2;
   const rowH = 16;
   let cy = y;
