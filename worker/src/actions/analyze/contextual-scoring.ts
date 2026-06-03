@@ -2693,18 +2693,10 @@ export function calculateDomainScore(opts: {
     }
   }
 
-  // HTTP/2+
+  // HTTP/2 and HTTP/3 are independent signals — a site can (and usually does) support both
   if (opts.httpProtocols) {
-    if (opts.httpProtocols.http3) {
-      findings.push({
-        signal: "http3",
-        axis: "foundations",
-        severity: "good",
-        label: "HTTP/3 supported",
-        tradeoff: null,
-        weight: 1,
-      });
-    } else if (opts.httpProtocols.http2) {
+    if (opts.httpProtocols.http2 || opts.httpProtocols.http3) {
+      // HTTP/3 implies HTTP/2 fallback; emit both when either is true
       findings.push({
         signal: "http2",
         axis: "foundations",
@@ -2713,6 +2705,16 @@ export function calculateDomainScore(opts: {
         tradeoff: null,
         weight: 2,
       });
+      if (opts.httpProtocols.http3) {
+        findings.push({
+          signal: "http3",
+          axis: "foundations",
+          severity: "good",
+          label: "HTTP/3 supported",
+          tradeoff: null,
+          weight: 1,
+        });
+      }
     } else {
       findings.push({
         signal: "http1_only",
