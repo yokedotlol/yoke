@@ -1099,6 +1099,7 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
     return new Set<string>();
   });
   const [expandedSignals, setExpandedSignals] = useState<Set<string>>(new Set());
+  const [expandedNotAssessed, setExpandedNotAssessed] = useState<Set<string>>(new Set());
   const [simulateMode, setSimulateMode] = useState(false);
   const [checkedSignals, setCheckedSignals] = useState<Set<string>>(new Set());
 
@@ -1154,6 +1155,15 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
       const next = new Set(prev);
       if (next.has(signalKey)) next.delete(signalKey);
       else next.add(signalKey);
+      return next;
+    });
+  };
+
+  const toggleNotAssessed = (axis: string) => {
+    setExpandedNotAssessed((prev) => {
+      const next = new Set(prev);
+      if (next.has(axis)) next.delete(axis);
+      else next.add(axis);
       return next;
     });
   };
@@ -1484,7 +1494,7 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
                           marginTop: issueCount > 0 ? "6px" : "2px",
                         }}
                       >
-                        Opportunities
+                        Improvements
                       </div>
                       {wa.signals
                         .filter((s) => s.tier === "opportunity")
@@ -1506,40 +1516,60 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
                     </>
                   )}
 
-                  {ndCount > 0 && (
-                    <>
-                      <div
-                        style={{
-                          fontSize: "9px",
-                          fontWeight: 600,
-                          color: "var(--dim)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                          padding: "4px 0 2px",
-                          marginTop: issueCount > 0 || oppCount > 0 ? "6px" : "2px",
-                        }}
-                      >
-                        Not detected
-                      </div>
-                      {wa.signals
-                        .filter((s) => s.tier === "not_detected")
-                        .map((sig) => {
-                          const key = `${wa.axis}-${sig.signal}`;
-                          return (
-                            <SignalRow
-                              key={key}
-                              sig={sig}
-                              maxDeduction={maxDeduction}
-                              expanded={expandedSignals.has(key)}
-                              onToggle={() => toggleSignal(key)}
-                              simulateMode={simulateMode}
-                              isChecked={checkedSignals.has(key)}
-                              onSimToggle={() => toggleSimSignal(key)}
-                            />
-                          );
-                        })}
-                    </>
-                  )}
+                  {ndCount > 0 &&
+                    (() => {
+                      const ndSignals = wa.signals.filter((s) => s.tier === "not_detected");
+                      const ndTotal = ndSignals.reduce((sum, s) => sum + s.deduction, 0);
+                      const naExpanded = expandedNotAssessed.has(wa.axis);
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => toggleNotAssessed(wa.axis)}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              fontSize: "9px",
+                              fontWeight: 600,
+                              color: "var(--dim)",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.06em",
+                              padding: "4px 0 2px",
+                              marginTop: issueCount > 0 || oppCount > 0 ? "6px" : "2px",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              fontFamily: "inherit",
+                            }}
+                          >
+                            <span style={{ fontSize: "8px", opacity: 0.6 }}>{naExpanded ? "▾" : "▸"}</span>
+                            Not assessed
+                            {!naExpanded && (
+                              <span style={{ fontWeight: 400, opacity: 0.7 }}>
+                                — {ndCount} signal{ndCount !== 1 ? "s" : ""} (−{ndTotal.toFixed(1)})
+                              </span>
+                            )}
+                          </button>
+                          {naExpanded &&
+                            ndSignals.map((sig) => {
+                              const key = `${wa.axis}-${sig.signal}`;
+                              return (
+                                <SignalRow
+                                  key={key}
+                                  sig={sig}
+                                  maxDeduction={maxDeduction}
+                                  expanded={expandedSignals.has(key)}
+                                  onToggle={() => toggleSignal(key)}
+                                  simulateMode={simulateMode}
+                                  isChecked={checkedSignals.has(key)}
+                                  onSimToggle={() => toggleSimSignal(key)}
+                                />
+                              );
+                            })}
+                        </>
+                      );
+                    })()}
                 </div>
               )}
             </div>

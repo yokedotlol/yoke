@@ -82,7 +82,7 @@ export interface SignalDef {
    * a bad-variant finding AND an absent good-variant both penalize.
    * E.g. referrer_policy_unsafe fires → referrer_policy excluded from absent.
    */
-  suppressesAbsent?: string;
+  suppressesAbsent?: string | string[];
   /**
    * When true, this signal requires HTTP/HTML access to detect.
    * If the scan's HTTP probe was blocked (http_blocked), these signals
@@ -211,6 +211,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~10 min — add one response header",
     fixDescription: "Add Strict-Transport-Security header",
     weightRange: [4, 4],
+    suppressesAbsent: ["hsts", "hsts_max_age", "hsts_preload"],
     promptGuidance:
       "Missing HSTS allows protocol downgrade attacks (SSL stripping). High-impact single header to add. Weight 4.",
     archetypeNotes: {
@@ -236,8 +237,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   hsts_preload: {
     axis: "security",
     label: "HSTS Preload",
+    absentLabel: "Not on HSTS preload list",
     fixDescription: "Submit your domain to the HSTS preload list at hstspreload.org",
-    actionable: false,
+    actionable: true,
+    effort: "~5 min — submit at hstspreload.org (requires max-age ≥1yr + includeSubDomains)",
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
@@ -269,6 +272,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~1-2 hours — requires auditing scripts/styles",
     fixDescription: "Add Content-Security-Policy header",
     weightRange: [3, 3],
+    suppressesAbsent: ["csp", "csp_quality"],
     promptGuidance:
       "Many sites lack CSP, but absence is a real XSS risk for sites handling user input. Hard to retrofit — recommend starting with report-only mode. Don't cite specific adoption percentages.",
     archetypeNotes: {
@@ -430,7 +434,8 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     label: "WAF Detected",
     absentLabel: "WAF not detected",
     fixDescription: "WAF protects against common web attacks",
-    actionable: false,
+    actionable: true,
+    effort: "~30 min — enable WAF in CDN dashboard or install ModSecurity",
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 2],
@@ -722,13 +727,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   security_headers_completeness: {
     axis: "security",
     label: "Security Headers Completeness",
-    actionable: true,
-    canBeNonGood: true,
-    canBeGood: true,
-    effort: "~30 min — add missing security headers",
-    fixDescription: "Add missing security response headers",
-    weightRange: [2, 2],
-    goodPrevalence: 0.044,
+    actionable: false,
+    canBeNonGood: false,
+    canBeGood: false,
+    weightRange: [0, 0],
     promptGuidance:
       "Meta-signal: how many of 6 key headers deployed (HSTS, CSP, XFO, XCTO, Referrer-Policy, Permissions-Policy). 6/6=good, 4+=info, 2+=low, <2=medium.",
     requiresHttpAccess: true,
@@ -1982,6 +1984,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~5 min — add link rel=canonical",
     fixDescription: "Add canonical URL link tag",
     weightRange: [1, 1],
+    suppressesAbsent: "canonical_url",
     promptGuidance: "Risks duplicate content indexing. More important for content sites.",
     archetypeNotes: { content: "Content sites should have canonical URLs." },
   },

@@ -226,9 +226,10 @@ export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: 
     totalDeduction += share * factor;
 
     const reg = SIGNAL_REGISTRY[f.signal as keyof typeof SIGNAL_REGISTRY];
-    // If this finding suppresses a good-variant from the absent pool, track it
+    // If this finding suppresses good-variants from the absent pool, track them
     if (reg?.suppressesAbsent) {
-      suppressedFromAbsent.add(reg.suppressesAbsent);
+      const targets = Array.isArray(reg.suppressesAbsent) ? reg.suppressesAbsent : [reg.suppressesAbsent];
+      for (const t of targets) suppressedFromAbsent.add(t);
     }
   }
 
@@ -295,9 +296,10 @@ export function computeAxisScoreWithDeductions(
     totalDeduction += deduction;
 
     const reg = SIGNAL_REGISTRY[f.signal as keyof typeof SIGNAL_REGISTRY];
-    // If this finding suppresses a good-variant from the absent pool, track it
+    // If this finding suppresses good-variants from the absent pool, track them
     if (reg?.suppressesAbsent) {
-      suppressedFromAbsent.add(reg.suppressesAbsent);
+      const targets = Array.isArray(reg.suppressesAbsent) ? reg.suppressesAbsent : [reg.suppressesAbsent];
+      for (const t of targets) suppressedFromAbsent.add(t);
     }
   }
 
