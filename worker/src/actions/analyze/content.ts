@@ -755,7 +755,12 @@ const PROBE_PATHS: Record<string, string[]> = {
   "Terms of Service": ["/terms", "/tos", "/terms-of-service"],
 };
 
-export async function detectLegalPages(html: string, domain: string, env: Env): Promise<LegalResult> {
+export async function detectLegalPages(
+  html: string,
+  domain: string,
+  env: Env,
+  probeTimeoutMs = 4_000,
+): Promise<LegalResult> {
   const pagesFound: Array<{ name: string; url: string }> = [];
   const seen = new Set<string>();
 
@@ -799,7 +804,7 @@ export async function detectLegalPages(html: string, domain: string, env: Env): 
           if (seen.has(name)) break; // Another probe already found it
           try {
             const url = `https://${domain}${path}`;
-            const result = await probeHeadWithFallback(url, env, { timeout: 10_000 });
+            const result = await probeHeadWithFallback(url, env, { timeout: probeTimeoutMs });
             if (result.ok && result.contentType.includes("text/html")) {
               pagesFound.push({ name, url });
               seen.add(name);
@@ -812,7 +817,8 @@ export async function detectLegalPages(html: string, domain: string, env: Env): 
       })(),
     );
   }
-  await Promise.all(probePromises);
+  // Run all probe groups concurrently, but cap total probe time at 8s
+  await Promise.race([Promise.all(probePromises), new Promise<void>((resolve) => setTimeout(resolve, 8_000))]);
 
   let cookieConsentDetected = false;
   let consentProvider: string | null = null;
