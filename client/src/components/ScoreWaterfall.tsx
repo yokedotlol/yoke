@@ -92,6 +92,9 @@ interface WaterfallAxis {
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
+// Null axes imputed at 35 to match backend contextual-scoring.ts NULL_AXIS_IMPUTE
+const NULL_AXIS_IMPUTE = 35;
+
 function clientComposite(axisScores: Record<string, number>): number {
   let sum = 0;
   for (const axis of Object.keys(AXIS_WEIGHTS) as Axis[]) {
@@ -625,10 +628,12 @@ function CompositeFormula({
   axisScores,
   simulatedScores,
   simulateActive,
+  imputedAxes,
 }: {
   axisScores: Record<string, number>;
   simulatedScores: Record<string, number> | null;
   simulateActive: boolean;
+  imputedAxes?: Set<string>;
 }) {
   const orderedAxes = Object.keys(AXIS_WEIGHTS) as Axis[];
   const currentComposite = clientComposite(axisScores);
@@ -654,6 +659,7 @@ function CompositeFormula({
         const simScore = simulatedScores?.[axis] ?? currentScore;
         const displayScore = simulateActive && simulatedScores ? simScore : currentScore;
         const changed = simulateActive && simulatedScores && simScore !== currentScore;
+        const isImputed = imputedAxes?.has(axis) ?? false;
         const axisColor = AXIS_COLORS[axis] || "var(--muted)";
         const weightPct = Math.round((AXIS_WEIGHTS[axis] ?? 0) * 100);
 
@@ -667,10 +673,12 @@ function CompositeFormula({
                 gap: "2px",
                 padding: "1px 5px",
                 borderRadius: "4px",
-                border: `1px solid ${changed ? "rgba(126,231,135,0.3)" : `${axisColor}30`}`,
+                border: `1px ${isImputed ? "dashed" : "solid"} ${changed ? "rgba(126,231,135,0.3)" : `${axisColor}${isImputed ? "20" : "30"}`}`,
                 background: changed ? "rgba(126,231,135,0.08)" : "transparent",
+                opacity: isImputed ? 0.55 : 1,
                 transition: "all 0.2s",
               }}
+              title={isImputed ? "Not assessed — imputed at 35 for composite calculation" : undefined}
             >
               <span style={{ fontWeight: 700, color: axisColor, fontSize: "11px" }}>{displayScore}</span>
               <span style={{ color: "var(--dim)", fontSize: "10px" }}>×.{weightPct.toString().padStart(2, "0")}</span>
@@ -1114,9 +1122,20 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
     const scores: Record<string, number> = {};
     for (const axis of Object.keys(AXIS_WEIGHTS) as Axis[]) {
       const ad = score.axes[axis];
-      scores[axis] = ad?.score ?? 0;
+      // Mirror backend NULL_AXIS_IMPUTE: null/not_measured axes use 35
+      scores[axis] = ad?.score ?? (ad?.not_measured ? NULL_AXIS_IMPUTE : 0);
     }
     return scores;
+  }, [score.axes]);
+
+  // Track which axes are imputed (null/not_measured) for visual distinction
+  const imputedAxes = useMemo(() => {
+    const set = new Set<string>();
+    for (const axis of Object.keys(AXIS_WEIGHTS) as Axis[]) {
+      const ad = score.axes[axis];
+      if (ad?.not_measured || ad?.score == null) set.add(axis);
+    }
+    return set;
   }, [score.axes]);
 
   // Simulated scores — add back deductions for checked signals
@@ -1276,7 +1295,12 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
       </div>
 
       {/* Composite formula */}
-      <CompositeFormula axisScores={axisScores} simulatedScores={simulatedAxisScores} simulateActive={simulateActive} />
+      <CompositeFormula
+        axisScores={axisScores}
+        simulatedScores={simulatedAxisScores}
+        simulateActive={simulateActive}
+        imputedAxes={imputedAxes}
+      />
       <FormulaAxisLabels />
 
       {/* Tier progress bar */}
