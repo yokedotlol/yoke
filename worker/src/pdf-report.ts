@@ -1015,14 +1015,18 @@ function buildPage3_SpeedFoundations(doc: PDFDocument, fonts: Fonts, data: Analy
   );
   y -= cwvTableH + 4;
 
-  // Acronym explainers below the table
-  if (y > CONTENT_BOTTOM + 60) {
-    for (const m of cwvMetrics) {
-      const explainer = CWV_EXPLAINERS[m.key];
-      if (explainer) {
-        drawText(page, explainer, MARGIN + 4, y, fonts.regular, 7, COLORS.dim, { maxWidth: CONTENT_W - 8 });
-        y -= 10;
+  // Acronym explainers below the table — two-column layout
+  if (y > CONTENT_BOTTOM + 40) {
+    const colW = (CONTENT_W - 16) / 2;
+    const explainers = cwvMetrics.map((m) => CWV_EXPLAINERS[m.key]).filter((e): e is string => !!e);
+    for (let i = 0; i < explainers.length; i += 2) {
+      drawText(page, explainers[i], MARGIN + 4, y, fonts.regular, 7, COLORS.dim, { maxWidth: colW - 8 });
+      if (i + 1 < explainers.length) {
+        drawText(page, explainers[i + 1], MARGIN + colW + 12, y, fonts.regular, 7, COLORS.dim, {
+          maxWidth: colW - 8,
+        });
       }
+      y -= 10;
     }
     y -= 4;
   }
