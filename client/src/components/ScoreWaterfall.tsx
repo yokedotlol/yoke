@@ -425,32 +425,46 @@ function EffortBadge({ effort }: { effort?: string }) {
 
 // ─── Simulate checkbox ──────────────────────────────────────────────
 
-function SimCheckbox({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+function SimCheckbox({
+  checked,
+  onChange,
+  actionable = true,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  actionable?: boolean;
+}) {
+  // Non-actionable signals get a clock-style circular checkbox to hint "may resolve over time"
+  const isTimeBased = !actionable;
   return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onChange();
-      }}
-      aria-label={checked ? "Uncheck fix simulation" : "Simulate fixing this signal"}
-      style={{
-        width: "14px",
-        height: "14px",
-        borderRadius: "3px",
-        border: `1.5px solid ${checked ? "var(--success)" : "var(--border)"}`,
-        background: checked ? "var(--success)" : "transparent",
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        padding: 0,
-        transition: "all 0.15s",
-      }}
-    >
-      {checked && <span style={{ fontSize: "9px", color: "var(--bg)", fontWeight: 700, lineHeight: 1 }}>✓</span>}
-    </button>
+    <Tooltip text={isTimeBased ? "May resolve over time" : "Simulate fixing this"}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onChange();
+        }}
+        aria-label={checked ? "Uncheck fix simulation" : "Simulate fixing this signal"}
+        style={{
+          width: "14px",
+          height: "14px",
+          borderRadius: isTimeBased ? "50%" : "3px",
+          border: `1.5px solid ${checked ? "var(--success)" : isTimeBased ? "var(--dim)" : "var(--border)"}`,
+          background: checked ? "var(--success)" : "transparent",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          padding: 0,
+          transition: "all 0.15s",
+          borderStyle: isTimeBased && !checked ? "dashed" : "solid",
+        }}
+      >
+        {checked && <span style={{ fontSize: "9px", color: "var(--bg)", fontWeight: 700, lineHeight: 1 }}>✓</span>}
+        {!checked && isTimeBased && <span style={{ fontSize: "8px", color: "var(--dim)", lineHeight: 1 }}>⏳</span>}
+      </button>
+    </Tooltip>
   );
 }
 
@@ -474,7 +488,7 @@ function SignalRow({
   onSimToggle: () => void;
 }) {
   const hasDetail = sig.fixDescription || sig.fixLink || sig.tooltipText;
-  const canSimulate = simulateMode && sig.actionable && sig.deduction > 0;
+  const canSimulate = simulateMode && sig.deduction > 0;
 
   return (
     <div>
@@ -505,7 +519,7 @@ function SignalRow({
           transition: "background 0.1s",
         }}
       >
-        {canSimulate && <SimCheckbox checked={isChecked} onChange={onSimToggle} />}
+        {canSimulate && <SimCheckbox checked={isChecked} onChange={onSimToggle} actionable={sig.actionable} />}
 
         <SeverityMarker severity={sig.severity} tier={sig.tier} />
         <span
@@ -826,45 +840,26 @@ function SimulateToggle({ active, onToggle }: { active: boolean; onToggle: () =>
       type="button"
       onClick={onToggle}
       style={{
-        display: "flex",
+        display: "inline-flex",
         alignItems: "center",
-        gap: "6px",
-        padding: "4px 8px",
-        borderRadius: "6px",
-        border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-        background: active ? "rgba(88,166,255,0.06)" : "transparent",
+        gap: "5px",
+        padding: "5px 12px",
+        borderRadius: "16px",
+        border: `1.5px solid ${active ? "var(--success)" : "var(--accent)"}`,
+        background: active ? "rgba(126,231,135,0.10)" : "rgba(88,166,255,0.06)",
         cursor: "pointer",
-        fontSize: "10px",
-        color: active ? "var(--accent)" : "var(--muted)",
+        fontSize: "11px",
+        color: active ? "var(--success)" : "var(--accent)",
         fontFamily: "var(--font-ui)",
-        transition: "all 0.15s",
+        fontWeight: 600,
+        transition: "all 0.2s",
         whiteSpace: "nowrap",
+        boxShadow: active ? "0 0 8px rgba(126,231,135,0.15)" : "0 0 6px rgba(88,166,255,0.1)",
+        letterSpacing: "0.01em",
       }}
     >
-      <div
-        style={{
-          width: "24px",
-          height: "12px",
-          borderRadius: "6px",
-          background: active ? "var(--accent)" : "var(--border)",
-          position: "relative",
-          transition: "background 0.2s",
-        }}
-      >
-        <div
-          style={{
-            width: "8px",
-            height: "8px",
-            borderRadius: "50%",
-            background: "var(--text)",
-            position: "absolute",
-            top: "2px",
-            left: active ? "14px" : "2px",
-            transition: "left 0.2s",
-          }}
-        />
-      </div>
-      <span style={{ fontWeight: 500 }}>What if?</span>
+      <span style={{ fontSize: "13px", lineHeight: 1 }}>{active ? "✓" : "✦"}</span>
+      <span>{active ? "Simulating" : "What if?"}</span>
     </button>
   );
 }
