@@ -544,13 +544,20 @@ async function runAnalysisCore(
     };
   });
 
-  await onPhase(
-    "phase2",
-    "running",
-    `Running ${checks.length} checks…`,
-    checks.length,
-    checks.map((c) => ({ key: c.key, label: c.label })),
-  );
+  // Post-check async steps that run after all registry checks complete.
+  // Include them in the total so the progress bar doesn't stall at "Calculating score…".
+  const POST_CHECK_STEPS = [
+    { key: "_legal", label: "Legal pages" },
+    { key: "_wp_probes", label: "WordPress security" },
+    { key: "_trust", label: "Trust signals" },
+    { key: "_scoring", label: "Scoring" },
+  ];
+  const totalWithPostChecks = checks.length + POST_CHECK_STEPS.length;
+
+  await onPhase("phase2", "running", `Running ${checks.length} checks…`, totalWithPostChecks, [
+    ...checks.map((c) => ({ key: c.key, label: c.label })),
+    ...POST_CHECK_STEPS,
+  ]);
 
   // Collect results as they arrive, streaming each via onResult
   const results: Record<string, unknown> = {};
@@ -561,7 +568,7 @@ async function runAnalysisCore(
       (value) => {
         results[key] = value;
         completed++;
-        const sendPromise = onResult(key, value, completed, checks.length, label);
+        const sendPromise = onResult(key, value, completed, totalWithPostChecks, label);
 
         // When _status arrives, compute and send early enhanced status
         if (key === "_status") {
@@ -618,7 +625,7 @@ async function runAnalysisCore(
           message: String(err).slice(0, 200),
           domain,
         });
-        return onResult(key, defaultValue, completed, checks.length, label, true);
+        return onResult(key, defaultValue, completed, totalWithPostChecks, label, true);
       },
     ),
   );
@@ -804,19 +811,6 @@ async function runAnalysisCore(
   const hosting = detectHosting(ipInfo, effectiveHeaders);
   const wpDetails = httpProbeSucceeded ? analyzeWordPress(html, effectiveHeaders ?? {}, dnsRecords) : null;
 
-  // WordPress security probes — quick HEAD/GET checks for common WP security issues
-  if (wpDetails) {
-    try {
-      const wpProbes = await probeWordPressSecurity(domain, fetchWithTimeout);
-      wpDetails.xmlrpc_accessible = wpProbes.xmlrpc_accessible;
-      wpDetails.login_accessible = wpProbes.login_accessible;
-      wpDetails.user_enumeration = wpProbes.user_enumeration;
-      wpDetails.directory_listing = wpProbes.directory_listing;
-    } catch {
-      // Probes are best-effort — don't fail the analysis
-    }
-  }
-
   // ISP fallback for hosting provider
   if (!hosting.provider && ipInfo?.isp) {
     for (const { pattern, name } of HOSTING_ISPS) {
@@ -827,14 +821,13 @@ async function runAnalysisCore(
     }
   }
 
+  // ── Sync derived analysis (no I/O, runs instantly) ───────────────
   const socialMeta = extractSocialMeta(html);
-  const legal = await detectLegalPages(html, domain, env);
   const resourceHints = detectResourceHints(html);
   const cookieSecurity = auditCookies(effectiveHeaders);
   const compression = detectCompression(effectiveHeaders);
   const cacheAnalysis = checkCacheHeaders(effectiveHeaders);
 
-  // WAF detection: gather set-cookie headers for cookie-based signals
   const setCookieRaw = effectiveHeaders?.["set-cookie"] ?? "";
   const setCookieHeaders = setCookieRaw ? setCookieRaw.split(/\n/) : [];
   const wafDetection = httpProbeSucceeded ? checkWaf(effectiveHeaders, html, setCookieHeaders) : null;
@@ -854,12 +847,20 @@ async function runAnalysisCore(
   const cookieConsentResult = httpProbeSucceeded ? analyzeCookieConsent(html, effectiveHeaders ?? {}, domain) : null;
   const assetCdnResult = httpProbeSucceeded ? detectAssetCdn(html, domain) : null;
 
-  // Trust signal aggregation
   const caaAnalysis = analyzeCaaRecords(dnsRecords);
   const caaRecordsForTrust =
     (caaAnalysis as { records?: Array<{ tag: string; value: string }> } | null)?.records ?? null;
-  const trustSignals = httpProbeSucceeded
-    ? await checkTrustSignals({
+
+  // ── Parallel post-check I/O (legal pages, WP probes, trust signals) ──
+  // These three async operations are independent — run them concurrently
+  // and tick the progress bar as each resolves.
+
+  const legalPromise = detectLegalPages(html, domain, env);
+  const wpPromise = wpDetails
+    ? probeWordPressSecurity(domain, fetchWithTimeout).catch(() => null)
+    : Promise.resolve(null);
+  const trustPromise = httpProbeSucceeded
+    ? checkTrustSignals({
         headers: effectiveHeaders,
         securityTxt: securityTxt,
         emailAuth,
@@ -873,7 +874,35 @@ async function runAnalysisCore(
         domain,
         env,
       })
-    : null;
+    : Promise.resolve(null);
+
+  // Await all three in parallel, ticking progress as each settles
+  const [legalResult, wpProbesResult, trustResult] = await Promise.all([
+    legalPromise.then(async (v) => {
+      completed++;
+      await onResult("_legal", null, completed, totalWithPostChecks, "Legal pages");
+      return v;
+    }),
+    wpPromise.then(async (v) => {
+      completed++;
+      await onResult("_wp_probes", null, completed, totalWithPostChecks, "WordPress security");
+      return v;
+    }),
+    trustPromise.then(async (v) => {
+      completed++;
+      await onResult("_trust", null, completed, totalWithPostChecks, "Trust signals");
+      return v;
+    }),
+  ]);
+
+  const legal = legalResult;
+  if (wpDetails && wpProbesResult) {
+    wpDetails.xmlrpc_accessible = wpProbesResult.xmlrpc_accessible;
+    wpDetails.login_accessible = wpProbesResult.login_accessible;
+    wpDetails.user_enumeration = wpProbesResult.user_enumeration;
+    wpDetails.directory_listing = wpProbesResult.directory_listing;
+  }
+  const trustSignals = trustResult;
 
   // Network health aggregation
   const networkHealth: NetworkHealth | null =
@@ -940,6 +969,10 @@ async function runAnalysisCore(
     wordpress: wpDetails,
     assetCdn: assetCdnResult,
   });
+
+  // Tick scoring progress
+  completed++;
+  await onResult("_scoring", null, completed, totalWithPostChecks, "Scoring");
 
   const result: AnalysisResult = {
     domain,

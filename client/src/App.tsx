@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftRight, CheckCircle2, Circle, Loader2, RotateCcw, Search, XCircle, Zap } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { analyzeStream, type RateLimitInfo, type StreamEvent } from "./api";
@@ -282,7 +281,7 @@ function useStreamingAnalysis() {
                 checks,
                 completed,
                 total,
-                label: allDone ? "Calculating score…" : `Analyzing… ${completed} of ${total} checks complete`,
+                label: allDone ? "Finishing up…" : `Analyzing… ${completed} of ${total} checks complete`,
               };
             });
             break;
@@ -691,7 +690,6 @@ export function App() {
   const [compareMode, setCompareMode] = useState(() => {
     return window.location.pathname.startsWith("/compare");
   });
-  const queryClient = useQueryClient();
 
   // Track tab switches — fire-and-forget, never blocks UI
   const handleTabChange = useCallback(
@@ -729,7 +727,7 @@ export function App() {
       }
       document.title = `${clean} — Yoke`;
     }
-  }, [analyze.data, queryClient]);
+  }, [analyze.data]);
 
   const doAnalyze = useCallback(() => {
     let d = domain.trim().toLowerCase();
