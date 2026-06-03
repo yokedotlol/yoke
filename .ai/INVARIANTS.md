@@ -46,6 +46,14 @@
 - [ ] **Context-aware denominator.** Inapplicable signals (e.g., `cookie_security` on cookieless sites) are excluded from normalization.
   - _Verify:_ Check `requiresContext` and `DetectedContext` in signal-registry.ts / contextual-scoring.ts.
 
+## Credibility
+
+- [ ] **No visible double-counting.** A single missing feature (e.g., HSTS) must never appear as multiple separate line items in the Score Breakdown. When a parent signal fires, all dependent child signals must be suppressed from the absent pool via `suppressesAbsent`.
+  - _Verify:_ For every `_missing` signal that has corresponding `canBeGood` siblings, confirm `suppressesAbsent` is set. `grep -A5 'suppressesAbsent' worker/src/config/signal-registry.ts` should cover HSTS, CSP, canonical_url, and all other families.
+
+- [ ] **Customer-facing output never looks broken.** If a reasonable non-technical user would look at the scores, waterfall, or AI analysis and think "this tool is wrong," that's a bug — even if the math is correct.
+  - _Verify:_ Manual spot-check. Pick 5 domains across tiers. For each, read the waterfall as a first-time user. Flag anything that looks like double-counting, contradictory labels, or unexplained gaps.
+
 ## Naming & Terminology
 
 - [ ] **"tier" not "grade"** in all API responses, UI, and documentation.

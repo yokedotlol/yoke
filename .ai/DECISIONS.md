@@ -199,3 +199,12 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **Simulated impact (IDF + threshold 78):** Strong drops 71% → ~55%, Moderate rises 21% → ~39%. Mean composite shifts -1.9 points. No signal is penalized less than before — only more for highly-prevalent missing signals.
 **Rejected:** Threshold 80 (too aggressive — 46% Strong / 47% Moderate is a near-even split), axis reweighting (current axis correlations are healthy), removing commodity signals (their value is in the absent penalty).
 **Directive:** The `goodPrevalence` values are static snapshots from 2026-06-02 corpus analysis. They should be refreshed periodically (quarterly or when the signal mix changes significantly). The ABSENT_DEDUCTION_FACTOR constant (0.30) is the baseline multiplier; the IDF factor (1 + goodPrevalence) scales it per-signal. Changes to either affect ALL scores.
+
+---
+
+### 2026-06-02 — Credibility Principle codified
+
+**What changed:** Added "Credibility Principle" to CONSTITUTION.md and two credibility invariants to INVARIANTS.md.
+**Why:** The HSTS/CSP triple-dip bug (missing `suppressesAbsent` wiring) produced technically-correct math that looked completely wrong to users — three line items for one missing header. The underlying math was valid, but the presentation destroyed trust. This principle codifies that user perception of correctness is as important as actual correctness. If it looks broken, it is broken.
+**Directive:** Every new signal, UI change, or scoring adjustment must be stress-tested against: "Would a skeptical first-time user trust this output?"
+
