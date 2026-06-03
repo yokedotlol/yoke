@@ -1,7 +1,10 @@
-// ─── Unified Score Waterfall Component ──────────────────────────────
-// Merges ScoreWaterfall + Level-Up Plan into one objective report.
-// Shows axis-grouped deductions, effort estimates, fix links, tooltips,
-// and a "Report an Issue" footer.
+// ─── Unified Score Breakdown Component (v2) ────────────────────────
+// Shows axis-grouped deductions with:
+// - Live composite formula display
+// - Tier progress bar
+// - "What if?" simulate mode with ghost bars
+// - Weighted composite impact (not raw axis points)
+// - Expandable signals with fix descriptions + reference links
 
 import { ChevronDown, ChevronUp, ExternalLink, HelpCircle, MessageSquare } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -27,6 +30,15 @@ const AXIS_LABELS: Record<string, string> = {
   email: "Email",
 };
 
+const AXIS_ABBR: Record<string, string> = {
+  security: "SEC",
+  speed: "SPD",
+  foundations: "FND",
+  reputation: "REP",
+  discoverability: "DIS",
+  email: "EML",
+};
+
 const AXIS_COLORS: Record<string, string> = {
   security: "#f85149",
   speed: "#58a6ff",
@@ -43,6 +55,14 @@ const EFFORT_LABELS: Record<string, { icon: string; label: string }> = {
 };
 
 const GITHUB_ISSUES_URL = "https://github.com/yokedotlol/yoke/issues/new";
+
+const TIER_DEFS = [
+  { tier: "Critical", min: 0, max: 40, color: "var(--tier-critical)" },
+  { tier: "Weak", min: 40, max: 60, color: "var(--tier-weak)" },
+  { tier: "Moderate", min: 60, max: 78, color: "var(--tier-moderate)" },
+  { tier: "Strong", min: 78, max: 90, color: "var(--tier-strong)" },
+  { tier: "Excellent", min: 90, max: 100, color: "var(--tier-excellent)" },
+];
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -70,29 +90,36 @@ interface WaterfallAxis {
   signals: WaterfallSignal[];
 }
 
+// ─── Helpers ────────────────────────────────────────────────────────
+
+function clientComposite(axisScores: Record<string, number>): number {
+  let sum = 0;
+  for (const axis of Object.keys(AXIS_WEIGHTS) as Axis[]) {
+    sum += (AXIS_WEIGHTS[axis] ?? 0) * (axisScores[axis] ?? 0);
+  }
+  const score = Math.max(0, Math.min(100, Math.round(sum)));
+  const hasLowOutlier = (Object.keys(AXIS_WEIGHTS) as Axis[]).some((a) => (axisScores[a] ?? 0) < 40);
+  return hasLowOutlier && score > 74 ? 74 : score;
+}
+
+function getTierName(score: number): string {
+  if (score >= 90) return "Excellent";
+  if (score >= 78) return "Strong";
+  if (score >= 60) return "Moderate";
+  if (score >= 40) return "Weak";
+  return "Critical";
+}
+
 // ─── Tooltip text generation ────────────────────────────────────────
 
 function getTooltipText(signal: string, tier: string): string | undefined {
   const reg = SIGNAL_REGISTRY[signal];
   if (!reg) return undefined;
-
-  // For absent signals, build a descriptive tooltip
   if (tier === "opportunity" || tier === "not_detected") {
-    // Use promptGuidance as the primary tooltip source — it describes what the signal checks
-    if (reg.promptGuidance) {
-      return reg.promptGuidance;
-    }
-    // Fallback to fixDescription
-    if (reg.fixDescription) {
-      return reg.fixDescription;
-    }
+    if (reg.promptGuidance) return reg.promptGuidance;
+    if (reg.fixDescription) return reg.fixDescription;
   }
-
-  // For fired issues, also show promptGuidance as context
-  if (tier === "issue" && reg.promptGuidance) {
-    return reg.promptGuidance;
-  }
-
+  if (tier === "issue" && reg.promptGuidance) return reg.promptGuidance;
   return undefined;
 }
 
@@ -396,21 +423,62 @@ function EffortBadge({ effort }: { effort?: string }) {
   );
 }
 
+// ─── Simulate checkbox ──────────────────────────────────────────────
+
+function SimCheckbox({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange();
+      }}
+      aria-label={checked ? "Uncheck fix simulation" : "Simulate fixing this signal"}
+      style={{
+        width: "14px",
+        height: "14px",
+        borderRadius: "3px",
+        border: `1.5px solid ${checked ? "var(--success)" : "var(--border)"}`,
+        background: checked ? "var(--success)" : "transparent",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        padding: 0,
+        transition: "all 0.15s",
+      }}
+    >
+      {checked && <span style={{ fontSize: "9px", color: "var(--bg)", fontWeight: 700, lineHeight: 1 }}>✓</span>}
+    </button>
+  );
+}
+
+// ─── Signal row ─────────────────────────────────────────────────────
+
 function SignalRow({
   sig,
   maxDeduction,
   expanded,
   onToggle,
+  simulateMode,
+  isChecked,
+  onSimToggle,
 }: {
   sig: WaterfallSignal;
   maxDeduction: number;
   expanded: boolean;
   onToggle: () => void;
+  simulateMode: boolean;
+  isChecked: boolean;
+  onSimToggle: () => void;
 }) {
   const hasDetail = sig.fixDescription || sig.fixLink || sig.tooltipText;
+  const canSimulate = simulateMode && sig.actionable && sig.deduction > 0;
 
   return (
     <div>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: role conditionally set via hasDetail flag */}
       <div
         role={hasDetail ? "button" : undefined}
         tabIndex={hasDetail ? 0 : undefined}
@@ -437,6 +505,8 @@ function SignalRow({
           transition: "background 0.1s",
         }}
       >
+        {canSimulate && <SimCheckbox checked={isChecked} onChange={onSimToggle} />}
+
         <SeverityMarker severity={sig.severity} tier={sig.tier} />
         <span
           style={{
@@ -446,6 +516,8 @@ function SignalRow({
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            textDecoration: isChecked ? "line-through" : "none",
+            opacity: isChecked ? 0.5 : 1,
           }}
           title={sig.label}
         >
@@ -533,6 +605,311 @@ function SignalRow({
   );
 }
 
+// ─── Composite Formula Display ──────────────────────────────────────
+
+function CompositeFormula({
+  axisScores,
+  simulatedScores,
+  simulateActive,
+}: {
+  axisScores: Record<string, number>;
+  simulatedScores: Record<string, number> | null;
+  simulateActive: boolean;
+}) {
+  const orderedAxes = Object.keys(AXIS_WEIGHTS) as Axis[];
+  const currentComposite = clientComposite(axisScores);
+  const simComposite = simulatedScores ? clientComposite(simulatedScores) : currentComposite;
+  const compositeChanged = simulateActive && simulatedScores && simComposite !== currentComposite;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "3px",
+        flexWrap: "wrap",
+        fontFamily: "var(--font-mono)",
+        fontSize: "11px",
+        lineHeight: 2,
+        padding: "6px 0",
+        justifyContent: "center",
+      }}
+    >
+      {orderedAxes.map((axis, i) => {
+        const currentScore = axisScores[axis] ?? 0;
+        const simScore = simulatedScores?.[axis] ?? currentScore;
+        const displayScore = simulateActive && simulatedScores ? simScore : currentScore;
+        const changed = simulateActive && simulatedScores && simScore !== currentScore;
+        const axisColor = AXIS_COLORS[axis] || "var(--muted)";
+        const weightPct = Math.round((AXIS_WEIGHTS[axis] ?? 0) * 100);
+
+        return (
+          <span key={axis} style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
+            {i > 0 && <span style={{ color: "var(--dim)", margin: "0 1px", fontSize: "10px" }}>+</span>}
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "2px",
+                padding: "1px 5px",
+                borderRadius: "4px",
+                border: `1px solid ${changed ? "rgba(126,231,135,0.3)" : `${axisColor}30`}`,
+                background: changed ? "rgba(126,231,135,0.08)" : "transparent",
+                transition: "all 0.2s",
+              }}
+            >
+              <span style={{ fontWeight: 700, color: axisColor, fontSize: "11px" }}>{displayScore}</span>
+              <span style={{ color: "var(--dim)", fontSize: "10px" }}>×.{weightPct.toString().padStart(2, "0")}</span>
+            </span>
+          </span>
+        );
+      })}
+      <span style={{ color: "var(--dim)", margin: "0 2px", fontSize: "11px" }}>=</span>
+      <span
+        style={{
+          fontWeight: 800,
+          fontSize: "14px",
+          color: compositeChanged ? "var(--success)" : "var(--text)",
+          transition: "color 0.2s",
+        }}
+      >
+        {compositeChanged ? simComposite : currentComposite}
+      </span>
+      {compositeChanged && (
+        <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--success)", marginLeft: "4px" }}>
+          (+{simComposite - currentComposite})
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Axis abbreviation labels ───────────────────────────────────────
+
+function FormulaAxisLabels() {
+  const orderedAxes = Object.keys(AXIS_WEIGHTS) as Axis[];
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "3px",
+        flexWrap: "wrap",
+        fontSize: "8px",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.06em",
+        padding: "0 0 4px",
+        justifyContent: "center",
+        marginTop: "-6px",
+      }}
+    >
+      {orderedAxes.map((axis, i) => {
+        const axisColor = AXIS_COLORS[axis] || "var(--dim)";
+        return (
+          <span key={axis} style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
+            {i > 0 && <span style={{ visibility: "hidden", margin: "0 1px" }}>+</span>}
+            <span
+              style={{
+                padding: "1px 5px",
+                border: "1px solid transparent",
+                color: axisColor,
+                textAlign: "center",
+                minWidth: "44px",
+              }}
+            >
+              {AXIS_ABBR[axis] || axis.substring(0, 3).toUpperCase()}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Tier Progress Bar ──────────────────────────────────────────────
+
+function TierProgressBar({
+  currentScore,
+  simulatedScore,
+  showSimulated,
+}: {
+  currentScore: number;
+  simulatedScore: number;
+  showSimulated: boolean;
+}) {
+  const compositeChanged = showSimulated && simulatedScore !== currentScore;
+
+  return (
+    <div style={{ position: "relative", margin: "4px 8px 10px" }}>
+      <div
+        style={{
+          display: "flex",
+          height: "5px",
+          borderRadius: "3px",
+          overflow: "hidden",
+          background: "var(--border)",
+        }}
+      >
+        {TIER_DEFS.map((t) => (
+          <div
+            key={t.tier}
+            style={{
+              width: `${t.max - t.min}%`,
+              height: "100%",
+              background: t.color,
+              opacity: 0.25,
+            }}
+          />
+        ))}
+      </div>
+      {/* Current marker */}
+      <div
+        style={{
+          position: "absolute",
+          top: "-4px",
+          left: `${currentScore}%`,
+          width: "2px",
+          height: "13px",
+          borderRadius: "1px",
+          background: "var(--text)",
+          transition: "left 0.3s ease",
+          zIndex: 2,
+        }}
+      />
+      {/* Simulated marker */}
+      {compositeChanged && (
+        <div
+          style={{
+            position: "absolute",
+            top: "-4px",
+            left: `${simulatedScore}%`,
+            width: "2px",
+            height: "13px",
+            borderRadius: "1px",
+            background: "var(--success)",
+            boxShadow: "0 0 6px var(--success)",
+            transition: "left 0.3s ease",
+            zIndex: 3,
+          }}
+        />
+      )}
+      {/* Tier labels */}
+      <div
+        style={{
+          display: "flex",
+          position: "relative",
+          height: "14px",
+          marginTop: "2px",
+          fontSize: "8px",
+          fontWeight: 600,
+          textTransform: "uppercase",
+          letterSpacing: "0.04em",
+          color: "var(--dim)",
+        }}
+      >
+        <span style={{ position: "absolute", left: 0 }}>Critical</span>
+        <span style={{ position: "absolute", left: "40%", transform: "translateX(-50%)" }}>Weak</span>
+        <span style={{ position: "absolute", left: "60%", transform: "translateX(-50%)" }}>Moderate</span>
+        <span style={{ position: "absolute", left: "78%", transform: "translateX(-50%)" }}>Strong</span>
+        <span style={{ position: "absolute", right: 0 }}>Excellent</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Simulate Mode Toggle ───────────────────────────────────────────
+
+function SimulateToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "4px 8px",
+        borderRadius: "6px",
+        border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+        background: active ? "rgba(88,166,255,0.06)" : "transparent",
+        cursor: "pointer",
+        fontSize: "10px",
+        color: active ? "var(--accent)" : "var(--muted)",
+        fontFamily: "var(--font-ui)",
+        transition: "all 0.15s",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <div
+        style={{
+          width: "24px",
+          height: "12px",
+          borderRadius: "6px",
+          background: active ? "var(--accent)" : "var(--border)",
+          position: "relative",
+          transition: "background 0.2s",
+        }}
+      >
+        <div
+          style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            background: "var(--text)",
+            position: "absolute",
+            top: "2px",
+            left: active ? "14px" : "2px",
+            transition: "left 0.2s",
+          }}
+        />
+      </div>
+      <span style={{ fontWeight: 500 }}>What if?</span>
+    </button>
+  );
+}
+
+// ─── Simulate Summary Banner ────────────────────────────────────────
+
+function SimulateSummary({
+  count,
+  currentComposite,
+  simComposite,
+  currentTier,
+  simTier,
+}: {
+  count: number;
+  currentComposite: number;
+  simComposite: number;
+  currentTier: string;
+  simTier: string;
+}) {
+  if (count === 0) return null;
+  return (
+    <div
+      style={{
+        marginTop: "10px",
+        padding: "10px 12px",
+        background: "rgba(126,231,135,0.06)",
+        border: "1px solid rgba(126,231,135,0.2)",
+        borderRadius: "8px",
+        fontSize: "11px",
+        color: "var(--success)",
+        fontWeight: 600,
+      }}
+    >
+      Simulating {count} fix{count !== 1 ? "es" : ""}: {currentComposite} → {simComposite} (+
+      {simComposite - currentComposite} pts)
+      {simTier !== currentTier && (
+        <span>
+          {" "}
+          · Would reach <strong>{simTier}</strong>
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ─── Report Issue Widget ────────────────────────────────────────────
 
 const ISSUE_CATEGORIES = [
@@ -597,6 +974,7 @@ function ReportIssueWidget({ domain }: { domain: string }) {
           padding: "4px 0",
           color: "var(--dim)",
           fontSize: "10px",
+          fontFamily: "var(--font-ui)",
           transition: "color 0.15s",
         }}
         onMouseEnter={(e) => (e.currentTarget.style.color = "var(--muted)")}
@@ -654,6 +1032,7 @@ function ReportIssueWidget({ domain }: { domain: string }) {
                   background: selected === cat.id ? "rgba(88,166,255,0.06)" : "transparent",
                   cursor: "pointer",
                   textAlign: "left",
+                  fontFamily: "var(--font-ui)",
                   transition: "all 0.15s",
                 }}
               >
@@ -702,6 +1081,7 @@ function ReportIssueWidget({ domain }: { domain: string }) {
               cursor: selected ? "pointer" : "default",
               fontSize: "11px",
               fontWeight: 600,
+              fontFamily: "var(--font-ui)",
               transition: "all 0.15s",
               opacity: selected ? 1 : 0.5,
             }}
@@ -724,13 +1104,46 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
     return new Set<string>();
   });
   const [expandedSignals, setExpandedSignals] = useState<Set<string>>(new Set());
+  const [simulateMode, setSimulateMode] = useState(false);
+  const [checkedSignals, setCheckedSignals] = useState<Set<string>>(new Set());
 
   const score = data.domain_score;
   if (!score) return null;
 
-  // Compute current / projected info
-  const currentScore = score.composite;
+  const currentComposite = score.composite;
   const currentTier = score.tier;
+
+  // Build axis scores map for formula
+  const axisScores = useMemo(() => {
+    const scores: Record<string, number> = {};
+    for (const axis of Object.keys(AXIS_WEIGHTS) as Axis[]) {
+      const ad = score.axes[axis];
+      scores[axis] = ad?.score ?? 0;
+    }
+    return scores;
+  }, [score.axes]);
+
+  // Simulated scores — add back deductions for checked signals
+  const simulatedAxisScores = useMemo(() => {
+    if (!simulateMode || checkedSignals.size === 0) return null;
+    const simScores: Record<string, number> = { ...axisScores };
+    for (const wa of waterfallAxes) {
+      let recovered = 0;
+      for (const sig of wa.signals) {
+        if (checkedSignals.has(`${wa.axis}-${sig.signal}`) && sig.deduction > 0) {
+          recovered += sig.deduction;
+        }
+      }
+      if (recovered > 0) {
+        simScores[wa.axis] = Math.min(100, (simScores[wa.axis] ?? 0) + recovered);
+      }
+    }
+    return simScores;
+  }, [simulateMode, checkedSignals, waterfallAxes, axisScores]);
+
+  const simComposite = simulatedAxisScores ? clientComposite(simulatedAxisScores) : currentComposite;
+  const simTier = getTierName(simComposite);
+  const simulateActive = simulateMode && checkedSignals.size > 0;
 
   const toggleAxis = (axis: string) => {
     setExpandedAxes((prev) => {
@@ -747,6 +1160,22 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
       if (next.has(signalKey)) next.delete(signalKey);
       else next.add(signalKey);
       return next;
+    });
+  };
+
+  const toggleSimSignal = (signalKey: string) => {
+    setCheckedSignals((prev) => {
+      const next = new Set(prev);
+      if (next.has(signalKey)) next.delete(signalKey);
+      else next.add(signalKey);
+      return next;
+    });
+  };
+
+  const toggleSimMode = () => {
+    setSimulateMode((prev) => {
+      if (prev) setCheckedSignals(new Set()); // clear selections when turning off
+      return !prev;
     });
   };
 
@@ -788,16 +1217,6 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
 
   if (waterfallAxes.length === 0) return null;
 
-  // Total actionable points
-  const totalActionable = waterfallAxes.reduce(
-    (sum, wa) =>
-      sum +
-      wa.signals
-        .filter((s) => s.actionable && (s.tier === "issue" || s.tier === "opportunity"))
-        .reduce((s2, sig) => s2 + sig.deduction, 0),
-    0,
-  );
-
   return (
     <div
       style={{
@@ -814,6 +1233,7 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
           alignItems: "center",
           gap: "8px",
           marginBottom: "4px",
+          flexWrap: "wrap",
         }}
       >
         <span
@@ -825,27 +1245,37 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
         >
           Score Breakdown
         </span>
-        <span style={{ fontSize: "10px", color: "var(--dim)", marginLeft: "auto" }}>
-          {currentScore}/100 · {currentTier}
-          {totalActionable > 0 && (
-            <>
-              {" "}
-              · <span style={{ color: "var(--success)" }}>+{totalActionable.toFixed(0)} pts recoverable</span>
-            </>
-          )}
-        </span>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "10px", color: "var(--dim)" }}>
+            {currentComposite}/100 · {currentTier}
+            {simulateActive && simComposite !== currentComposite && (
+              <span style={{ color: "var(--success)", fontWeight: 600 }}>
+                {" "}
+                → {simComposite} · {simTier}
+              </span>
+            )}
+          </span>
+          <SimulateToggle active={simulateMode} onToggle={toggleSimMode} />
+        </div>
       </div>
 
       <div
         style={{
           fontSize: "10px",
           color: "var(--dim)",
-          marginBottom: "12px",
+          marginBottom: "4px",
           lineHeight: 1.4,
         }}
       >
-        Deductions from 100 for each axis. Expand an axis to see individual signals.
+        Deductions from 100 for each axis, weighted into the composite score.
       </div>
+
+      {/* Composite formula */}
+      <CompositeFormula axisScores={axisScores} simulatedScores={simulatedAxisScores} simulateActive={simulateActive} />
+      <FormulaAxisLabels />
+
+      {/* Tier progress bar */}
+      <TierProgressBar currentScore={currentComposite} simulatedScore={simComposite} showSimulated={simulateActive} />
 
       {/* Axis sections */}
       <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
@@ -855,6 +1285,10 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
           const oppCount = wa.signals.filter((s) => s.tier === "opportunity").length;
           const ndCount = wa.signals.filter((s) => s.tier === "not_detected").length;
           const maxDeduction = Math.max(...wa.signals.map((s) => s.deduction), 1);
+
+          // Compute simulated axis score
+          const simAxisScore = simulatedAxisScores?.[wa.axis] ?? wa.score;
+          const axisScoreChanged = simulateActive && simAxisScore !== wa.score;
 
           return (
             <div key={wa.axis}>
@@ -872,6 +1306,7 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
                   background: isExpanded ? "rgba(255,255,255,0.03)" : "transparent",
                   border: "none",
                   cursor: "pointer",
+                  fontFamily: "var(--font-ui)",
                   transition: "background 0.15s",
                 }}
                 onMouseEnter={(e) => {
@@ -906,20 +1341,36 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
                     fontSize: "11px",
                     fontWeight: 600,
                     color: wa.score >= 90 ? "var(--success)" : wa.score >= 75 ? "var(--text)" : "var(--warning)",
-                    minWidth: "32px",
+                    minWidth: "52px",
+                    fontFamily: "var(--font-mono)",
+                    fontVariantNumeric: "tabular-nums",
                   }}
                 >
                   {wa.score}
+                  {axisScoreChanged && (
+                    <span
+                      style={{
+                        color: "var(--success)",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        marginLeft: "4px",
+                      }}
+                    >
+                      → {Math.round(simAxisScore)}
+                    </span>
+                  )}
                 </span>
 
+                {/* Progress bar with ghost */}
                 <div
                   style={{
                     flex: 1,
                     height: "4px",
                     borderRadius: "2px",
                     background: "var(--border)",
-                    overflow: "hidden",
+                    overflow: "visible",
                     maxWidth: "120px",
+                    position: "relative",
                   }}
                 >
                   <div
@@ -929,19 +1380,39 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
                       background: AXIS_COLORS[wa.axis] || "var(--muted)",
                       width: `${wa.score}%`,
                       opacity: 0.5,
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
                     }}
                   />
+                  {axisScoreChanged && (
+                    <div
+                      style={{
+                        height: "100%",
+                        borderRadius: "2px",
+                        background: AXIS_COLORS[wa.axis] || "var(--muted)",
+                        opacity: 0.2,
+                        position: "absolute",
+                        top: 0,
+                        left: `${wa.score}%`,
+                        width: `${Math.round(simAxisScore) - wa.score}%`,
+                        borderRight: `2px dashed ${AXIS_COLORS[wa.axis] || "var(--muted)"}`,
+                        transition: "width 0.3s ease",
+                      }}
+                    />
+                  )}
                 </div>
 
                 <span
                   style={{
                     fontSize: "10px",
                     color: "var(--dim)",
-                    minWidth: "45px",
+                    minWidth: "60px",
                     textAlign: "right",
+                    fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  −{wa.totalDeduction} pts
+                  −{wa.compositeImpact.toFixed(1)} composite
                 </span>
                 <span
                   style={{
@@ -996,6 +1467,9 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
                               maxDeduction={maxDeduction}
                               expanded={expandedSignals.has(key)}
                               onToggle={() => toggleSignal(key)}
+                              simulateMode={simulateMode}
+                              isChecked={checkedSignals.has(key)}
+                              onSimToggle={() => toggleSimSignal(key)}
                             />
                           );
                         })}
@@ -1028,6 +1502,9 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
                               maxDeduction={maxDeduction}
                               expanded={expandedSignals.has(key)}
                               onToggle={() => toggleSignal(key)}
+                              simulateMode={simulateMode}
+                              isChecked={checkedSignals.has(key)}
+                              onSimToggle={() => toggleSimSignal(key)}
                             />
                           );
                         })}
@@ -1060,6 +1537,9 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
                               maxDeduction={maxDeduction}
                               expanded={expandedSignals.has(key)}
                               onToggle={() => toggleSignal(key)}
+                              simulateMode={simulateMode}
+                              isChecked={checkedSignals.has(key)}
+                              onSimToggle={() => toggleSimSignal(key)}
                             />
                           );
                         })}
@@ -1084,6 +1564,17 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
         >
           {perfectAxes.map((a) => AXIS_LABELS[a] || a).join(", ")} — no deductions
         </div>
+      )}
+
+      {/* Simulate summary */}
+      {simulateActive && (
+        <SimulateSummary
+          count={checkedSignals.size}
+          currentComposite={currentComposite}
+          simComposite={simComposite}
+          currentTier={currentTier}
+          simTier={simTier}
+        />
       )}
 
       {/* Report an issue */}
