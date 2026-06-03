@@ -503,7 +503,7 @@ function streamOpenRouter(
           method: "POST",
           // CF Workers Unbound: 30s CPU limit but 6-min wall clock for I/O-bound waits.
           // LLM streaming is I/O, not CPU, so 55s is safe and matches the non-streaming retry path.
-          signal: AbortSignal.timeout(55000), // Stay within safe I/O wall-clock limit
+          signal: AbortSignal.timeout(90000), // CF Workers Unbound: 30s CPU limit but 6-min wall clock for I/O
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
