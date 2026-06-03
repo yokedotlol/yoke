@@ -345,7 +345,7 @@ function drawRadarChart(page: PDFPage, fonts: Fonts, axes: AnalysisData, cx: num
   }
 
   // Axis labels — OUTSIDE the grid with generous padding
-  const labelPadding = 26; // distance beyond the outermost ring
+  const labelPadding = 36; // distance beyond the outermost ring
   for (let i = 0; i < n; i++) {
     const angle = startAngle + i * angleStep;
     const label = AXIS_LABELS[axisKeys[i]] || axisKeys[i];
@@ -752,7 +752,7 @@ function buildPage1(doc: PDFDocument, fonts: Fonts, data: AnalysisData): PDFPage
 
   const radarCx = MARGIN + leftW / 2;
   const radarCy = y - 95;
-  const radarR = 68;
+  const radarR = 58;
   drawRadarChart(page, fonts, ds.axes, radarCx, radarCy, radarR);
 
   // Axis scores (right column)
@@ -1013,7 +1013,7 @@ function buildPage3_SpeedFoundations(doc: PDFDocument, fonts: Fonts, data: Analy
     [1.2, 1, 1, 1, 1.2],
     { fontSize: 9 },
   );
-  y -= cwvTableH + 4;
+  y -= cwvTableH + 14;
 
   // Acronym explainers below the table — two-column layout
   if (y > CONTENT_BOTTOM + 40) {
@@ -1336,7 +1336,7 @@ function buildPage5_ScoreBreakdown(doc: PDFDocument, fonts: Fonts, data: Analysi
 
   // Draw formula in mono — may be long, so truncate if needed
   drawText(page, formulaStr, MARGIN, y, fonts.mono, 7.5, COLORS.text, { maxWidth: CONTENT_W });
-  y -= 18;
+  y -= 30;
 
   // ── Tier Progress Bar ──
   const barW = CONTENT_W;
@@ -1366,11 +1366,11 @@ function buildPage5_ScoreBreakdown(doc: PDFDocument, fonts: Fonts, data: Analysi
     y: triTop,
     color: color,
   });
-  // Score label above indicator
+  // Score label above indicator — clear gap above triangle
   const scoreLabel = `${composite} · ${tier}`;
   const slW = textWidth(fonts.bold, scoreLabel, 8);
   const labelX = Math.max(MARGIN, Math.min(indicatorX - slW / 2, PAGE_W - MARGIN - slW));
-  drawText(page, scoreLabel, labelX, triTop + 6, fonts.bold, 8, color);
+  drawText(page, scoreLabel, labelX, triTop + 10, fonts.bold, 8, color);
 
   y = barY - 12;
 
