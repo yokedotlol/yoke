@@ -252,6 +252,14 @@ export const fingerprints: Fingerprint[] = [
       headers: { server: /netlify/i, "x-nf-request-id": /./ },
     },
   },
+  {
+    name: "WordPress VIP",
+    category: "Hosting",
+    patterns: {
+      headers: { "x-vip-go": /./ },
+      htmlPatterns: [/wp-content\/client-mu-plugins/, /wpvip\.com/],
+    },
+  },
   // E-commerce
   {
     name: "WooCommerce",
