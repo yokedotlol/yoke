@@ -187,12 +187,25 @@ export function DataRow({
   }, []);
 
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: click-to-copy convenience, not primary interaction
-    // biome-ignore lint/a11y/noStaticElementInteractions: click-to-copy data row
+    // biome-ignore lint/a11y/noStaticElementInteractions: role is conditionally button when copiable
+    // biome-ignore lint/a11y/useAriaPropsSupportedByRole: aria-label is paired with role=button when copiable
     <div
       className={`data-row${isCopiable ? " data-row-copiable" : ""}`}
       onClick={isCopiable ? handleCopy : undefined}
-      title={isCopiable ? "Click to copy" : undefined}
+      onKeyDown={
+        isCopiable
+          ? (e: React.KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleCopy();
+              }
+            }
+          : undefined
+      }
+      role={isCopiable ? "button" : undefined}
+      tabIndex={isCopiable ? 0 : undefined}
+      title={isCopiable ? "Copy to clipboard" : undefined}
+      aria-label={isCopiable ? `Copy ${typeof label === "string" ? label : "value"}` : undefined}
     >
       <span className="data-label">{label}</span>
       <span className="data-value-wrap">

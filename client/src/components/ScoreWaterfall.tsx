@@ -496,9 +496,11 @@ function SignalRow({
   return (
     <div>
       {/* biome-ignore lint/a11y/noStaticElementInteractions: role conditionally set via hasDetail flag */}
+      {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: aria-expanded is paired with role=button when hasDetail */}
       <div
         role={hasDetail ? "button" : undefined}
         tabIndex={hasDetail ? 0 : undefined}
+        aria-expanded={hasDetail ? expanded : undefined}
         onClick={hasDetail ? onToggle : undefined}
         onKeyDown={
           hasDetail
@@ -1373,6 +1375,7 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
               <button
                 type="button"
                 onClick={() => toggleAxis(wa.axis)}
+                aria-expanded={isExpanded}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -1598,6 +1601,7 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
                           <button
                             type="button"
                             onClick={() => toggleNotAssessed(wa.axis)}
+                            aria-expanded={naExpanded}
                             style={{
                               display: "flex",
                               alignItems: "center",

@@ -608,7 +608,7 @@ function RateLimitError({ message, onRetry }: { message: string; onRetry: () => 
   const mins = parseInt(message.replace("rate_limit:", ""), 10) || 0;
 
   return (
-    <div className="panel p-5 mb-4 mt-3" style={{ borderColor: "var(--warning, #d29922)" }}>
+    <div className="panel p-5 mb-4 mt-3" role="alert" style={{ borderColor: "var(--warning, #d29922)" }}>
       <div className="flex items-center gap-2 mb-2">
         <Zap size={16} style={{ color: "var(--warning, #d29922)" }} />
         <span
@@ -780,7 +780,7 @@ export function App() {
   }, [analyze.mutate]);
 
   return (
-    <main className="min-h-screen pb-12" style={{ background: "var(--bg)" }}>
+    <main id="main-content" className="min-h-screen pb-12" style={{ background: "var(--bg)" }}>
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-6">
         {/* Header */}
         <header>
@@ -947,7 +947,11 @@ export function App() {
               (analyze.error.message.startsWith("rate_limit:") ? (
                 <RateLimitError message={analyze.error.message} onRetry={() => doAnalyze()} />
               ) : (
-                <div className="panel p-4 mb-4 flex items-center gap-3 mt-3" style={{ borderColor: "var(--danger)" }}>
+                <div
+                  className="panel p-4 mb-4 flex items-center gap-3 mt-3"
+                  role="alert"
+                  style={{ borderColor: "var(--danger)" }}
+                >
                   <span style={{ color: "var(--danger)", fontFamily: "var(--font-ui)", fontSize: "13px" }}>
                     Analysis failed: {String(analyze.error)}
                   </span>

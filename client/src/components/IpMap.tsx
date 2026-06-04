@@ -145,7 +145,13 @@ export function IpMap({ data }: { data: AnalysisResult }) {
   return (
     <Panel title="IP Geolocation Map" icon={<MapPin size={14} />}>
       <div className="p-3">
-        <div ref={mapRef} style={{ height: "320px", borderRadius: "var(--radius-sm)", overflow: "hidden" }} />
+        <div
+          ref={mapRef}
+          role="img"
+          aria-label={`Server location map: ${lat.toFixed(4)}, ${lon.toFixed(4)}${data.ip_info?.city ? `, ${data.ip_info.city}` : ""}${data.ip_info?.country ? `, ${data.ip_info.country}` : ""}`}
+          tabIndex={-1}
+          style={{ height: "320px", borderRadius: "var(--radius-sm)", overflow: "hidden" }}
+        />
         <div className="flex items-center gap-3 mt-2 px-1">
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--dim)" }}>
             {lat.toFixed(4)}, {lon.toFixed(4)}
