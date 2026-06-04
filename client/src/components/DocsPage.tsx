@@ -358,7 +358,7 @@ const FAQ_ITEMS: { q: string; a: string; persona: string }[] = [
   // Freelancer
   {
     persona: "freelancer",
-    q: "How do I improve my client's score?",
+    q: "How do I improve my score?",
     a: "Open the Score Breakdown tab to see every deduction, grouped by axis. Items under \"Issues\" are things found that hurt the score. Items under \"Improvements\" are things we looked for but didn't find. Each item shows an effort estimate and a fix description. Focus on the highest-deduction items first for the biggest impact.",
   },
   {
@@ -368,7 +368,7 @@ const FAQ_ITEMS: { q: string; a: string; persona: string }[] = [
   },
   {
     persona: "freelancer",
-    q: "Can I share a report with my client?",
+    q: "Can I share a report?",
     a: "Yes — use the share buttons above your scan results. You can copy a permalink, download a PDF report, or share directly to X, LinkedIn, or Reddit. The permalink creates a static snapshot with your domain's score and axis breakdown that anyone can view without running a new scan.",
   },
   // Marketing

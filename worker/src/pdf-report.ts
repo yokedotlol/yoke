@@ -1188,17 +1188,17 @@ function buildPage4_ReputationDiscoverabilityEmail(doc: PDFDocument, fonts: Font
 
     const breaches = data.breaches || {};
     if (!breaches.found || !breaches.breaches?.length) {
-      drawRect(page, MARGIN, y - 30, CONTENT_W, 30, { fill: COLORS.surface, border: COLORS.border, borderWidth: 0.5 });
+      drawRect(page, MARGIN, y - 26, CONTENT_W, 26, { fill: COLORS.surface, border: COLORS.border, borderWidth: 0.5 });
       drawText(
         page,
         "No breaches found in Have I Been Pwned database.",
         MARGIN + 10,
-        y - 20,
+        y - 17,
         fonts.regular,
         9,
         COLORS.good,
       );
-      y -= 44;
+      y -= 34;
     } else {
       for (const b of breaches.breaches.slice(0, 3)) {
         if (y < CONTENT_BOTTOM + 40) break;
