@@ -143,7 +143,9 @@ describe("Hosting/CDN Detection", () => {
   });
 
   it("should detect WordPress VIP via HTML pattern", () => {
-    const result = detectHosting('<link href="https://wpvip.com/cdn/file.css">', {});
+    // HTML-based VIP detection is handled by detectManagedHosting() in wordpress.ts
+    // detectHosting() only checks headers/IP/rDNS, so test with wpvip.com domain in x-powered-by
+    const result = detectHosting(null, { "x-powered-by": "WordPress VIP <https://wpvip.com>" });
     expect(result.provider).toBe("WordPress VIP");
   });
 

@@ -125,6 +125,11 @@ export const HOSTING_PATTERNS: Array<{
   { name: "Render", type: "provider", patterns: { rdns: [/onrender\.com$/] } },
   { name: "GitHub Pages", type: "provider", patterns: { headers: { server: /GitHub\.com/i }, rdns: [/github\.io$/] } },
   { name: "Linode/Akamai", type: "provider", patterns: { org: [/linode|akamai/i], rdns: [/linode/i] } },
+  {
+    name: "WordPress VIP",
+    type: "provider",
+    patterns: { headers: { "x-vip-go": /./, "x-powered-by": /wordpress vip/i } },
+  },
 ];
 
 export function detectHosting(ipInfo: IpInfo | null, headers: Record<string, string> | null): HostingResult {
