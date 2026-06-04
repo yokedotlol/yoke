@@ -1,0 +1,16 @@
+# ── Stage 1: Build the Go probe ───────────────────────────────────
+FROM golang:1.22-alpine AS builder
+WORKDIR /build
+COPY fly-proxy/go.mod fly-proxy/go.sum ./
+RUN go mod download
+COPY fly-proxy/ ./
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o yoke-probe .
+
+# ── Stage 2: Runtime ──────────────────────────────────────────────
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates
+COPY --from=builder /build/yoke-probe /usr/local/bin/yoke-probe
+
+EXPOSE 8788
+
+CMD ["yoke-probe"]

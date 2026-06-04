@@ -1,0 +1,15 @@
+{$YOKE_DOMAIN} {
+    # Static assets from the client build
+    @static {
+        path /assets/* /fonts/* /manifest.json /apple-touch-icon.png /og-banner.png /favicon.ico
+    }
+    handle @static {
+        root * /srv/client
+        file_server
+    }
+
+    # Everything else → workerd (API + SPA fallback)
+    handle {
+        reverse_proxy workerd:8787
+    }
+}

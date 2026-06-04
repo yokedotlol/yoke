@@ -1,0 +1,59 @@
+services:
+  # ── Caddy: TLS termination + static assets + reverse proxy ──────
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - client_dist:/srv/client:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - YOKE_DOMAIN=${YOKE_DOMAIN}
+    depends_on:
+      workerd:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── workerd: Yoke analysis engine (Cloudflare Workers runtime) ──
+  workerd:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.workerd
+    volumes:
+      - client_dist:/app/client-dist   # Shared with Caddy for static files
+    environment:
+      - YOKE_DOMAIN=${YOKE_DOMAIN}
+      - SHARE_SECRET=${SHARE_SECRET}
+      - ADMIN_KEY=${ADMIN_KEY}
+      - PROBE_SECRET=${PROBE_SECRET}
+      - PAGESPEED_API_KEY=${PAGESPEED_API_KEY:-}
+    extra_hosts:
+      # Prevent call-home to hosted infrastructure
+      - "yoke.lol:127.0.0.1"
+      - "www.yoke.lol:127.0.0.1"
+      - "yoke-probe.fly.dev:127.0.0.1"
+    depends_on:
+      probe:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── Probe: SSL/TLS inspection + connection timing + PageSpeed ───
+  probe:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.probe
+    environment:
+      - PORT=8788
+      - FLY_AUTH_SECRET=${PROBE_SECRET}
+      - ALLOW_OPEN_PROXY=false
+      - GOOGLE_PAGESPEED_API_KEY=${PAGESPEED_API_KEY:-}
+    restart: unless-stopped
+
+volumes:
+  client_dist:    # Client build output shared between workerd and Caddy
+  caddy_data:     # TLS certificates
+  caddy_config:   # Caddy config state

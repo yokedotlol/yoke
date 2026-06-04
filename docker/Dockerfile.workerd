@@ -1,0 +1,44 @@
+# ── Stage 1: Build the Yoke client (SPA) ──────────────────────────
+FROM oven/bun:1-slim AS client-builder
+WORKDIR /build
+COPY client/package.json client/bun.lock* ./
+RUN bun install --frozen-lockfile 2>/dev/null || bun install
+COPY client/ ./
+RUN bun run build
+
+# ── Stage 2: Build the Yoke worker ────────────────────────────────
+FROM oven/bun:1-slim AS worker-builder
+WORKDIR /build
+COPY worker/package.json worker/bun.lock* ./
+RUN bun install --frozen-lockfile 2>/dev/null || bun install
+COPY worker/ ./
+RUN bun run build
+
+# ── Stage 3: Runtime ──────────────────────────────────────────────
+FROM node:22-slim
+
+# Install workerd via npm (bundles the correct platform binary)
+RUN npm install -g workerd@latest 2>/dev/null && npm cache clean --force
+
+# base64 is needed by the entrypoint to generate the assets shim
+RUN apt-get update && apt-get install -y coreutils && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Client dist (baked into image; entrypoint copies to shared volume for Caddy)
+COPY --from=client-builder /build/dist /app/client-dist-src
+
+# Worker artifacts
+COPY --from=worker-builder /build/dist/worker.js worker/dist/worker.js
+COPY --from=worker-builder /build/dist/resvg_bg.wasm worker/dist/resvg_bg.wasm
+
+# Fonts for PDF generation
+COPY worker/src/fonts/ worker/src/fonts/
+
+# Entrypoint: copies client dist, generates assets-shim + workerd.capnp from env
+COPY docker/entrypoint-workerd.sh entrypoint.sh
+RUN chmod +x entrypoint.sh
+
+EXPOSE 8787
+
+ENTRYPOINT ["/app/entrypoint.sh"]
