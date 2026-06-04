@@ -435,7 +435,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     absentLabel: "WAF not detected",
     fixDescription: "WAF protects against common web attacks",
     actionable: true,
-    effort: "~30 min — enable WAF in CDN or hosting dashboard",
+    effort: "~30 min — enable WAF in CDN or hosting dashboard (Wordfence for WordPress)",
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 2],
