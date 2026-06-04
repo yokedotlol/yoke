@@ -300,8 +300,9 @@ export default function AboutPage() {
           <strong style={{ color: "var(--text)" }}>IP ranges:</strong>
         </P>
         <P>
-          Our scanner runs on Cloudflare Workers. Outbound requests originate from{" "}
-          <A href="https://www.cloudflare.com/ips/">Cloudflare's published IP ranges</A>.
+          Yoke scans from two locations:{" "}
+          <A href="https://www.cloudflare.com/ips/">Cloudflare Workers</A> (DNS, API orchestration)
+          and a <A href="https://fly.io">Fly.io</A> proxy (HTTP probes, SSL checks, geolocation).
         </P>
         <P>PageSpeed Insights data comes from Google's infrastructure — we don't control those IPs.</P>
 
@@ -427,7 +428,7 @@ export default function AboutPage() {
         <Collapsible title={`"Yoke can't scan my site"`}>
           <P style={{ marginBottom: 8 }}>Common causes:</P>
           <ul style={{ margin: "0 0 12px", paddingLeft: 18 }}>
-            <li>Your WAF blocks requests from Cloudflare IP ranges</li>
+            <li>Your WAF blocks requests from Cloudflare or Fly.io IP ranges</li>
             <li>Your server requires cookies or JavaScript to respond</li>
             <li>DNS doesn't resolve or HTTPS certificate is invalid</li>
             <li>The domain is behind a login wall</li>
