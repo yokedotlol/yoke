@@ -53,6 +53,14 @@ npx wrangler kv namespace create REFERENCE_DATA
 # → Save the id
 ```
 
+## Cloudflare Bot Fight Mode
+
+**Disable Bot Fight Mode** (Security → Bots → Bot Fight Mode → Off).
+
+Yoke is an API-first product — the CLI, MCP server, Chrome extension, and CI smoke tests all make automated requests. Bot Fight Mode challenges anything that isn't a browser, returning 403 JS challenge pages that automated clients can't solve. This breaks the JSON API, CI pipelines (GitHub Actions runners use Azure IPs, which BFM flags), and any headless consumer of your instance.
+
+Your instance is already protected by per-IP rate limiting and SSRF guards — BFM adds nothing useful here.
+
 ## Step 3: Configure
 
 **OG Worker** (deploy first — main worker depends on it via service binding):
