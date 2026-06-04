@@ -192,7 +192,6 @@ Set via `npx wrangler secret put` or as `[vars]` in wrangler.toml (non-sensitive
 | `RATE_LIMIT_AVAILABILITY` | Optional | Max availability checks/hr per IP (default: 60, 0 = disable) |
 | `CACHE_TTL_HOURS` | Optional | Analysis cache TTL in hours (default: 24, 0 = disable) |
 | `SELF_DOMAINS` | Optional | Comma-separated list of your instance's own domains (default: yoke.lol) |
-| `SHOWCASE_FEED` | Optional | Homepage feed mode: `popular` (default), `recent`, or `off` |
 
 ## Admin Endpoints
 

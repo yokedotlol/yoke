@@ -46,7 +46,7 @@ jobs:
         run: |
           bun install --frozen-lockfile
           cd client && bun install --frozen-lockfile && cd ..
-          cd worker && bun install && cd ..
+          cd worker && bun install --frozen-lockfile && cd ..
 
       - name: Audit dependencies for known vulnerabilities
         working-directory: client
@@ -118,7 +118,7 @@ jobs:
         run: |
           bun install --frozen-lockfile
           cd client && bun install --frozen-lockfile && cd ..
-          cd worker && bun install && cd ..
+          cd worker && bun install --frozen-lockfile && cd ..
 
       - name: Build client
         working-directory: client

@@ -334,6 +334,21 @@ function checkAdminAuth(request: Request, adminKey: string | undefined): Respons
 
 export default {
   async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
+    // HEAD → GET conversion: process as GET, return headers only
+    if (request.method === "HEAD") {
+      const getReq = new Request(request.url, {
+        method: "GET",
+        headers: request.headers,
+        redirect: "follow",
+      });
+      const response = await this.fetch(getReq, env, ctx);
+      return new Response(null, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    }
+
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
@@ -420,7 +435,7 @@ export default {
     }
 
     // Status page — server-rendered, public
-    if ((method === "GET" || method === "HEAD") && path === "/status") {
+    if (method === "GET" && path === "/status") {
       return renderStatusPage(env.STATS_DB, baseUrl);
     }
 
