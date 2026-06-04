@@ -1243,49 +1243,6 @@ async function runAnalysisCore(
       } catch (e) {
         console.warn(`[yoke:cache] KV write failed for ${domain}:`, e instanceof Error ? e.message : e);
       }
-
-      if (siteIsUp) {
-        try {
-          const ds = result.domain_score as
-            | {
-                composite: number;
-                tier: string;
-                archetype?: { detected?: string };
-                axes?: Record<string, { score: number | null; not_measured?: boolean }>;
-              }
-            | null
-            | undefined;
-          // Build compact axis scores map for the feed heatmap
-          const axisKeys = ["security", "speed", "foundations", "reputation", "discoverability", "email"] as const;
-          const axes: Record<string, number | null> = {};
-          for (const key of axisKeys) {
-            const ax = ds?.axes?.[key];
-            axes[key] = ax && !ax.not_measured ? (ax.score ?? null) : null;
-          }
-          const entry = {
-            domain,
-            score: ds?.composite ?? null,
-            tier: ds?.tier ?? null,
-            archetype: ds?.archetype?.detected ?? null,
-            axes,
-          };
-          const raw = await env.REFERENCE_DATA.get("showcase:index", "text");
-          const existing: (typeof entry & { scan_count?: number })[] = raw ? JSON.parse(raw) : [];
-          // Update or insert — bump scan_count for popularity tracking
-          const prev = existing.find((e) => e.domain === domain);
-          const scan_count = (prev?.scan_count ?? 0) + 1;
-          const updated = [{ ...entry, scan_count }, ...existing.filter((e) => e.domain !== domain)]
-            .sort((a, b) => (b.scan_count ?? 0) - (a.scan_count ?? 0))
-            .slice(0, 30);
-          await env.REFERENCE_DATA.put("showcase:index", JSON.stringify(updated), {
-            expirationTtl: 86400, // 24h TTL
-          });
-        } catch {
-          /* showcase feed update is non-critical */
-        }
-      } else {
-        // Unreachable sites skip the showcase feed
-      }
     })(),
   );
 

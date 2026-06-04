@@ -25,8 +25,6 @@ export interface Env {
   CACHE_TTL_HOURS?: string;
   /** Comma-separated list of self-hosted domain names (for self-fetch bypass). Defaults to yoke.lol. */
   SELF_DOMAINS?: string;
-  /** Showcase feed mode: "popular" (default) shows most-analyzed domains, "recent" shows latest scans, "off" disables the feed. */
-  SHOWCASE_FEED?: string;
   /** Execution context for ctx.waitUntil — set per-request from the Worker fetch handler */
   _ctx?: ExecutionContext;
 }

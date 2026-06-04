@@ -51,7 +51,7 @@ import {
 import { logError } from "./logger";
 import { getApiDocsHtml } from "./pages";
 import { buildPdfUrl, handleReportDownload, matchReportPath } from "./pdf-route";
-import { getDistribution, injectPercentiles, lookupCompositePercentile } from "./percentiles";
+import { injectPercentiles } from "./percentiles";
 import { trackRequest } from "./request-tracking";
 import {
   buildShareUrl,
@@ -494,109 +494,6 @@ export default {
     const spaResponse = await handleSPARoute(request, env, path);
     if (spaResponse) return spaResponse;
 
-    // GET /_/showcase — popular domains feed for the SPA homepage
-    if (method === "GET" && path === "/_/showcase") {
-      const feedMode = (env.SHOWCASE_FEED || "popular").toLowerCase();
-      if (feedMode === "off") return json({ domains: [] });
-
-      try {
-        type ShowcaseEntry = {
-          domain: string;
-          score: number | null;
-          tier: string | null;
-          archetype: string | null;
-          axes?: Record<string, number | null>;
-          scan_count?: number;
-        };
-        let entries: ShowcaseEntry[] | null = null;
-
-        // Try KV cache first
-        if (env.REFERENCE_DATA) {
-          const raw = await env.REFERENCE_DATA.get("showcase:index", "text");
-          if (raw) entries = JSON.parse(raw);
-        }
-
-        // D1 fallback on KV miss
-        if (!entries && env.STATS_DB) {
-          const orderClause =
-            feedMode === "recent" ? "ORDER BY MAX(scored_at) DESC" : "ORDER BY COUNT(*) DESC, MAX(scored_at) DESC";
-
-          const rows = await env.STATS_DB.prepare(
-            `SELECT domain,
-                    MAX(composite_score) as composite_score,
-                    MAX(security_score) as security_score,
-                    MAX(performance_score) as performance_score,
-                    MAX(reliability_score) as reliability_score,
-                    MAX(trust_score) as trust_score,
-                    MAX(visibility_score) as visibility_score,
-                    MAX(email_score) as email_score,
-                    MAX(archetype) as archetype,
-                    COUNT(*) as scan_count
-             FROM domain_scores
-             GROUP BY domain
-             HAVING COUNT(*) >= ${feedMode === "recent" ? 1 : 2}
-             ${orderClause}
-             LIMIT 20`,
-          ).all<{
-            domain: string;
-            composite_score: number;
-            security_score: number;
-            performance_score: number;
-            reliability_score: number;
-            trust_score: number;
-            visibility_score: number;
-            email_score: number | null;
-            archetype: string;
-            scan_count: number;
-          }>();
-          if (rows.results?.length) {
-            entries = rows.results.map((r) => ({
-              domain: r.domain,
-              score: r.composite_score,
-              tier:
-                r.composite_score >= 90
-                  ? "Excellent"
-                  : r.composite_score >= 78
-                    ? "Strong"
-                    : r.composite_score >= 60
-                      ? "Moderate"
-                      : r.composite_score >= 40
-                        ? "Weak"
-                        : "Critical",
-              archetype: r.archetype,
-              scan_count: r.scan_count,
-              axes: {
-                security: r.security_score,
-                speed: r.performance_score,
-                foundations: r.reliability_score,
-                reputation: r.trust_score,
-                discoverability: r.visibility_score,
-                email: r.email_score,
-              },
-            }));
-          }
-        }
-
-        if (!entries?.length) return json({ domains: [] });
-
-        // Enrich with composite percentile
-        const dist = await getDistribution(env);
-        const enriched = entries.slice(0, 20).map((e) => {
-          if (dist && e.score != null) {
-            return { ...e, composite_percentile: lookupCompositePercentile(dist, e.score) };
-          }
-          return e;
-        });
-
-        return json({
-          domains: enriched,
-          ...(dist ? { percentile_sample_size: dist.sample_size } : {}),
-        });
-      } catch {
-        return json({ domains: [] });
-      }
-    }
-
     // GET /manifest.json — PWA manifest for installability
     if (method === "GET" && path === "/manifest.json") {
       const manifest = {
@@ -726,7 +623,7 @@ export default {
           return addHeaders(resp, rl.headers);
         }
 
-        // GET /api/recent — removed; use /_/showcase for the public feed API
+        // GET /api/recent — removed; domain suggestions are now client-side
 
         // POST /api/subdomains
         if (method === "POST" && path === "/api/subdomains") {

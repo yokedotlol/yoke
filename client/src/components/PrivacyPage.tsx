@@ -166,11 +166,7 @@ export default function PrivacyPage() {
         <p>
           Rate-limit hashes are cleaned up automatically within hours. Analytics data is retained indefinitely in
           aggregate form but contains no personal identifiers. Domain analysis results are cached for up to 24 hours.
-          Domain scores and scan history are retained to power the{" "}
-          <a href="/_/showcase" style={{ color: "var(--accent)" }}>
-            popular domains
-          </a>{" "}
-          feed and percentile rankings.
+          Domain scores and scan history are retained to power percentile rankings.
         </p>
       </Section>
 
