@@ -686,20 +686,34 @@ async function runAnalysisCore(
     accounts: Array<{ platform: string; url: string; username: string | null; found_via: string }>;
   };
 
-  // Build merged meta
-  const meta: MetaResult = {
-    ...(robotsSitemap ?? {
-      robots_txt: null,
-      robots_txt_exists: false,
-      sitemap_detected: false,
-      sitemap_url: null,
-      sitemap_page_count: null,
-    }),
-    og_title: httpProbeSucceeded ? (httpAnalysis?.meta?.og_title ?? null) : null,
-    og_description: httpProbeSucceeded ? (httpAnalysis?.meta?.og_description ?? null) : null,
-    og_image: httpProbeSucceeded ? (httpAnalysis?.meta?.og_image ?? null) : null,
-    favicon_url: httpProbeSucceeded ? (httpAnalysis?.meta?.favicon_url ?? null) : null,
-  };
+  // Build merged meta — suppress HTTP-dependent fields when the probe failed.
+  // robotsSitemap uses its own HEAD requests that also fail on unreachable sites,
+  // so including their false results would penalize domains for probe failures.
+  const meta: MetaResult = httpProbeSucceeded
+    ? {
+        ...(robotsSitemap ?? {
+          robots_txt: null,
+          robots_txt_exists: false,
+          sitemap_detected: false,
+          sitemap_url: null,
+          sitemap_page_count: null,
+        }),
+        og_title: httpAnalysis?.meta?.og_title ?? null,
+        og_description: httpAnalysis?.meta?.og_description ?? null,
+        og_image: httpAnalysis?.meta?.og_image ?? null,
+        favicon_url: httpAnalysis?.meta?.favicon_url ?? null,
+      }
+    : {
+        robots_txt: null,
+        robots_txt_exists: false,
+        sitemap_detected: false,
+        sitemap_url: null,
+        sitemap_page_count: null,
+        og_title: null,
+        og_description: null,
+        og_image: null,
+        favicon_url: null,
+      };
 
   // Enhanced status with DNS-based fallback
   const dnsResolves = dnsRecords.some((r) => r.type === "A" || r.type === "AAAA");

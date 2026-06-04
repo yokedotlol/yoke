@@ -3700,7 +3700,7 @@ export function calculateDomainScore(opts: {
   }
 
   // Robots.txt
-  if (opts.meta) {
+  if (opts.meta && !opts.httpBlocked) {
     findings.push({
       signal: "robots_txt",
       axis: "discoverability",
@@ -3712,7 +3712,7 @@ export function calculateDomainScore(opts: {
   }
 
   // Sitemap
-  if (opts.meta) {
+  if (opts.meta && !opts.httpBlocked) {
     findings.push({
       signal: "sitemap",
       axis: "discoverability",
@@ -4430,6 +4430,7 @@ export function calculateDomainScore(opts: {
     (f) =>
       f.signal === "http_blocked_security" ||
       f.signal === "http_blocked_performance" ||
+      f.signal === "http_blocked_infrastructure" ||
       f.signal === "http_error_response" ||
       f.signal === "site_unreachable" ||
       f.signal === "site_unreachable_performance" ||

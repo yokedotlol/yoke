@@ -71,3 +71,19 @@ This Font Software is licensed under the SIL Open Font License, Version 1.1. Thi
 - **Usage**: IP geolocation (city, country) and ASN/ISP identification for analyzed domains
 
 This product includes GeoLite2 data created by MaxMind, available from https://www.maxmind.com.
+
+## pdf-lib
+
+- **Source**: https://github.com/Hopding/pdf-lib
+- **License**: MIT
+- **Copyright**: Copyright (c) 2019-2023 Andrew Dillon
+- **Files**: Bundled via npm (`pdf-lib` package) into worker build
+- **Usage**: PDF report generation for downloadable domain analysis reports
+
+## @pdf-lib/fontkit
+
+- **Source**: https://github.com/Hopding/fontkit
+- **License**: MIT
+- **Copyright**: Copyright (c) 2015-present Devon Govett, 2020 Andrew Dillon
+- **Files**: Bundled via npm (`@pdf-lib/fontkit` package) into worker build
+- **Usage**: Font embedding for PDF report generation

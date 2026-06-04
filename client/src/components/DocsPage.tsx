@@ -353,7 +353,7 @@ const FAQ_ITEMS: { q: string; a: string; persona: string }[] = [
   {
     persona: "sysadmin",
     q: "How do I whitelist Yoke's scanner?",
-    a: "Yoke scans originate from Cloudflare Workers IP ranges. If you want full coverage, allow the User-Agent \"Yoke/1.0\" or Cloudflare's published IP ranges in your WAF rules. However, Yoke is designed to produce fair scores even when blocked — blocked signals are excluded, not penalized.",
+    a: "Yoke scans from two locations: Cloudflare Workers (DNS, API orchestration) and a Fly.io proxy (HTTP probes, SSL checks, geolocation). If you want full coverage, allow the User-Agent \"Yoke/1.0\" in your WAF rules. However, Yoke is designed to produce fair scores even when blocked — blocked signals are excluded, not penalized.",
   },
   // Freelancer
   {
