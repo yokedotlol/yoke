@@ -300,9 +300,8 @@ export default function AboutPage() {
           <strong style={{ color: "var(--text)" }}>IP ranges:</strong>
         </P>
         <P>
-          Yoke scans from two locations:{" "}
-          <A href="https://www.cloudflare.com/ips/">Cloudflare Workers</A> (DNS, API orchestration)
-          and a <A href="https://fly.io">Fly.io</A> proxy (HTTP probes, SSL checks, geolocation).
+          Yoke scans from two locations: <A href="https://www.cloudflare.com/ips/">Cloudflare Workers</A> (DNS, API
+          orchestration) and a <A href="https://fly.io">Fly.io</A> proxy (HTTP probes, SSL checks, geolocation).
         </P>
         <P>PageSpeed Insights data comes from Google's infrastructure — we don't control those IPs.</P>
 
