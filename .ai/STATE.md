@@ -58,21 +58,23 @@
 | BYO API keys | Client `localStorage` only, ephemeral on server (single-request memory, never logged) |
 | Cookies/trackers | None |
 
-## Homepage Feed
+## Homepage Domain Suggestions
 
 | Aspect | Implementation |
 |--------|---------------|
-| Endpoint | `/_/showcase` (popularity-based, ranked by scan count) |
-| Env var | `SHOWCASE_FEED`: `popular` (default), `recent` (self-host opt-in), `off` |
-| Legacy | `/_/recent` fully removed (no redirect, pre-launch) |
+| Approach | 100% client-side — 250+ curated seed domains in `RecentLookups.tsx` |
+| Behavior | Picks 10 randomly (Fisher-Yates) on each page load, renders as clickable pills |
+| Server endpoint | None — `/_/showcase` and `/_/recent` both removed |
+| Self-hosting | `scripts/seed-domains.sh` reads from the same domain list, fires `/api/analyze` with concurrency control |
 
 ## Recent Significant Commits
 
 | Hash | Description |
 |------|-------------|
+| `a8da63f` | seed-domains.sh for self-hosters, 250+ curated domains |
+| `9c01216` | Client-side domain pills replace `/_/showcase` |
 | `1c03e4b` | WordPress VIP in HOSTING_PATTERNS + test fix |
 | `a1ab990` | Hash user IPs, Brandfetch UA, news cache TTL |
-| `157bdb5` | `/_/showcase` replaces `/_/recent` |
 | `ebf7bae` | Comprehensive a11y fixes (skip link, WCAG AA, keyboard nav, ARIA) |
 | `f430b0a` | SECURITY.md with vulnerability reporting + data handling |
 

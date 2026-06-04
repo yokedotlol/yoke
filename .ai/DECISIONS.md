@@ -229,12 +229,12 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 
 ---
 
-### 2026-06-04 — `/_/recent` fully removed, replaced by `/_/showcase`
+### 2026-06-04 — `/_/showcase` killed → client-side domain suggestion pills
 
-**What changed:** `/_/recent` endpoint deleted entirely (no redirect). Replaced by `/_/showcase` which ranks domains by scan count (popularity) instead of chronological order. No timestamps exposed. `SHOWCASE_FEED` env var controls behavior (`popular`/`recent`/`off`).
-**Why:** Council debate (documented in `yoke-internal/reviews/recent-endpoint-council.md`) concluded the recent feed exposed user behavior patterns (what domains people scan), had no real utility for users, and conflicted with the privacy-first stance. Popularity-based ranking surfaces interesting domains without temporal fingerprinting. Self-hosters can opt into `recent` mode via env var.
-**Rejected:** Keeping `/_/recent` with a 301 redirect → pre-launch, no consumers to break, dead code is dead code.
-**Directive:** The showcase endpoint is the only homepage feed. It's also a documented API endpoint. KV writes go to `showcase:index` with `scan_count` tracking. `/_/recent` is gone — don't add it back.
+**What changed:** Removed the `/_/showcase` server-side endpoint entirely. Replaced with a static list of 250+ curated seed domains in `client/src/components/RecentLookups.tsx`. The client picks 10 randomly (Fisher-Yates shuffle) on each page load and renders them as clickable pills. Also removed the KV write to `showcase:index` that ran on every analysis (saving a read+parse+sort+write per scan), and the `SHOWCASE_FEED` env var.
+**Why:** The showcase feed was popularity-based, but at low traffic all domains have `scan_count=1`, making it functionally identical to a random/chronological feed. A client-side curated list works at any traffic level, requires zero server infrastructure, and doubles as a seed domain list for self-hosters (`scripts/seed-domains.sh`).
+**Rejected:** Keeping showcase with synthetic boosted counts — artificial and unnecessary complexity for a feature that's purely cosmetic.
+**Directive:** Homepage domain suggestions are 100% client-side. No server endpoint, no KV state. The domain list in `RecentLookups.tsx` IS the seed list. `seed-domains.sh` reads from it directly. Any domain additions go in that file.
 
 ---
 

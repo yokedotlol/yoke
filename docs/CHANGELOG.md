@@ -12,7 +12,8 @@ All notable changes to Yoke are documented here.
 - **SECURITY.md expanded** — added Data Handling section documenting the privacy-first approach.
 
 ### Features
-- **`/_/showcase` replaces `/_/recent`** — homepage feed now shows domains ranked by popularity (scan count) instead of chronological order. No timestamps exposed. Controlled via `SHOWCASE_FEED` env var (`popular`/`recent`/`off`).
+- **Domain suggestion pills** — homepage now shows 10 randomly-selected domains from a curated list of 250+ across 15+ categories (tech, media, finance, gov, edu, gaming, security, etc.). Fully client-side — no server endpoint, no KV writes, works at any traffic level. Fresh selection on every page load.
+- **`scripts/seed-domains.sh`** — self-hosters can populate their instance by running `./scripts/seed-domains.sh https://my-instance.example.com`. Reads from the same curated domain list, fires `/api/analyze` with configurable concurrency.
 - **`?summary` compact API** — append `?summary=true` to any analysis to get a ~500-byte summary instead of the full ~94KB response. Returns composite score, tier, archetype, axis scores, and percentiles.
 - **WordPress VIP detection** — detect WordPress VIP hosting via `x-vip-go` header, `x-powered-by` header, and HTML patterns (wpvip.com CDN references). Added to both `detectHosting()` patterns and `detectManagedHosting()`.
 
