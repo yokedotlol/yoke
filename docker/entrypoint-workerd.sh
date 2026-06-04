@@ -17,7 +17,7 @@ fi
 if [ "$SITE_NAME" != "Yoke" ]; then
   echo "Patching site name: Yoke → $SITE_NAME"
   find /app/client-dist -type f \( -name '*.html' -o -name '*.js' \) \
-    -exec sed -i "s|— Yoke|— ${SITE_NAME}|g; s|\"Yoke\"|\"${SITE_NAME}\"|g; s|alt=\"Yoke\"|alt=\"${SITE_NAME}\"|g; s|content=\"Yoke\"|content=\"${SITE_NAME}\"|g" {} +
+    -exec sed -i "s|Yoke|${SITE_NAME}|g" {} +
 fi
 
 # ── Ensure data directories exist ─────────────────────────────────
