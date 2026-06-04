@@ -27,7 +27,7 @@ FROM node:22-slim
 RUN npm install -g workerd@latest 2>/dev/null && npm cache clean --force
 
 # base64 is needed by the entrypoint to generate the assets shim
-RUN apt-get update && apt-get install -y coreutils && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y coreutils ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
