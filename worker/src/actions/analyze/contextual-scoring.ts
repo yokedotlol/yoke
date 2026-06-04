@@ -1146,8 +1146,18 @@ export function calculateDomainScore(opts: {
     }
   }
 
+  // ── Domain-uses-email gate ─────────────────────────────────────────
+  // If the domain has no MX records AND no SPF AND no DMARC, it doesn't
+  // participate in email at all. Skip email scoring entirely so we don't
+  // penalize parked/minimal domains for "missing" auth they never needed.
+  // Domains with SPF/DMARC but no MX are intentionally protecting against
+  // spoofing and should still be scored.
+  const hasMxRecords = opts.dnsRecords.some((r) => r.type === "MX");
+  const hasAnyEmailAuth = opts.emailAuth != null && (opts.emailAuth.spf.found || opts.emailAuth.dmarc.found);
+  const domainUsesEmail = hasMxRecords || hasAnyEmailAuth;
+
   // Email auth (SPF + DKIM + DMARC)
-  if (opts.emailAuth) {
+  if (domainUsesEmail && opts.emailAuth) {
     const hasSpf = opts.emailAuth.spf.found;
     const hasDmarc = opts.emailAuth.dmarc.found;
     const hasDkim = opts.emailAuth.dkim_selectors_found.length > 0;
@@ -2426,51 +2436,54 @@ export function calculateDomainScore(opts: {
   // underlying signals already scored individually, inflating Reputation axis by ~15 points.
   if (opts.trustSignals) {
     // DMARC enforcement — bidirectional: reward reject, penalize weak/absent
-    const dmarcRejecting = opts.trustSignals.signals.some(
-      (s) => s.name === "DMARC Enforcement" && s.present && s.value?.includes("reject"),
-    );
-    if (dmarcRejecting) {
-      findings.push({
-        signal: "dmarc_reject",
-        axis: "email",
-        severity: "good",
-        label: "DMARC policy=reject prevents email spoofing",
-        tradeoff: null,
-        weight: 2,
-      });
-    } else if (opts.emailAuth?.dmarc?.found) {
-      const policy = opts.emailAuth.dmarc.policy;
-      if (policy === "quarantine") {
+    // Only score if the domain actually uses email (has MX or SPF/DMARC)
+    if (domainUsesEmail) {
+      const dmarcRejecting = opts.trustSignals.signals.some(
+        (s) => s.name === "DMARC Enforcement" && s.present && s.value?.includes("reject"),
+      );
+      if (dmarcRejecting) {
         findings.push({
           signal: "dmarc_reject",
           axis: "email",
-          severity: "info",
-          label: "DMARC policy=quarantine — partial email protection",
-          tradeoff: "Upgrade to p=reject for full spoofing prevention.",
+          severity: "good",
+          label: "DMARC policy=reject prevents email spoofing",
+          tradeoff: null,
           weight: 2,
         });
+      } else if (opts.emailAuth?.dmarc?.found) {
+        const policy = opts.emailAuth.dmarc.policy;
+        if (policy === "quarantine") {
+          findings.push({
+            signal: "dmarc_reject",
+            axis: "email",
+            severity: "info",
+            label: "DMARC policy=quarantine — partial email protection",
+            tradeoff: "Upgrade to p=reject for full spoofing prevention.",
+            weight: 2,
+          });
+        } else {
+          // p=none or unrecognized
+          findings.push({
+            signal: "dmarc_reject",
+            axis: "email",
+            severity: "low",
+            label: "DMARC policy=none — monitoring only, no protection",
+            tradeoff: "Move to quarantine/reject once reports look clean.",
+            weight: 2,
+          });
+        }
       } else {
-        // p=none or unrecognized
+        // No DMARC at all
         findings.push({
           signal: "dmarc_reject",
           axis: "email",
-          severity: "low",
-          label: "DMARC policy=none — monitoring only, no protection",
-          tradeoff: "Move to quarantine/reject once reports look clean.",
+          severity: "medium",
+          label: "No DMARC — domain vulnerable to email spoofing",
+          tradeoff: null,
           weight: 2,
         });
       }
-    } else {
-      // No DMARC at all
-      findings.push({
-        signal: "dmarc_reject",
-        axis: "email",
-        severity: "medium",
-        label: "No DMARC — domain vulnerable to email spoofing",
-        tradeoff: null,
-        weight: 2,
-      });
-    }
+    } // end domainUsesEmail gate for dmarc_reject
 
     // Operational transparency bonus
     const opsSignals = opts.trustSignals.signals.filter((s) => s.category === "operational" && s.present);
@@ -3411,7 +3424,8 @@ export function calculateDomainScore(opts: {
   }
 
   // Email auth completeness (trust signal — penalty-only; email_auth handles the reward)
-  if (opts.emailAuth) {
+  // Gated on domainUsesEmail — no-email domains shouldn't be penalized here either.
+  if (domainUsesEmail && opts.emailAuth) {
     const hasSpf = opts.emailAuth.spf.found;
     const hasDmarc = opts.emailAuth.dmarc.found;
     const hasDkim = opts.emailAuth.dkim_selectors_found.length > 0;
