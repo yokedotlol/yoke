@@ -190,49 +190,52 @@ jobs:
         run: |
           cd worker && bun install && cd ..
 
-      - name: Wait for edge propagation
-        run: sleep 15
-
-      - name: Smoke test — HTML homepage
+      - name: Smoke tests (with retry)
         run: |
-          echo "Checking https://yoke.lol/ returns HTML..."
-          curl -sf --max-time 30 https://yoke.lol/ | grep -q '<title>'
-          echo "✓ Homepage OK"
+          # Retry helper: retries a command up to N times with backoff
+          # Usage: retry <max_attempts> <delay_secs> <description> <command...>
+          retry() {
+            local max=$1 delay=$2 desc=$3
+            shift 3
+            for attempt in $(seq 1 "$max"); do
+              if "$@" 2>/dev/null; then
+                echo "✓ $desc (attempt $attempt)"
+                return 0
+              fi
+              if [ "$attempt" -lt "$max" ]; then
+                echo "  ⟳ $desc — attempt $attempt/$max failed, retrying in ${delay}s..."
+                sleep "$delay"
+              fi
+            done
+            echo "::error::$desc — failed after $max attempts"
+            return 1
+          }
 
-      - name: Smoke test — Deployed version
-        run: |
-          echo "Checking X-Yoke-Version header is present..."
-          VERSION=$(curl -sI --max-time 10 https://yoke.lol/api/docs | grep -i 'x-yoke-version' | awk '{print $2}' | tr -d '\r')
-          echo "Deployed version: $VERSION"
-          if [ -z "$VERSION" ]; then
-            echo "::error::X-Yoke-Version header missing"
-            exit 1
-          fi
-          # Version should be semver-like (e.g., "2.0.0" or "2.0.0-abc1234")
-          if echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "✓ Valid version header: $VERSION"
-          else
-            echo "::error::X-Yoke-Version header has unexpected format: $VERSION"
-            exit 1
-          fi
+          echo "Waiting for edge propagation..."
+          # 1. HTML homepage — wait longest here since it's the first check after deploy
+          retry 6 10 "HTML homepage" bash -c \
+            'curl -sf --max-time 15 https://yoke.lol/ | grep -q "<title>"'
 
-      - name: Smoke test — API docs
-        run: |
-          echo "Checking https://yoke.lol/api/docs..."
-          curl -sf --max-time 30 https://yoke.lol/api/docs | grep -qi 'api'
-          echo "✓ API docs OK"
+          # 2. Version header
+          retry 3 5 "X-Yoke-Version header" bash -c '
+            VERSION=$(curl -sI --max-time 10 https://yoke.lol/api/docs | grep -i x-yoke-version | awk "{print \$2}" | tr -d "\r")
+            [ -n "$VERSION" ] && echo "$VERSION" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+" && echo "Deployed: $VERSION"
+          '
 
-      - name: Smoke test — JSON API
-        run: |
-          echo "Checking JSON API with example.com..."
-          curl -sf --max-time 90 -H "Accept: application/json" "https://yoke.lol/example.com" | jq -e '.domain' > /dev/null
-          echo "✓ JSON API OK"
+          # 3. API docs
+          retry 3 5 "API docs" bash -c \
+            'curl -sf --max-time 15 https://yoke.lol/api/docs | grep -qi "api"'
 
-      - name: Smoke test — Status page
-        run: |
-          echo "Checking https://yoke.lol/status..."
-          curl -sf --max-time 30 https://yoke.lol/status | grep -qi 'status'
-          echo "✓ Status page OK"
+          # 4. JSON API (longer timeout — runs a real analysis)
+          retry 3 10 "JSON API (example.com)" bash -c \
+            'curl -sf --max-time 90 -H "Accept: application/json" "https://yoke.lol/example.com" | jq -e ".domain" > /dev/null'
+
+          # 5. Status page
+          retry 3 5 "Status page" bash -c \
+            'curl -sf --max-time 15 https://yoke.lol/status | grep -qi "status"'
+
+          echo ""
+          echo "All smoke tests passed ✅"
 
       # ── Rollback on failure ──────────────────────────────────────
       - name: Generate wrangler.toml (for rollback)
