@@ -46,3 +46,15 @@ This is a solo open-source project, not a company with a security team. That sai
 ## Bug Bounty
 
 There is no formal bug bounty program. If you find something significant, you'll get credit and my genuine gratitude.
+
+## Data Handling
+
+Yoke takes a privacy-first approach to user data:
+
+- **No raw IP storage.** User IP addresses are SHA-256 hashed with a daily-rotating salt before being written to any database. The hash is used for rate limiting and anonymous visitor counting — it cannot be reversed and rotates every 24 hours.
+- **No accounts or sessions.** There are no user accounts, login cookies, session tokens, or tracking pixels.
+- **No client-side tracking.** No analytics scripts, no fingerprinting, no third-party trackers.
+- **BYO API keys are ephemeral.** Keys stored in `localStorage` on the client. On the server, they exist in memory for a single request, then are discarded. Never logged or persisted.
+- **Domain data is public.** Everything Yoke stores about analyzed domains (DNS, WHOIS, SSL, headers) is publicly available information.
+
+See our [Privacy Policy](https://yoke.lol/privacy) for the full picture.

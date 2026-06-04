@@ -4,6 +4,40 @@ All notable changes to Yoke are documented here.
 
 > **Scope:** This changelog tracks the **Service (Worker + Client)** version. The CLI and MCP Server version independently — see the [Versioning](README.md#versioning) section in README.md for tag formats and release mechanisms.
 
+## [2.1.0] — 2026-06-04
+
+### Privacy & Security
+- **IP addresses are now hashed** — user IPs from `cf-connecting-ip` are SHA-256 hashed with a daily-rotating salt before being stored in rate-limit tables (`endpoint_rate_limits`, `ai_rate_limits`). Raw IPs are never persisted. Rate limiting works identically — same IP produces the same hash within a 24-hour window.
+- **Privacy policy rewritten** — new sections covering IP hashing, anonymous analytics, data retention, and GDPR. Updated from "we collect only the domain" to accurately describe rate-limit hashes, visitor counting, and request metadata.
+- **SECURITY.md expanded** — added Data Handling section documenting the privacy-first approach.
+
+### Features
+- **`/_/showcase` replaces `/_/recent`** — homepage feed now shows domains ranked by popularity (scan count) instead of chronological order. No timestamps exposed. Controlled via `SHOWCASE_FEED` env var (`popular`/`recent`/`off`).
+- **`?summary` compact API** — append `?summary=true` to any analysis to get a ~500-byte summary instead of the full ~94KB response. Returns composite score, tier, archetype, axis scores, and percentiles.
+- **WordPress VIP detection** — detect WordPress VIP hosting via `x-vip-go` header, `x-powered-by` header, and HTML patterns (wpvip.com CDN references). Added to both `detectHosting()` patterns and `detectManagedHosting()`.
+
+### Improvements
+- **Brandfetch UA updated** — from spoofed `Mozilla/YokeBot/1.0` to proper `Yoke/2.0 (+https://yoke.lol)` identifying the official Brand Search API usage.
+- **News RSS cache TTL** — bumped from 1h to 4h to reduce upstream request volume. News content doesn't change fast enough to warrant hourly re-fetches.
+- **DATA-SOURCES.md** — added Terms/License column documenting the legal basis for every third-party API we consume.
+
+### Accessibility
+- **Skip navigation link** — keyboard-accessible skip-to-content link on all pages.
+- **WCAG AA contrast** — all 12 themes now meet AA contrast ratios for text and interactive elements.
+- **Keyboard navigation** — full keyboard support for collapsible panels, theme switcher, search, and all interactive elements.
+- **ARIA attributes** — proper `aria-expanded`, `aria-label`, `role` attributes on interactive components.
+
+### Bug Fixes
+- **AI analytics accuracy** — usage tracking now fires after validation, captures real HTTP status codes instead of always recording 200.
+- **SSL Labs JSON-LD** — corrected stale claim in structured data output.
+- **Extension clipboard** — fixed `clipboard-write` permission in iframe-embedded extension context.
+- **`/_/recent` fully removed** — endpoint deleted (not redirected), pre-launch so no backward compatibility needed.
+- **VIP detection tests** — fixed tests that were calling `detectHosting()` with HTML (wrong parameter type); VIP header detection added to `HOSTING_PATTERNS`.
+
+### Documentation
+- **SECURITY.md** — new vulnerability reporting policy with scope, response times, and data handling section.
+- **548 tests passing** — up from 498 (50 new tests for VIP detection, compact API, showcase feed).
+
 ## [2.0.0] — 2026-05-31
 
 ### Breaking Changes

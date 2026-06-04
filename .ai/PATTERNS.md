@@ -69,8 +69,9 @@ CORS headers are applied by the `json()` helper in `helpers.ts` for public endpo
 
 ## Rate Limiting
 
-- Endpoint rate limits: D1-backed (`STATS_DB`), per-IP, checked via `checkRateLimit()`.
-- AI analysis: separate rate limit table in `STATS_DB`, slot reserved before API call, refunded on failure using the specific row ID (not `ORDER BY id DESC LIMIT 1` — that's racy).
+- Endpoint rate limits: D1-backed (`STATS_DB`), per-hashed-IP, checked via `checkRateLimit()`. IPs are hashed via `hashIp()` from `helpers.ts` (SHA-256 + daily salt) before being passed to the rate limiter — raw IPs never touch D1.
+- AI analysis: separate rate limit table in `STATS_DB`, same hashed-IP approach, slot reserved before API call, refunded on failure using the specific row ID (not `ORDER BY id DESC LIMIT 1` — that's racy).
+- Anonymous analytics: `request-tracking.ts` uses its own `hashVisitor()` (functionally equivalent to `hashIp()`). Writes to `request_meta` table with visitor_hash, country, client_type, endpoint, status, latency.
 
 ## Anti-Patterns — Don't Do These
 

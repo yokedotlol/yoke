@@ -6,33 +6,34 @@ Yoke pulls data from a variety of third-party services to build its domain intel
 
 ## Data Sources
 
-| Service | What Yoke Uses It For | Link |
-|---------|----------------------|------|
-| **Google PageSpeed Insights** | Core Web Vitals, performance scores, and Lighthouse audits | [developers.google.com/speed](https://developers.google.com/speed/pagespeed/insights/) |
-| **Yoke Fly Probe** | Direct TLS handshake, cipher enumeration, OCSP stapling, Certificate Transparency SCTs, forward secrecy, HTTP content fallback | Self-hosted on Fly.io |
-| **Have I Been Pwned** | Data breach exposure lookups for domains | [haveibeenpwned.com](https://haveibeenpwned.com) |
-| **crt.sh** | Certificate Transparency log searches | [crt.sh](https://crt.sh) |
-| **Cert Spotter (SSLMate)** | Certificate Transparency monitoring | [sslmate.com/certspotter](https://sslmate.com/certspotter) |
-| **Shodan InternetDB** | Open port and known-vulnerability lookups | [internetdb.shodan.io](https://internetdb.shodan.io) |
-| **GreyNoise** | Internet background noise and scanner classification | [greynoise.io](https://greynoise.io) |
-| **Google Public DNS** | DNS record resolution (via DNS-over-HTTPS) | [dns.google](https://dns.google) |
-| **WhoisFreaks** | WHOIS registration data lookups | [whoisfreaks.com](https://whoisfreaks.com) |
-| **Google RDAP** | Domain registration data via the RDAP protocol | [Google Registry](https://pubapi.registry.google/rdap) |
-| **Cloudflare API** | Domain availability checks | [cloudflare.com](https://www.cloudflare.com) |
-| **Tranco** | Domain popularity ranking | [tranco-list.eu](https://tranco-list.eu) |
-| **Brandfetch** | Brand logos and visual identity | [brandfetch.com](https://brandfetch.com) |
-| **Wikidata** | Structured entity data (organization info, founding date, etc.) | [wikidata.org](https://www.wikidata.org) |
-| **Green Web Foundation** | Green/sustainable hosting checks | [thegreenwebfoundation.org](https://www.thegreenwebfoundation.org) |
-| **Website Carbon** | Estimated carbon footprint per page load | [websitecarbon.com](https://www.websitecarbon.com) |
-| **Wayback Machine** | Historical snapshot availability via the Internet Archive | [web.archive.org](https://web.archive.org) |
-| **HackerTarget** | Supplementary reconnaissance lookups | [hackertarget.com](https://hackertarget.com) |
-| **ipwho.is** | IP geolocation (HTTPS fallback, used by both Worker and Fly proxy) | [ipwho.is](https://ipwho.is) |
-| **OpenRouter** | LLM inference proxy (powers AI-generated analysis) | [openrouter.ai](https://openrouter.ai) |
-| **check-host.net** | Global HTTP availability probes from 20+ worldwide locations (relayed via Fly proxy) | [check-host.net](https://check-host.net) |
-| **MaxMind GeoLite2** | Local IP geolocation database (city, country, ASN/ISP) used in Fly proxy | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
-| **CARTO** | Dark-themed map tile layer for IP geolocation maps | [carto.com](https://carto.com) |
-| **OpenStreetMap** | Base map data underlying CARTO tiles | [openstreetmap.org](https://www.openstreetmap.org) |
-| **Crunchbase** | Company and startup data enrichment | [crunchbase.com](https://www.crunchbase.com) |
+| Service | What Yoke Uses It For | Terms / License | Link |
+|---------|----------------------|-----------------|------|
+| **Google PageSpeed Insights** | Core Web Vitals, performance scores, and Lighthouse audits | [Google APIs ToS](https://developers.google.com/terms) — free, no key required | [developers.google.com/speed](https://developers.google.com/speed/pagespeed/insights/) |
+| **Yoke Fly Probe** | Direct TLS handshake, cipher enumeration, OCSP stapling, CT SCTs, forward secrecy, HTTP content fallback | Self-hosted (MIT) | Self-hosted on Fly.io |
+| **Have I Been Pwned** | Data breach exposure lookups for domains | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — attribution required | [haveibeenpwned.com](https://haveibeenpwned.com) |
+| **crt.sh** | Certificate Transparency log searches | Public, no key required | [crt.sh](https://crt.sh) |
+| **Cert Spotter (SSLMate)** | Certificate Transparency monitoring | Free tier, no key required | [sslmate.com/certspotter](https://sslmate.com/certspotter) |
+| **Shodan InternetDB** | Open port and known-vulnerability lookups | Free public API, no key required | [internetdb.shodan.io](https://internetdb.shodan.io) |
+| **GreyNoise** | Internet background noise and scanner classification | [Community API](https://docs.greynoise.io/docs/using-the-greynoise-community-api) — free, rate-limited | [greynoise.io](https://greynoise.io) |
+| **Google Public DNS** | DNS record resolution (via DNS-over-HTTPS) | [Google APIs ToS](https://developers.google.com/terms) — free, no key required | [dns.google](https://dns.google) |
+| **WhoisFreaks** | WHOIS registration data lookups | API key required, free tier available | [whoisfreaks.com](https://whoisfreaks.com) |
+| **Google RDAP** | Domain registration data via the RDAP protocol | Public RDAP protocol, no key required | [Google Registry](https://pubapi.registry.google/rdap) |
+| **Cloudflare API** | Domain availability checks | [Cloudflare ToS](https://www.cloudflare.com/terms/) — API key required | [cloudflare.com](https://www.cloudflare.com) |
+| **Tranco** | Domain popularity ranking | Research use, [citation requested](https://tranco-list.eu/about) | [tranco-list.eu](https://tranco-list.eu) |
+| **Brandfetch** | Brand logos and visual identity | [Brand Search API](https://docs.brandfetch.com/) — free up to 500K req/mo, no key required | [brandfetch.com](https://brandfetch.com) |
+| **Wikidata** | Structured entity data (organization info, founding date, etc.) | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) — public domain | [wikidata.org](https://www.wikidata.org) |
+| **Green Web Foundation** | Green/sustainable hosting checks | [ODbL](https://opendatacommons.org/licenses/odbl/) — open data | [thegreenwebfoundation.org](https://www.thegreenwebfoundation.org) |
+| **Website Carbon** | Estimated carbon footprint per page load | Free API | [websitecarbon.com](https://www.websitecarbon.com) |
+| **Wayback Machine** | Historical snapshot availability via the Internet Archive | Free public API | [web.archive.org](https://web.archive.org) |
+| **HackerTarget** | Supplementary reconnaissance lookups | Free tier, rate-limited | [hackertarget.com](https://hackertarget.com) |
+| **ipwho.is** | IP geolocation (HTTPS fallback, used by both Worker and Fly proxy) | Free, no key required | [ipwho.is](https://ipwho.is) |
+| **OpenRouter** | LLM inference proxy (powers AI-generated analysis) | [OpenRouter ToS](https://openrouter.ai/terms) — BYO key or platform key | [openrouter.ai](https://openrouter.ai) |
+| **check-host.net** | Global HTTP availability probes from 20+ worldwide locations (relayed via Fly proxy) | Free public API | [check-host.net](https://check-host.net) |
+| **MaxMind GeoLite2** | Local IP geolocation database (city, country, ASN/ISP) used in Fly proxy | [GeoLite2 EULA](https://www.maxmind.com/en/geolite2/eula) — attribution required | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
+| **CARTO** | Dark-themed map tile layer for IP geolocation maps | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | [carto.com](https://carto.com) |
+| **OpenStreetMap** | Base map data underlying CARTO tiles | [ODbL](https://opendatacommons.org/licenses/odbl/) — attribution required | [openstreetmap.org](https://www.openstreetmap.org) |
+| **Crunchbase** | Company and startup data enrichment | [Crunchbase ToS](https://about.crunchbase.com/terms-of-service/) — public data | [crunchbase.com](https://www.crunchbase.com) |
+| **Google News RSS** | Recent news articles mentioning analyzed domains | [Google ToS](https://policies.google.com/terms) — RSS feed, results cached 4h | [news.google.com](https://news.google.com) |
 
 ---
 

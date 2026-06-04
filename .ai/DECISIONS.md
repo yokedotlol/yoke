@@ -217,3 +217,46 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **Why:** Email security (SPF, DKIM, DMARC) protects EVERY domain, not just domains that actively send email. Without SPF/DMARC, anyone can spoof `From: ceo@yourdomain.com` and send phishing emails that damage your domain's reputation. Spoofed emails from unprotected domains can get the domain blocklisted by email providers. Blocklists typically operate on sender IP ranges, but domain reputation scoring by ESPs (Gmail, Outlook) also factors in the From domain's authentication posture.
 **Rejected:** Skipping email axis scoring for "no-email domains" → this would leave domains unprotected and unaware of the spoofing risk. A domain with no MX records but also no SPF `v=spf1 -all` is MORE vulnerable, not less.
 **Directive:** The email axis scores all domains. The absence of email infrastructure (no MX, no SPF, no DMARC) is a real security gap, not a "not applicable" condition.
+
+---
+
+### 2026-06-04 — User IPs hashed with daily-rotating salt (GDPR compliance)
+
+**What changed:** All user IP addresses from `cf-connecting-ip` are SHA-256 hashed with a daily-rotating salt before being stored in D1 rate-limit tables (`endpoint_rate_limits`, `ai_rate_limits`). Shared `hashIp()` helper in `helpers.ts`.
+**Why:** Raw IP addresses are personal data under GDPR (Breyer v. Germany, EU Court of Justice). Rate limiting only needs "same requester = same key" within a window — a daily hash achieves this without storing reversible identifiers. The `request_meta` analytics table already used this approach via `hashVisitor()`.
+**Rejected:** Moving rate limiting entirely to KV with auto-expiring TTL keys → cleaner but bigger refactor, not needed since hashing solves the legal issue. Storing IPs with consent → no accounts, no consent mechanism, unnecessary complexity.
+**Directive:** No raw user IP addresses may be stored in any database table. Use `hashIp()` from `helpers.ts` for any IP-keyed storage. Server IPs from DNS lookups (analyzed domain infrastructure) are public data and don't require hashing.
+
+---
+
+### 2026-06-04 — `/_/recent` fully removed, replaced by `/_/showcase`
+
+**What changed:** `/_/recent` endpoint deleted entirely (no redirect). Replaced by `/_/showcase` which ranks domains by scan count (popularity) instead of chronological order. No timestamps exposed. `SHOWCASE_FEED` env var controls behavior (`popular`/`recent`/`off`).
+**Why:** Council debate (documented in `yoke-internal/reviews/recent-endpoint-council.md`) concluded the recent feed exposed user behavior patterns (what domains people scan), had no real utility for users, and conflicted with the privacy-first stance. Popularity-based ranking surfaces interesting domains without temporal fingerprinting. Self-hosters can opt into `recent` mode via env var.
+**Rejected:** Keeping `/_/recent` with a 301 redirect → pre-launch, no consumers to break, dead code is dead code.
+**Directive:** The showcase endpoint is the only homepage feed. It's also a documented API endpoint. KV writes go to `showcase:index` with `scan_count` tracking. `/_/recent` is gone — don't add it back.
+
+---
+
+### 2026-06-04 — Brandfetch is the official Brand Search API (false alarm)
+
+**What changed:** No integration change — confirmed the endpoint we use (`api.brandfetch.io/v2/search/`) IS Brandfetch's documented Brand Search API. Updated User-Agent from spoofed `Mozilla/YokeBot/1.0` to proper `Yoke/2.0 (+https://yoke.lol)`.
+**Why:** Initial concern was that we were using an undocumented internal API. Research confirmed it's their official free tier (500K req/mo, no key required). The only issue was the misleading UA string.
+**Directive:** Brandfetch usage is legitimate. Do not add API key authentication — the free tier is sufficient. Keep the UA string honest: `Yoke/2.0 (+https://yoke.lol)`.
+
+---
+
+### 2026-06-04 — Google News RSS: keep with 4h cache TTL
+
+**What changed:** News RSS cache TTL bumped from 1h to 4h.
+**Why:** Google's ToS technically says "personal, non-commercial" for RSS, but thousands of tools consume Google News RSS without issue. Real risk is operational (CF IP ranges getting blocked), not legal. Longer cache TTL reduces upstream request volume and the risk of triggering automated blocks.
+**Rejected:** Replacing RSS with Bing News Search API → adds Azure dependency and API key management for marginal benefit. May add as fallback later.
+**Directive:** RSS is the primary news source. Cache aggressively (4h minimum). If Google starts blocking CF IPs, evaluate Bing News API (1K free req/mo via Azure) as fallback.
+
+---
+
+### 2026-06-04 — Privacy policy rewritten for accuracy
+
+**What changed:** Complete rewrite of `/privacy` page. New sections: Rate Limiting & IP Handling, Anonymous Analytics, Data Retention, GDPR. Updated "What We Collect" to honestly describe hashed IP storage for rate limiting and anonymous request metadata.
+**Why:** The old policy said "we collect only the domain name you submit" which was inaccurate — we also store hashed IPs for rate limiting and anonymous analytics metadata. For a security/privacy tool, an inaccurate privacy policy is a credibility problem. The new policy is thorough and honest.
+**Directive:** Keep the privacy policy in sync with actual data handling. Any new data collection must be reflected in `/privacy` before shipping.

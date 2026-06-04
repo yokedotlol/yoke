@@ -167,7 +167,7 @@ export async function probeHeadWithFallback(
 
 // ─── Version ─────────────────────────────────────────────────────────
 
-export const YOKE_VERSION = "2.0.0";
+export const YOKE_VERSION = "2.1.0";
 
 /** Minimum CLI version required. Bump when shipping breaking API changes. */
 export const MIN_CLIENT_VERSION = "2.0.0";

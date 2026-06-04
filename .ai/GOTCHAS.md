@@ -119,3 +119,21 @@
 
 **Don't:** Add canBeGood: true to signals that are only relevant to specific site types without requiresContext gating.
 **Do:** When adding a new signal, ask: "Does every website need this?" If not, either gate with requiresContext or make it informational (canBeGood: false, weightRange: [0, 0]). The industry pattern: score on universals, inform on niche features.
+
+---
+
+### Two IP hash functions exist — use the right one
+
+**What happened:** `request-tracking.ts` has `hashVisitor(ip, day)` (private, takes explicit day param) and `helpers.ts` has `hashIp(ip)` (exported, derives day internally). Both produce SHA-256 hashes with daily salt, but they're separate implementations. Using the wrong one or adding a third would fragment rate limiting (same IP → different hashes → rate limit bypass).
+
+**Don't:** Create new IP hash functions. Don't use `hashVisitor()` outside of `request-tracking.ts`.
+**Do:** Use `hashIp()` from `helpers.ts` for all new IP-keyed storage. `hashVisitor()` in `request-tracking.ts` predates `hashIp()` and is functionally equivalent — it stays as-is to avoid touching the analytics pipeline.
+
+---
+
+### detectHosting() and detectManagedHosting() are separate detection paths
+
+**What happened:** WordPress VIP tests called `detectHosting()` with an HTML string as the first param, but `detectHosting()` takes `IpInfo | null` — it only checks headers, rDNS, and org. HTML-based hosting detection lives in `detectManagedHosting()` in `wordpress.ts`. Tests passed locally (test suite failed to load due to tslib issue) but broke in CI where the test actually ran.
+
+**Don't:** Assume `detectHosting()` checks HTML content. Don't skip CI verification because tests pass locally.
+**Do:** `detectHosting()` = headers/IP/rDNS patterns in `HOSTING_PATTERNS` (security.ts). `detectManagedHosting()` = deep detection with HTML patterns (wordpress.ts). Both run during analysis, but they're separate functions with separate inputs. Test the right one.
