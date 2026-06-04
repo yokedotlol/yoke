@@ -17,20 +17,23 @@ if [ -n "$STAGED_FILES" ]; then
 fi
 
 # ── Lockfile freshness ──
-check_lockfile() {
-  dir="$1"
-  if [ -f "$dir/package.json" ]; then
-    if ! (cd "$dir" && bun install --frozen-lockfile) >/dev/null 2>&1; then
-      echo ""
-      echo "❌ Lockfile out of date in $dir/"
-      echo "   Run: cd $dir && bun install"
-      echo "   Then stage the updated bun.lockb and commit again."
-      echo ""
-      exit 1
+# Skip in environments without network access (e.g., sandboxed CI/dev VMs)
+if [ -z "$SKIP_LOCKFILE_CHECK" ]; then
+  check_lockfile() {
+    dir="$1"
+    if [ -f "$dir/package.json" ]; then
+      if ! timeout 10 sh -c "cd \"$dir\" && bun install --frozen-lockfile" >/dev/null 2>&1; then
+        echo ""
+        echo "❌ Lockfile out of date in $dir/"
+        echo "   Run: cd $dir && bun install"
+        echo "   Then stage the updated bun.lockb and commit again."
+        echo ""
+        exit 1
+      fi
     fi
-  fi
-}
+  }
 
-check_lockfile "."
-check_lockfile "client"
-check_lockfile "worker"
+  check_lockfile "."
+  check_lockfile "client"
+  check_lockfile "worker"
+fi
