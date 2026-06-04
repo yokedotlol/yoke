@@ -1,4 +1,0 @@
-name = "yoke-og"
-main = "dist/worker.js"
-compatibility_date = "2026-05-31"
-# account_id = "your-cloudflare-account-id"
