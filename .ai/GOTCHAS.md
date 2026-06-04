@@ -88,7 +88,7 @@
 
 ### Stale CLAUDE.md causes agent confusion
 
-**What happened:** CLAUDE.md referenced "5 axes" and "~136 signals" long after the project had 6 axes and 155 signals. Agents reading it as authoritative context produced work based on outdated assumptions.
+**What happened:** CLAUDE.md referenced "5 axes" and "~136 signals" long after the project had 6 axes and 156 signals. Agents reading it as authoritative context produced work based on outdated assumptions.
 
 **Don't:** Treat CLAUDE.md as a write-once file.
 **Do:** Update CLAUDE.md when the project state changes significantly. Run `.ai/staleness-check.sh` to detect drift. The `.ai/STATE.md` file is the volatile snapshot; CLAUDE.md should point agents there.

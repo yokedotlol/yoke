@@ -114,8 +114,8 @@ Input: { "domain1": "stripe.com", "domain2": "square.com" }
 | Tier | Score Range |
 |------|-------------|
 | Excellent | 90–100 |
-| Strong | 75–89 |
-| Moderate | 60–74 |
+| Strong | 78–89 |
+| Moderate | 60–77 |
 | Weak | 40–59 |
 | Critical | 0–39 |
 

@@ -3,7 +3,7 @@
 > Volatile snapshot of the project. Updated after significant sessions.
 > Run `.ai/staleness-check.sh` to detect drift.
 
-**Last updated:** 2026-06-01
+**Last updated:** 2026-06-03
 
 ## Versions
 
@@ -20,7 +20,7 @@
 |--------|-------|
 | Scoring model | Deductive (budget-based, start at 100) |
 | Axes | 6: Security, Speed, Foundations, Reputation, Discoverability, Email |
-| Signal count | 155 |
+| Signal count | 156 |
 | Composite method | Weighted arithmetic mean + outlier floor cap |
 | Tier labels | Excellent, Strong, Moderate, Weak, Critical |
 | Absent penalty | 0.30 |

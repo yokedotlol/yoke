@@ -48,7 +48,7 @@ Write the 3 most devastating (but fair) comments you'd post. These are the comme
 ### Claims vs. Reality
 - Does the README/marketing match what the tool actually does?
 - Are there features that seem impressive in the description but are shallow in practice?
-- Is "142 signals" genuinely useful or is it padding? (Are some signals trivial?)
+- Is "156 signals" genuinely useful or is it padding? (Are some signals trivial?)
 - Is the "AI Analysis" tab actually useful or is it GPT-wrapper-ware?
 
 ### Comparison to Existing Tools
