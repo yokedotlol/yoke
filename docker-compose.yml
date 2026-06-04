@@ -18,13 +18,14 @@ services:
         condition: service_started
     restart: unless-stopped
 
-  # ── workerd: Yoke analysis engine (Cloudflare Workers runtime) ──
+  # ── workerd: Yoke analysis engine (miniflare + workerd runtime) ──
   workerd:
     build:
       context: .
       dockerfile: docker/Dockerfile.workerd
     volumes:
       - client_dist:/app/client-dist   # Shared with Caddy for static files
+      - yoke_data:/data                # KV + D1 persistence (SQLite)
     environment:
       - YOKE_DOMAIN=${YOKE_DOMAIN}
       - SHARE_SECRET=${SHARE_SECRET}
@@ -57,3 +58,4 @@ volumes:
   client_dist:    # Client build output shared between workerd and Caddy
   caddy_data:     # TLS certificates
   caddy_config:   # Caddy config state
+  yoke_data:      # KV + D1 SQLite data (persistent across restarts)

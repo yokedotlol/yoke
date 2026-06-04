@@ -20,16 +20,17 @@ COPY worker/ ./
 COPY prompts/ /build/prompts/
 RUN bun run build
 
-# ── Stage 3: Runtime ──────────────────────────────────────────────
+# ── Stage 3: Runtime (miniflare wraps workerd + local KV/D1) ──────
 FROM node:22-slim
 
-# Install workerd via npm (bundles the correct platform binary)
-RUN npm install -g workerd@latest 2>/dev/null && npm cache clean --force
-
-# base64 is needed by the entrypoint to generate the assets shim
-RUN apt-get update && apt-get install -y coreutils ca-certificates && rm -rf /var/lib/apt/lists/*
+# ca-certificates needed for TLS to upstream APIs
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# Install miniflare (includes workerd binary + local KV/D1 backed by SQLite)
+RUN npm init -y && npm install miniflare && npm cache clean --force
 
 # Client dist (baked into image; entrypoint copies to shared volume for Caddy)
 COPY --from=client-builder /build/client/dist /app/client-dist-src
@@ -41,7 +42,10 @@ COPY --from=worker-builder /build/worker/dist/resvg_bg.wasm worker/dist/resvg_bg
 # Fonts for PDF generation
 COPY worker/src/fonts/ worker/src/fonts/
 
-# Entrypoint: copies client dist, generates assets-shim + workerd.capnp from env
+# Miniflare server script
+COPY docker/server.mjs server.mjs
+
+# Entrypoint: copies client dist, patches domains, starts miniflare
 COPY docker/entrypoint-workerd.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
 
