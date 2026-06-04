@@ -22,12 +22,11 @@ export function getHtmlSecurityHeaders(baseUrl?: string): Record<string, string>
       "default-src 'self'; script-src 'self' 'sha256-uc4Eo0eLbA2bnen9IAsmPVnrCkYfuaETrxr4nohh0Mk='; " +
       "style-src 'self' 'unsafe-inline'; " +
       `img-src 'self' data: https:; connect-src ${connectSrc} https://*.googleapis.com; ` +
-      "font-src 'self'; frame-ancestors 'self' https://*.chromiumapp.org; base-uri 'self'; form-action 'self'",
+      "font-src 'self'; frame-ancestors 'self' https://*.chromiumapp.org chrome-extension://*; base-uri 'self'; form-action 'self'",
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Embedder-Policy": "credentialless",
     "Cross-Origin-Resource-Policy": "same-origin",
-    "X-Frame-Options": "SAMEORIGIN",
   };
 }
 
