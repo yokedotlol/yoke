@@ -147,7 +147,19 @@ export function trackRequest(env: Env, request: Request, meta: RequestMeta): voi
 }
 
 /** Get rich analytics for the dashboard */
-export async function getRequestAnalytics(db: D1Database, days: number): Promise<RequestAnalytics> {
+export async function getRequestAnalytics(db: D1Database | undefined, days: number): Promise<RequestAnalytics> {
+  if (!db)
+    return {
+      total_requests: 0,
+      unique_visitors: 0,
+      unique_domains: 0,
+      avg_latency_ms: 0,
+      error_rate_pct: 0,
+      by_country: [],
+      top_domains: [],
+      by_day: [],
+      top_referrers: [],
+    };
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
 
   const result: RequestAnalytics = {

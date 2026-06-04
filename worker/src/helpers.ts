@@ -1,7 +1,13 @@
 // Cloudflare Worker environment bindings
 export interface Env {
-  STATS_DB: D1Database;
+  STATS_DB?: D1Database;
   ASSETS: { fetch: (request: Request) => Promise<Response> };
+  /** Self-hosted font data bindings (workerd data embeds) — used when KV is unavailable */
+  FONT_INTER_REGULAR?: ArrayBuffer;
+  FONT_INTER_MEDIUM?: ArrayBuffer;
+  FONT_INTER_SEMIBOLD?: ArrayBuffer;
+  FONT_INTER_BOLD?: ArrayBuffer;
+  FONT_JETBRAINS_MONO?: ArrayBuffer;
   OPENROUTER_API_KEY?: string;
   CF_ACCOUNT_ID?: string;
   CF_API_TOKEN?: string;

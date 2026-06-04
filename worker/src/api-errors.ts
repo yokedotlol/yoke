@@ -35,7 +35,8 @@ async function ensureTable(db: D1Database): Promise<void> {
   }
 }
 
-export async function logApiError(db: D1Database, err: ApiError): Promise<void> {
+export async function logApiError(db: D1Database | undefined, err: ApiError): Promise<void> {
+  if (!db) return;
   try {
     await ensureTable(db);
     await db
@@ -49,10 +50,11 @@ export async function logApiError(db: D1Database, err: ApiError): Promise<void> 
 
 // ─── Health summary for /api/health ──────────────────────────────────
 
-export async function getApiHealth(db: D1Database): Promise<{
+export async function getApiHealth(db: D1Database | undefined): Promise<{
   last_24h: { api: string; errors: number; last_status: number; last_message: string; last_ts: number }[];
   last_7d_summary: { api: string; errors: number }[];
 }> {
+  if (!db) return { last_24h: [], last_7d_summary: [] };
   try {
     await ensureTable(db);
     const now = Date.now();
@@ -131,7 +133,10 @@ const API_REGISTRY: { api: string; label: string; url: string }[] = [
   { api: "connection_timing", label: "Connection Timing", url: "Fly probe /probe-timing" },
 ];
 
-export async function getStatusPageData(db: D1Database): Promise<{ apis: ApiStatusRow[]; generated_at: string }> {
+export async function getStatusPageData(
+  db: D1Database | undefined,
+): Promise<{ apis: ApiStatusRow[]; generated_at: string }> {
+  if (!db) return { apis: [], generated_at: new Date().toISOString() };
   await ensureTable(db);
   const now = Date.now();
   const day = now - 24 * 60 * 60 * 1000;

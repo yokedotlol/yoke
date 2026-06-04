@@ -703,6 +703,7 @@ export async function getAIAnalysis(
   let rateLimitRowId: number | undefined;
   if (!isByoKey) {
     try {
+      if (!env.STATS_DB) throw new Error("STATS_DB not available (self-hosted)");
       await ensureRateLimitTable(env.STATS_DB);
       const count = await getRateLimitCount(env.STATS_DB, clientIP);
       if (count >= AI_HOURLY_LIMIT) {

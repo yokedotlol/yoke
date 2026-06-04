@@ -27,7 +27,7 @@ function clientIcon(t: string): string {
   return { web: "🌐", extension: "🧩", cli: "⌨️", api: "🔌" }[t] || "❓";
 }
 
-export async function renderUsagePage(db: D1Database, days = 30): Promise<Response> {
+export async function renderUsagePage(db: D1Database | undefined, days = 30): Promise<Response> {
   const [stats, rq] = await Promise.all([getUsageStats(db, days), getRequestAnalytics(db, days)]);
 
   // Endpoint traffic

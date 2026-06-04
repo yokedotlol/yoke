@@ -119,7 +119,13 @@ interface RateLimitResult {
 
 const rateLimitNoop = async () => {};
 
-async function checkRateLimit(db: D1Database, ip: string, endpoint: string, env: Env): Promise<RateLimitResult> {
+async function checkRateLimit(
+  db: D1Database | undefined,
+  ip: string,
+  endpoint: string,
+  env: Env,
+): Promise<RateLimitResult> {
+  if (!db) return { blocked: null, headers: {}, record: rateLimitNoop };
   const limits = getRateLimits(env);
   const config = limits[endpoint];
   if (!config || config.limit === 0) return { blocked: null, headers: {}, record: rateLimitNoop };
@@ -887,6 +893,7 @@ export default {
               });
             }
           }
+          if (!env.STATS_DB) return adminJson({ ok: false, error: "STATS_DB not configured (self-hosted)" }, 501);
           try {
             const [totals, last24h, tiers] = await Promise.all([
               env.STATS_DB.prepare(
@@ -945,6 +952,7 @@ export default {
 
         // POST /api/track-tab — anonymous tab view analytics
         if (method === "POST" && path === "/api/track-tab") {
+          if (!env.STATS_DB) return json({ ok: true });
           const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/track-tab", env);
           if (rl.blocked) return rl.blocked;
           const body = await parseBody<{ domain?: string; tab?: string }>(request);
@@ -1131,6 +1139,7 @@ export default {
         if (method === "GET" && path === "/api/cleanup") {
           const authErr = checkAdminAuth(request, env.ADMIN_KEY);
           if (authErr) return authErr;
+          if (!env.STATS_DB) return adminJson({ ok: false, error: "STATS_DB not configured (self-hosted)" }, 501);
           const cutoff1d = Date.now() - 24 * 60 * 60 * 1000;
           const cutoff7d = Date.now() - 7 * 24 * 60 * 60 * 1000;
           const results: Record<string, string> = {};
@@ -1174,6 +1183,7 @@ export default {
         if (method === "POST" && path === "/api/rescore") {
           const authErr = checkAdminAuth(request, env.ADMIN_KEY);
           if (authErr) return authErr;
+          if (!env.STATS_DB) return adminJson({ ok: false, error: "STATS_DB not configured (self-hosted)" }, 501);
 
           const startMs = Date.now();
           let total = 0;
@@ -1308,7 +1318,7 @@ export default {
               }
 
               // Execute batch
-              if (stmts.length > 0) {
+              if (stmts.length > 0 && env.STATS_DB) {
                 await env.STATS_DB.batch(stmts);
               }
             }

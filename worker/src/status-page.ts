@@ -68,7 +68,7 @@ function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-export async function renderStatusPage(db: D1Database, baseUrl = "https://yoke.lol"): Promise<Response> {
+export async function renderStatusPage(db: D1Database | undefined, baseUrl = "https://yoke.lol"): Promise<Response> {
   const data = await getStatusPageData(db);
 
   const totalErrors24h = data.apis.reduce((s, a) => s + a.errors_24h, 0);

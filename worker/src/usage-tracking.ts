@@ -19,7 +19,8 @@ async function ensureTable(db: D1Database): Promise<void> {
 }
 
 /** Track endpoint usage. Returns a promise — caller should pass to ctx.waitUntil() or await it. */
-export function trackUsage(db: D1Database, endpoint: string): Promise<void> {
+export function trackUsage(db: D1Database | undefined, endpoint: string): Promise<void> {
+  if (!db) return Promise.resolve();
   const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   return ensureTable(db)
     .then(() =>
@@ -37,7 +38,7 @@ export function trackUsage(db: D1Database, endpoint: string): Promise<void> {
 
 /** Get usage stats for the last N days */
 export async function getUsageStats(
-  db: D1Database,
+  db: D1Database | undefined,
   days = 30,
 ): Promise<{
   by_endpoint: Record<string, number>;
@@ -55,6 +56,7 @@ export async function getUsageStats(
   daily_snapshot_count?: number;
   error_stats?: { total: number; by_api: Record<string, number>; recent: { ts: number; api: string; error: string }[] };
 }> {
+  if (!db) return { by_endpoint: {}, by_day: [], total: 0 };
   await ensureTable(db);
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const tsCutoff = Date.now() - 7 * 86400000; // tab_views: last 7 days
