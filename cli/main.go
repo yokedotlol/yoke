@@ -909,7 +909,7 @@ func printAnalysis(r *AnalysisResult) {
 }
 
 func sortedAxes(axes map[string]AxisVal) []string {
-	order := []string{"security", "performance", "reliability", "trust", "visibility"}
+	order := []string{"security", "speed", "foundations", "reputation", "discoverability", "email"}
 	var result []string
 	for _, name := range order {
 		if _, ok := axes[name]; ok {

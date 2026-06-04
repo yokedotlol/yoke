@@ -2,7 +2,7 @@
 // Handles: content negotiation, OG tag injection, security headers, static pages, asset passthrough
 
 import type { Env } from "./helpers";
-import { getBaseUrl, YOKE_VERSION } from "./helpers";
+import { getBaseUrl, MIN_CLIENT_VERSION, YOKE_VERSION } from "./helpers";
 import { buildPdfUrl } from "./pdf-route";
 import { buildShareUrl } from "./share";
 import { trackUsage } from "./usage-tracking";
@@ -199,7 +199,17 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
       path === "/usage")
   ) {
     const indexHtml = await getIndexHtml(env, request.url);
-    return htmlResponse(indexHtml, { "Cache-Control": "no-cache" }, baseUrl);
+    const pageUrl = `${baseUrl}${path === "/" ? "" : path}`;
+    const ogHtml = injectOgTags(indexHtml, {
+      title:
+        path === "/"
+          ? "Yoke — Free Domain Intelligence & OSINT"
+          : `${path.slice(1).charAt(0).toUpperCase() + path.slice(2)} — Yoke`,
+      description:
+        "Free domain intelligence and OSINT tool. Analyze DNS, SSL, WHOIS, security headers, tech stack, performance, breach history, and more.",
+      url: pageUrl,
+    });
+    return htmlResponse(ogHtml, { "Cache-Control": "no-cache" }, baseUrl);
   }
 
   // ── Domain path: content negotiation ──
@@ -349,9 +359,13 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
         "Content-Type": "application/json;charset=UTF-8",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, X-OpenRouter-Key, Authorization",
+        "Access-Control-Expose-Headers": "X-Yoke-Version, X-Yoke-Min-Client",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "frame-ancestors 'self' https://*.chromiumapp.org chrome-extension://*",
         "X-Yoke-Cache": isCached ? "HIT" : "MISS",
         "X-Yoke-Version": YOKE_VERSION,
+        "X-Yoke-Min-Client": MIN_CLIENT_VERSION,
         "X-Yoke-Docs": `${baseUrl}/api/docs`,
         "Cache-Control": "public, max-age=3600",
         Vary: "Accept",

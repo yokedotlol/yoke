@@ -48,19 +48,6 @@ if $DEPLOY_CF; then
   echo "🔨 Building client..."
   cd client && bun run build.ts && cd ..
 
-  # ── Deploy OG Worker first (main worker depends on it via service binding) ──
-  echo "🔨 Building OG worker..."
-  cd og-worker && bun run build && cd ..
-
-  echo "🚀 Deploying OG worker to Cloudflare..."
-  cd og-worker
-  if ! bun x wrangler deploy; then
-    echo "❌ OG Worker deploy failed"
-    exit 1
-  fi
-  cd ..
-  echo "✅ OG Worker deployed"
-
   # ── Deploy Main Worker ──
   echo "🔨 Building worker..."
   cd worker && bun run build && cd ..

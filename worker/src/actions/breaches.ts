@@ -31,6 +31,7 @@ export interface BreachResult {
   total_pwned: number;
   items: BreachItem[];
   check_failed?: boolean;
+  attribution?: string;
 }
 
 export interface BreachItem {
@@ -180,6 +181,8 @@ export async function checkBreaches(domain: string, kv: KVNamespace, statsDb?: D
     total_pwned: totalPwned,
     items,
     check_failed: false,
+    attribution:
+      "Breach data sourced from Have I Been Pwned (haveibeenpwned.com) by Troy Hunt, licensed under CC BY 4.0",
   };
 
   // Cache

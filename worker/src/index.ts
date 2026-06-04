@@ -283,10 +283,19 @@ async function parseBody<T>(req: Request): Promise<T> {
 
 /** Constant-time string comparison to prevent timing side-channels. */
 function timingSafeEq(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let r = 0;
-  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return r === 0;
+  const encoder = new TextEncoder();
+  const aBytes = encoder.encode(a);
+  const bBytes = encoder.encode(b);
+  const maxLen = Math.max(aBytes.length, bBytes.length);
+  if (maxLen === 0) return true;
+  const aPadded = new Uint8Array(maxLen);
+  const bPadded = new Uint8Array(maxLen);
+  aPadded.set(aBytes);
+  bPadded.set(bBytes);
+  // Constant-time compare — then check lengths match
+  let mismatch = aBytes.length !== bBytes.length ? 1 : 0;
+  for (let i = 0; i < maxLen; i++) mismatch |= aPadded[i] ^ bPadded[i];
+  return mismatch === 0;
 }
 
 /** Verify admin Basic auth. Returns null if valid, or a Response to return if invalid. */
@@ -1121,7 +1130,7 @@ export default {
               fix_desc_map: FIX_DESC_MAP,
               thresholds: ALL_THRESHOLDS,
               archetype_note:
-                "Budget-based deductive scoring: each axis starts at 100 and loses points for issues. Signal share = signal_weight / total_good_weight × 100. Severity multipliers: good=0, info=0, low=0.5×share, medium=0.75×share, high=1.0×share, critical=1.5×share. Absent canBeGood signals deduct 0.15×share. Composite = weighted arithmetic mean. Floor cap: any axis below 40 caps composite at 74 (Moderate). Cache hits do not count against rate limits. Categories: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12).",
+                "Budget-based deductive scoring: each axis starts at 100 and loses points for issues. Signal share = signal_weight / total_good_weight × 100. Severity multipliers: good=0, info=0, low=0.5×share, medium=0.75×share, high=1.0×share, critical=1.5×share. Absent canBeGood signals deduct 0.30×share. Composite = weighted arithmetic mean. Floor cap: any axis below 40 caps composite at 74 (Moderate). Cache hits do not count against rate limits. Categories: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12).",
             },
             200,
           );
@@ -1194,9 +1203,7 @@ export default {
           results.domain_cache = "KV TTL handles expiry automatically";
           results.domain_lookups = "Recent lookups maintained as KV JSON array";
           try {
-            const rlRes = await env.STATS_DB.prepare(
-              "DELETE FROM ai_rate_limits WHERE date < date('now', '-1 day')",
-            ).run();
+            const rlRes = await env.STATS_DB.prepare("DELETE FROM ai_rate_limits WHERE ts < ?").bind(cutoff1d).run();
             results.ai_rate_limits = `${rlRes.meta?.changes ?? "?"} expired rows deleted`;
           } catch (e) {
             results.ai_rate_limits = `error: ${e instanceof Error ? e.message : String(e)}`;
@@ -1516,7 +1523,8 @@ export default {
 
     // Catch-all: if a non-browser client hits an unrecognized path that doesn't look like a static asset,
     // return a JSON error instead of SPA HTML (helps curl users who mistype domains)
-    if (wantsJSON(request) && !path.includes(".")) {
+    const isStaticAsset = /\.(js|css|map|ico|png|svg|woff2?|json|webp|jpg|jpeg|gif|wasm|txt|xml)$/i.test(path);
+    if (wantsJSON(request) && !isStaticAsset) {
       return json(
         { error: "Invalid domain format", hint: "Use a fully-qualified domain name (e.g., example.com)" },
         400,

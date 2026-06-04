@@ -12,7 +12,7 @@ sed -i "s/export const YOKE_VERSION = \".*\"/export const YOKE_VERSION = \"${VER
 echo "  ✅ worker/src/helpers.ts → YOKE_VERSION = \"${VERSION}\""
 
 # ── Sub-package package.json files ───────────────────────────────────
-for pkg in client/package.json worker/package.json og-worker/package.json; do
+for pkg in client/package.json worker/package.json; do
   node -e "
     const fs = require('fs');
     const p = JSON.parse(fs.readFileSync('${pkg}', 'utf8'));
@@ -40,7 +40,6 @@ echo "📋 Verification:"
 echo "  package.json:           $(node -p "require('./package.json').version")"
 echo "  client/package.json:    $(node -p "require('./client/package.json').version")"
 echo "  worker/package.json:    $(node -p "require('./worker/package.json').version")"
-echo "  og-worker/package.json: $(node -p "require('./og-worker/package.json').version")"
 echo "  YOKE_VERSION:           $(grep 'YOKE_VERSION' worker/src/helpers.ts | head -1)"
 echo ""
 echo "  (extension: $(node -p "require('./extension/manifest.json').version") — independent, not synced)"

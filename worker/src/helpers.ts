@@ -23,6 +23,8 @@ export interface Env {
   REFERENCE_DATA?: KVNamespace;
   /** Analysis cache TTL override in hours (default: 1) */
   CACHE_TTL_HOURS?: string;
+  /** Comma-separated list of self-hosted domain names (for self-fetch bypass). Defaults to yoke.lol. */
+  SELF_DOMAINS?: string;
   /** Execution context for ctx.waitUntil — set per-request from the Worker fetch handler */
   _ctx?: ExecutionContext;
 }
@@ -85,11 +87,12 @@ export async function fetchWithTimeout(url: string, opts: RequestInit & { timeou
 
 // ─── Self-Domain Detection ───────────────────────────────────────────
 
-const SELF_DOMAINS = ["yoke.lol", "www.yoke.lol"];
+const DEFAULT_SELF_DOMAINS = ["yoke.lol", "www.yoke.lol"];
 
 /** True when the domain being analyzed is Yoke itself (CF Workers can't subrequest own routes). */
-export function isSelfDomain(domain: string): boolean {
-  return SELF_DOMAINS.includes(domain.toLowerCase());
+export function isSelfDomain(domain: string, envSelfDomains?: string): boolean {
+  const domains = envSelfDomains ? envSelfDomains.split(",").map((d) => d.trim().toLowerCase()) : DEFAULT_SELF_DOMAINS;
+  return domains.includes(domain.toLowerCase());
 }
 
 // ─── Proxy-Aware HEAD Probe ──────────────────────────────────────────
@@ -113,7 +116,7 @@ export async function probeHeadWithFallback(
 ): Promise<HeadProbeResult> {
   const timeout = opts?.timeout ?? 10_000;
   const parsedUrl = new URL(url);
-  const forceFly = isSelfDomain(parsedUrl.hostname);
+  const forceFly = isSelfDomain(parsedUrl.hostname, env.SELF_DOMAINS);
 
   // Try direct HEAD first (unless self-domain)
   if (!forceFly) {

@@ -136,7 +136,7 @@ export async function getUsageStats(
         `SELECT
         CASE
           WHEN composite_score >= 90 THEN 'Excellent'
-          WHEN composite_score >= 75 THEN 'Strong'
+          WHEN composite_score >= 78 THEN 'Strong'
           WHEN composite_score >= 60 THEN 'Moderate'
           WHEN composite_score >= 40 THEN 'Weak'
           ELSE 'Critical'

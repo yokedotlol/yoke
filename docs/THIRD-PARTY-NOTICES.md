@@ -87,3 +87,23 @@ This product includes GeoLite2 data created by MaxMind, available from https://w
 - **Copyright**: Copyright (c) 2015-present Devon Govett, 2020 Andrew Dillon
 - **Files**: Bundled via npm (`@pdf-lib/fontkit` package) into worker build
 - **Usage**: Font embedding for PDF report generation
+
+## resvg-js (@resvg/resvg-wasm)
+
+- **Source**: https://github.com/thx/resvg-js (npm: @resvg/resvg-wasm)
+- **License**: MPL-2.0 (Mozilla Public License 2.0)
+- **Copyright**: Copyright (c) 2021-present, yisibl(一丝)
+- **Files**: `worker/src/og/resvg_bg.wasm`, `worker/src/og/resvg.cjs`
+- **Usage**: SVG-to-PNG rendering for OG share card images
+
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+## Inter
+
+- **Source**: https://github.com/rsms/inter
+- **License**: SIL Open Font License 1.1
+- **Copyright**: Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
+- **Files**: `client/public/fonts/inter-latin.woff2`
+- **Usage**: Primary UI typeface for the Yoke web application
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL

@@ -119,7 +119,7 @@ const FIXED_WEIGHTS: Record<Axis, number> = {
 
 function axisTierColor(score: number): string {
   if (score >= 90) return "var(--tier-excellent)";
-  if (score >= 75) return "var(--tier-strong)";
+  if (score >= 78) return "var(--tier-strong)";
   if (score >= 60) return "var(--tier-moderate)";
   if (score >= 40) return "var(--tier-weak)";
   return "var(--tier-critical)";

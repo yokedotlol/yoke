@@ -33,7 +33,6 @@ cd yoke
 
 cd client && bun install && cd ..
 cd worker && bun install && cd ..
-cd og-worker && npm install && cd ..
 
 # Enable pre-commit hooks (recommended)
 git config core.hooksPath .githooks
@@ -62,20 +61,6 @@ Yoke is an API-first product — the CLI, MCP server, Chrome extension, and CI s
 Your instance is already protected by per-IP rate limiting and SSRF guards — BFM adds nothing useful here.
 
 ## Step 3: Configure
-
-**OG Worker** (deploy first — main worker depends on it via service binding):
-
-```bash
-cp og-worker/wrangler.toml.example og-worker/wrangler.toml
-```
-
-Edit `og-worker/wrangler.toml`:
-```toml
-name = "yoke-og"
-main = "dist/worker.js"
-compatibility_date = "2024-12-01"
-account_id = "your-cloudflare-account-id"   # dash.cloudflare.com → any zone → Overview sidebar
-```
 
 **Main Worker:**
 
@@ -109,13 +94,9 @@ id = "paste-kv-namespace-id-from-step-2"
 [[routes]]
 pattern = "yourdomain.com/*"
 zone_name = "yourdomain.com"
-
-[[services]]
-binding = "OG_WORKER"
-service = "yoke-og"
 ```
 
-Both wrangler.toml files are gitignored.
+The wrangler.toml file is gitignored.
 
 ## Step 4: Migrations
 
@@ -153,14 +134,14 @@ npx wrangler secret put WHOISFREAKS_API_KEY
 
 ## Step 6: Build and Deploy
 
-Deploy order matters — OG worker first, then main worker.
+Deploy order matters — build the client first, then deploy the worker.
 
 ```bash
 # Everything at once
 bash deploy.sh --cf
 
 # Or manually
-cd og-worker && bun run build && npx wrangler deploy && cd ..
+cd client && bun run build.ts && cd ..
 cd worker && bun run build && npx wrangler deploy && cd ..
 ```
 

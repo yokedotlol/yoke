@@ -2681,14 +2681,15 @@ export function calculateDomainScore(opts: {
       });
     }
 
-    // TTFB
-    if (primaryPerf.ttfb != null) {
-      const ttfb = resolveSeverity(TTFB, primaryPerf.ttfb);
+    // TTFB — with fallback from mobile → desktop when mobile is null
+    const ttfbValue = primaryPerf.ttfb ?? (hasMobile && perfDesktop?.ttfb != null ? perfDesktop.ttfb : null);
+    if (ttfbValue != null) {
+      const ttfb = resolveSeverity(TTFB, ttfbValue);
       findings.push({
         signal: TTFB.signal,
         axis: "speed",
         severity: ttfb.severity,
-        label: `TTFB: ${Math.round(primaryPerf.ttfb)}ms`,
+        label: `TTFB: ${Math.round(ttfbValue)}ms`,
         tradeoff: null,
         weight: TTFB.weight,
         source: TTFB.source,
