@@ -8,10 +8,12 @@ RUN bun run build
 
 # ── Stage 2: Build the Yoke worker ────────────────────────────────
 FROM oven/bun:1-slim AS worker-builder
-WORKDIR /build
+WORKDIR /build/worker
 COPY worker/package.json worker/bun.lock* ./
 RUN bun install --frozen-lockfile 2>/dev/null || bun install
 COPY worker/ ./
+# Prompts live at repo root; worker imports them via ../../../prompts/
+COPY prompts/ /build/prompts/
 RUN bun run build
 
 # ── Stage 3: Runtime ──────────────────────────────────────────────
@@ -29,8 +31,8 @@ WORKDIR /app
 COPY --from=client-builder /build/dist /app/client-dist-src
 
 # Worker artifacts
-COPY --from=worker-builder /build/dist/worker.js worker/dist/worker.js
-COPY --from=worker-builder /build/dist/resvg_bg.wasm worker/dist/resvg_bg.wasm
+COPY --from=worker-builder /build/worker/dist/worker.js worker/dist/worker.js
+COPY --from=worker-builder /build/worker/dist/resvg_bg.wasm worker/dist/resvg_bg.wasm
 
 # Fonts for PDF generation
 COPY worker/src/fonts/ worker/src/fonts/
