@@ -1,6 +1,7 @@
 // SPA serving logic — ported from build_combined.py
 // Handles: content negotiation, OG tag injection, security headers, static pages, asset passthrough
 
+import { tierFromComposite } from "./config/signal-registry";
 import type { Env } from "./helpers";
 import { getBaseUrl, MIN_CLIENT_VERSION, YOKE_VERSION } from "./helpers";
 import { buildPdfUrl } from "./pdf-route";
@@ -277,6 +278,7 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
 async function serveDomainJSON(request: Request, env: Env, domain: string): Promise<Response> {
   const url = new URL(request.url);
   const pretty = url.searchParams.has("pretty");
+  const summary = url.searchParams.has("summary");
   const baseUrl = getBaseUrl(request, env);
 
   try {
@@ -350,8 +352,57 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
       /* percentile injection is non-critical */
     }
 
-    const body = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
+    // ── Summary mode: return compact ~500 byte response ──
     const isCached = !!(data as Record<string, unknown>).cached;
+    if (summary) {
+      const axes: Record<string, { score: number | null; tier: string }> = {};
+      if (domainScore?.axes) {
+        for (const [axis, info] of Object.entries(domainScore.axes)) {
+          const axisInfo = info as { score?: number };
+          const s = axisInfo.score ?? null;
+          axes[axis] = {
+            score: s,
+            tier: s != null ? tierFromComposite(s) : "Unknown",
+          };
+        }
+      }
+      const summaryData = {
+        domain: clean,
+        score: {
+          composite: domainScore?.composite ?? null,
+          tier: domainScore?.tier ?? "Unknown",
+        },
+        axes,
+        scanned_at: analyzedAt,
+        full_results: `${baseUrl}/${clean}`,
+        _meta: {
+          summary: true,
+          api_version: YOKE_VERSION,
+          source: new URL(baseUrl).hostname,
+        },
+      };
+      const summaryBody = pretty ? JSON.stringify(summaryData, null, 2) : JSON.stringify(summaryData);
+      return new Response(summaryBody, {
+        status: analyzeResp.status,
+        headers: {
+          "Content-Type": "application/json;charset=UTF-8",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, X-OpenRouter-Key, Authorization",
+          "Access-Control-Expose-Headers": "X-Yoke-Version, X-Yoke-Min-Client",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": "frame-ancestors 'self' https://*.chromiumapp.org chrome-extension://*",
+          "X-Yoke-Cache": isCached ? "HIT" : "MISS",
+          "X-Yoke-Version": YOKE_VERSION,
+          "X-Yoke-Min-Client": MIN_CLIENT_VERSION,
+          "X-Yoke-Docs": `${baseUrl}/api/docs`,
+          "Cache-Control": "public, max-age=3600",
+          Vary: "Accept",
+        },
+      });
+    }
+
+    const body = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
 
     return new Response(body, {
       status: analyzeResp.status,
