@@ -35,6 +35,16 @@ export interface Env {
   SITE_NAME?: string;
   /** Custom tagline for self-hosted instances (default: "open-source domain intelligence") */
   SITE_TAGLINE?: string;
+  /** Custom repo URL for source/issues links (default: yokedotlol/yoke GitHub) */
+  REPO_URL?: string;
+  /** Custom feedback/issue URL (default: repo issues) */
+  FEEDBACK_URL?: string;
+  /** Custom Chrome extension URL (default: Yoke extension) */
+  EXTENSION_URL?: string;
+  /** Set "true" to hide Chrome extension links */
+  HIDE_EXTENSION?: string;
+  /** Set "true" to hide CLI links */
+  HIDE_CLI?: string;
   /** Execution context for ctx.waitUntil — set per-request from the Worker fetch handler */
   _ctx?: ExecutionContext;
 }
@@ -239,6 +249,11 @@ export interface Branding {
   domain: string; // "yoke.lol" or custom
   tagline: string; // "open-source domain intelligence" or custom
   nameUpper: string; // "YOKE" or custom uppercase
+  repoUrl: string; // GitHub repo URL (for source/issues links)
+  feedbackUrl: string; // Feedback/issue reporting URL
+  extensionUrl: string; // Chrome extension URL (empty = hidden)
+  showExtension: boolean; // Whether to show extension links
+  showCli: boolean; // Whether to show CLI links
 }
 
 /** Resolve branding from env vars + request context. */
@@ -246,7 +261,23 @@ export function getBranding(request: Request, env?: Env): Branding {
   const domain = getBaseUrl(request, env).replace(/^https?:\/\//, "");
   const name = env?.SITE_NAME || "Yoke";
   const tagline = env?.SITE_TAGLINE || "open-source domain intelligence";
-  return { name, domain, tagline, nameUpper: name.toUpperCase() };
+  const repoUrl = env?.REPO_URL || "https://github.com/yokedotlol/yoke";
+  const feedbackUrl = env?.FEEDBACK_URL || `${repoUrl}/issues/new/choose`;
+  const extensionUrl =
+    env?.EXTENSION_URL || "https://chromewebstore.google.com/detail/yoke/fghkhjlelidaepapcdfjifnlcjmkgpcj";
+  const showExtension = env?.HIDE_EXTENSION !== "true";
+  const showCli = env?.HIDE_CLI !== "true";
+  return {
+    name,
+    domain,
+    tagline,
+    nameUpper: name.toUpperCase(),
+    repoUrl,
+    feedbackUrl,
+    extensionUrl,
+    showExtension,
+    showCli,
+  };
 }
 
 // ─── SSRF Protection ─────────────────────────────────────────────────

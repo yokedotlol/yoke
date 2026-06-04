@@ -26,6 +26,11 @@ const bindings = {
   FLY_AUTH_SECRET: process.env.PROBE_SECRET || "",
   SITE_NAME: process.env.SITE_NAME || "Yoke",
   SITE_TAGLINE: process.env.SITE_TAGLINE || "open-source domain intelligence",
+  REPO_URL: process.env.REPO_URL || "https://github.com/yokedotlol/yoke",
+  FEEDBACK_URL: process.env.FEEDBACK_URL || "",
+  EXTENSION_URL: process.env.EXTENSION_URL || "https://chromewebstore.google.com/detail/yoke/fghkhjlelidaepapcdfjifnlcjmkgpcj",
+  HIDE_EXTENSION: process.env.HIDE_EXTENSION || "false",
+  HIDE_CLI: process.env.HIDE_CLI || "false",
 };
 
 // Note: the worker code reads env.GOOGLE_PAGESPEED_API_KEY (not PAGESPEED_API_KEY)

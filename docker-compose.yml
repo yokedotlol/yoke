@@ -30,6 +30,11 @@ services:
       - YOKE_DOMAIN=${YOKE_DOMAIN}
       - SITE_NAME=${SITE_NAME:-Yoke}
       - SITE_TAGLINE=${SITE_TAGLINE:-open-source domain intelligence}
+      - REPO_URL=${REPO_URL:-https://github.com/yokedotlol/yoke}
+      - FEEDBACK_URL=${FEEDBACK_URL:-}
+      - EXTENSION_URL=${EXTENSION_URL:-https://chromewebstore.google.com/detail/yoke/fghkhjlelidaepapcdfjifnlcjmkgpcj}
+      - HIDE_EXTENSION=${HIDE_EXTENSION:-false}
+      - HIDE_CLI=${HIDE_CLI:-false}
       - SHARE_SECRET=${SHARE_SECRET}
       - ADMIN_KEY=${ADMIN_KEY}
       - PROBE_SECRET=${PROBE_SECRET}

@@ -72,6 +72,7 @@ export async function renderStatusPage(
   db: D1Database | undefined,
   baseUrl = "https://yoke.lol",
   siteName = "Yoke",
+  repoUrl = "https://github.com/yokedotlol/yoke",
 ): Promise<Response> {
   const data = await getStatusPageData(db);
 
@@ -144,7 +145,7 @@ export async function renderStatusPage(
 <body>
   <div class="container">
     <header>
-      <div class="logo"><a href="${baseUrl}">⚡ yoke<span>.lol</span></a></div>
+      <div class="logo"><a href="${baseUrl}">⚡ ${escHtml(siteName.toLowerCase())}</a></div>
       <h1>API Status</h1>
       <div class="overall"><span class="dot" style="background:${overallColor}"></span>${escHtml(overallLabel)}</div>
       <p class="subtitle">Real-time health of external APIs that ${siteName} depends on. Each bar = 1 hour over the last 24h. <a href="/api/health" class="json-link">JSON</a></p>
@@ -152,7 +153,7 @@ export async function renderStatusPage(
     ${rows}
     <footer>
       <span>Updated ${escHtml(data.generated_at)} · Errors auto-prune after 7 days</span>
-      <span><a href="${baseUrl}">${escHtml(new URL(baseUrl).hostname)}</a> · <a href="https://github.com/yokedotlol/yoke">GitHub</a></span>
+      <span><a href="${baseUrl}">${escHtml(new URL(baseUrl).hostname)}</a>${repoUrl ? ` · <a href="${escHtml(repoUrl)}">Source</a>` : ""}</span>
     </footer>
   </div>
 </body>
