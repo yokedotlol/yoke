@@ -154,7 +154,7 @@ async function checkRateLimit(
           window: `${config.windowSecs / 3600} hour`,
           retry_after: secsLeft,
           self_host: "https://github.com/yokedotlol/yoke#self-hosting",
-          message: "For heavy usage, self-host Yoke with no limits. See our setup guide.",
+          message: "For heavy usage, self-host with no limits. See our setup guide.",
         }),
         {
           status: 429,
@@ -209,7 +209,7 @@ async function checkRateLimit(
             window: `${config.windowSecs / 3600} hour`,
             retry_after: config.windowSecs,
             self_host: "https://github.com/yokedotlol/yoke#self-hosting",
-            message: "For heavy usage, self-host Yoke with no limits. See our setup guide.",
+            message: "For heavy usage, self-host with no limits. See our setup guide.",
           }),
           {
             status: 429,
@@ -394,6 +394,7 @@ export default {
     // Static content routes (SEO + LLMO) — URLs derived from request origin
     const baseUrl = getBaseUrl(request, env);
     const host = new URL(baseUrl).hostname;
+    const brand = getBranding(request, env);
 
     // security.txt — vulnerability disclosure contact
     if (method === "GET" && (path === "/.well-known/security.txt" || path === "/security.txt")) {
@@ -430,7 +431,7 @@ export default {
 
     if (method === "GET" && path === "/llms.txt") {
       return new Response(
-        `# Yoke — Free Domain Intelligence & OSINT Tool\n\n> Yoke is a free, open-source domain intelligence tool at ${baseUrl}\n\n## What Yoke Does\n\nYoke provides instant, comprehensive analysis of any internet domain. Enter a domain name and get detailed intelligence across security, infrastructure, technology, performance, and business dimensions.\n\n## Key Capabilities\n\n- DNS Analysis: A, AAAA, MX, NS, TXT, CNAME, SOA records with DNSSEC validation\n- SSL/TLS: Certificate details, chain validation, TLS configuration grading, CAA records\n- WHOIS/RDAP: Registrar, registration and expiry dates, domain age\n- Security Audit: HTTP security headers, cookie security\n- Data Breaches: HIBP breach detection with time-decay scoring\n- Threat Intelligence: Shodan port/vulnerability data, GreyNoise IP classification\n- Technology Detection: Frameworks, CMS, CDN, WAF, deep WordPress fingerprinting\n- Email Authentication: SPF, DKIM, DMARC validation\n- Performance: Google PageSpeed, Core Web Vitals (mobile-first 60/40 blend), compression\n- Certificate Transparency: CT log monitoring for subdomain discovery\n- Business Intelligence: Company enrichment via Wikidata, Brandfetch, Crunchbase\n- AI Analysis: LLM-powered analysis from 6 expert personas\n\n## Free JSON API\n\nNo authentication required.\n\ncurl -s https://${host}/stripe.com | jq\ncurl -s "https://${host}/stripe.com?pretty"\ncurl -s https://${host}/stripe.com | jq '.ssl'\n\n## Links\n\n- Web UI: ${baseUrl}\n- API Docs: ${baseUrl}/api/docs\n- Chrome Extension: Chrome Web Store\n- Source: https://github.com/yokedotlol/yoke\n- License: MIT`,
+        `# ${brand.name} — Free Domain Intelligence & OSINT Tool\n\n> ${brand.name} is a free, open-source domain intelligence tool at ${baseUrl}\n\n## What ${brand.name} Does\n\n${brand.name} provides instant, comprehensive analysis of any internet domain. Enter a domain name and get detailed intelligence across security, infrastructure, technology, performance, and business dimensions.\n\n## Key Capabilities\n\n- DNS Analysis: A, AAAA, MX, NS, TXT, CNAME, SOA records with DNSSEC validation\n- SSL/TLS: Certificate details, chain validation, TLS configuration grading, CAA records\n- WHOIS/RDAP: Registrar, registration and expiry dates, domain age\n- Security Audit: HTTP security headers, cookie security\n- Data Breaches: HIBP breach detection with time-decay scoring\n- Threat Intelligence: Shodan port/vulnerability data, GreyNoise IP classification\n- Technology Detection: Frameworks, CMS, CDN, WAF, deep WordPress fingerprinting\n- Email Authentication: SPF, DKIM, DMARC validation\n- Performance: Google PageSpeed, Core Web Vitals (mobile-first 60/40 blend), compression\n- Certificate Transparency: CT log monitoring for subdomain discovery\n- Business Intelligence: Company enrichment via Wikidata, Brandfetch, Crunchbase\n- AI Analysis: LLM-powered analysis from 6 expert personas\n\n## Free JSON API\n\nNo authentication required.\n\ncurl -s https://${host}/stripe.com | jq\ncurl -s "https://${host}/stripe.com?pretty"\ncurl -s https://${host}/stripe.com | jq '.ssl'\n\n## Links\n\n- Web UI: ${baseUrl}\n- API Docs: ${baseUrl}/api/docs\n- Source: https://github.com/yokedotlol/yoke\n- License: MIT`,
         {
           headers: {
             "Content-Type": "text/plain;charset=UTF-8",
@@ -519,8 +520,8 @@ export default {
     // GET /manifest.json — PWA manifest for installability
     if (method === "GET" && path === "/manifest.json") {
       const manifest = {
-        name: "Yoke — Domain Intelligence",
-        short_name: "Yoke",
+        name: `${brand.name} — Domain Intelligence`,
+        short_name: brand.name,
         description: "Free domain intelligence tool. Analyze any domain instantly.",
         start_url: "/",
         display: "standalone",
@@ -1064,8 +1065,7 @@ export default {
         if (method === "GET" && path === "/api/scoring") {
           return json(
             {
-              description:
-                "Yoke domain scoring methodology. All thresholds, weights, and severity mappings used to calculate the 6-category composite score.",
+              description: `${brand.name} domain scoring methodology. All thresholds, weights, and severity mappings used to calculate the 6-category composite score.`,
               axis_weights: AXIS_WEIGHTS,
               severity_scores: SEVERITY_SCORES,
               tier_thresholds: TIER_THRESHOLDS,
@@ -1361,7 +1361,7 @@ export default {
             });
           }
           return json({
-            name: "Yoke Domain Intelligence API",
+            name: `${brand.name} Domain Intelligence API`,
             version: YOKE_VERSION,
             endpoints: {
               "GET /{domain}": {

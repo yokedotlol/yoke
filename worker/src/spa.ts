@@ -3,7 +3,7 @@
 
 import { tierFromComposite } from "./config/signal-registry";
 import type { Env } from "./helpers";
-import { getBaseUrl, MIN_CLIENT_VERSION, YOKE_VERSION } from "./helpers";
+import { getBaseUrl, getBranding, MIN_CLIENT_VERSION, YOKE_VERSION } from "./helpers";
 import { buildPdfUrl } from "./pdf-route";
 import { buildShareUrl } from "./share";
 import { trackUsage } from "./usage-tracking";
@@ -175,6 +175,7 @@ async function getIndexHtml(env: Env, requestUrl: string): Promise<string> {
 export async function handleSPARoute(request: Request, env: Env, path: string): Promise<Response | null> {
   const method = request.method;
   const baseUrl = getBaseUrl(request, env);
+  const brand = getBranding(request, env);
 
   // ── Static pages ──
   // Bluesky domain handle verification — proves yoke.lol owns this Bluesky account
@@ -204,8 +205,8 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
     const ogHtml = injectOgTags(indexHtml, {
       title:
         path === "/"
-          ? "Yoke — Free Domain Intelligence & OSINT"
-          : `${path.slice(1).charAt(0).toUpperCase() + path.slice(2)} — Yoke`,
+          ? `${brand.name} — Free Domain Intelligence & OSINT`
+          : `${path.slice(1).charAt(0).toUpperCase() + path.slice(2)} — ${brand.name}`,
       description:
         "Free domain intelligence and OSINT tool. Analyze DNS, SSL, WHOIS, security headers, tech stack, performance, breach history, and more.",
       url: pageUrl,
@@ -240,7 +241,7 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
     const indexHtml = await getIndexHtml(env, request.url);
     const domain = domainMatch;
     const ogHtml = injectOgTags(indexHtml, {
-      title: `${domain} — Yoke Domain Intelligence`,
+      title: `${domain} — ${brand.name} Domain Intelligence`,
       description: `Free domain intelligence report for ${domain} — DNS, SSL, WHOIS, security audit, tech stack, performance, and more.`,
       url: `${baseUrl}/${domain}`,
     });
@@ -253,7 +254,7 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
     const [d1, d2] = compareMatch;
     const indexHtml = await getIndexHtml(env, request.url);
     const ogHtml = injectOgTags(indexHtml, {
-      title: `${d1} vs ${d2} — Yoke Domain Intelligence`,
+      title: `${d1} vs ${d2} — ${brand.name} Domain Intelligence`,
       description: `Side-by-side domain comparison of ${d1} and ${d2} — security, performance, infrastructure, trust, and visibility scores.`,
       url: `${baseUrl}/compare/${d1}/${d2}`,
     });
