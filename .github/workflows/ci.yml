@@ -192,6 +192,19 @@ jobs:
 
       - name: Smoke tests (with retry)
         run: |
+          # ── Diagnostic pre-flight ──
+          echo "=== DIAGNOSTIC: Full curl -v to homepage ==="
+          curl -v --max-time 15 https://yoke.lol/ 2>&1 | head -60
+          echo ""
+          echo "=== DIAGNOSTIC: HTTP status code ==="
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://yoke.lol/)
+          echo "Status: $HTTP_CODE"
+          echo ""
+          echo "=== DIAGNOSTIC: Response body (first 500 chars) ==="
+          curl -s --max-time 15 https://yoke.lol/ | head -c 500
+          echo ""
+          echo "=== END DIAGNOSTICS ==="
+
           # Retry helper: retries a command up to N times with backoff
           # Usage: retry <max_attempts> <delay_secs> <description> <command...>
           retry() {
@@ -208,6 +221,10 @@ jobs:
               fi
             done
             echo "::error::$desc — failed after $max attempts"
+            # Show diagnostic on final failure
+            echo "=== FINAL FAILURE DIAGNOSTIC ==="
+            curl -v --max-time 15 https://yoke.lol/ 2>&1 | head -40
+            echo "=== END ==="
             return 1
           }
 
