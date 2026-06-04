@@ -43,6 +43,7 @@ import {
   CORS_HEADERS,
   cleanDomain,
   getBaseUrl,
+  getBranding,
   getFromCache,
   hashIp,
   safeFetchWithRedirects,
@@ -442,7 +443,7 @@ export default {
 
     // Status page — server-rendered, public
     if (method === "GET" && path === "/status") {
-      return renderStatusPage(env.STATS_DB, baseUrl);
+      return renderStatusPage(env.STATS_DB, baseUrl, getBranding(request, env).name);
     }
 
     // Usage dashboard — admin-only, basic auth with ADMIN_KEY secret

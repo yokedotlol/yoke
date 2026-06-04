@@ -31,6 +31,10 @@ export interface Env {
   CACHE_TTL_HOURS?: string;
   /** Comma-separated list of self-hosted domain names (for self-fetch bypass). Defaults to yoke.lol. */
   SELF_DOMAINS?: string;
+  /** Custom site name for self-hosted instances (default: "Yoke") */
+  SITE_NAME?: string;
+  /** Custom tagline for self-hosted instances (default: "open-source domain intelligence") */
+  SITE_TAGLINE?: string;
   /** Execution context for ctx.waitUntil — set per-request from the Worker fetch handler */
   _ctx?: ExecutionContext;
 }
@@ -227,6 +231,22 @@ export function getFlyAuthHeaders(env: Env): Record<string, string> {
 export function getBaseUrl(request: Request, env?: Env): string {
   if (env?.BASE_URL) return env.BASE_URL.replace(/\/$/, "");
   return new URL(request.url).origin;
+}
+
+/** Branding config resolved from env vars (supports white-labeling for self-hosted). */
+export interface Branding {
+  name: string; // "Yoke" or custom
+  domain: string; // "yoke.lol" or custom
+  tagline: string; // "open-source domain intelligence" or custom
+  nameUpper: string; // "YOKE" or custom uppercase
+}
+
+/** Resolve branding from env vars + request context. */
+export function getBranding(request: Request, env?: Env): Branding {
+  const domain = getBaseUrl(request, env).replace(/^https?:\/\//, "");
+  const name = env?.SITE_NAME || "Yoke";
+  const tagline = env?.SITE_TAGLINE || "open-source domain intelligence";
+  return { name, domain, tagline, nameUpper: name.toUpperCase() };
 }
 
 // ─── SSRF Protection ─────────────────────────────────────────────────

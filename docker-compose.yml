@@ -28,6 +28,8 @@ services:
       - yoke_data:/data                # KV + D1 persistence (SQLite)
     environment:
       - YOKE_DOMAIN=${YOKE_DOMAIN}
+      - SITE_NAME=${SITE_NAME:-Yoke}
+      - SITE_TAGLINE=${SITE_TAGLINE:-open-source domain intelligence}
       - SHARE_SECRET=${SHARE_SECRET}
       - ADMIN_KEY=${ADMIN_KEY}
       - PROBE_SECRET=${PROBE_SECRET}

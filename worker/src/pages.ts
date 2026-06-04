@@ -127,7 +127,7 @@ curl -s https://${host}/thisdomaindoesnotexist.com | jq '.not_registered'</pre><
   "_meta": {
     "api_version": "${YOKE_VERSION}",
     "analyzed_at": "...",
-    "source": "yoke.lol",
+    "source": "${host}",
     "docs": "${docsUrl}/api/docs",
     "share_url": "https://${host}/r/...",      <span style="color:#8b949e">// shareable report link</span>
     "pdf_url": "https://${host}/report/..."    <span style="color:#8b949e">// downloadable PDF report</span>
@@ -140,5 +140,5 @@ X-Yoke-Version: ${YOKE_VERSION}</pre><h2>Rate Limits</h2><p>No authentication re
   -d '{"domain1":"stripe.com","domain2":"shopify.com"}' | jq '.comparison'</pre><h3>Check SSL details</h3><pre>curl -s https://${host}/github.com | jq '{grade: .ssl.grade, issuer: .ssl.issuer, expires: .ssl.valid_to}'</pre><h3>Get DNS records</h3><pre>curl -s https://${host}/example.com | jq '.dns.mx'</pre><h3>Check email authentication</h3><pre>curl -s https://${host}/google.com | jq '.email_auth | {spf: .spf.record, dmarc: .dmarc.record}'</pre><h3>List tech stack</h3><pre>curl -s https://${host}/nytimes.com | jq '[.tech_stack[] | .name]'</pre><h3>Breach history</h3><pre>curl -s https://${host}/linkedin.com | jq '.breaches'</pre><h3>AI Readiness</h3><pre>curl -s https://${host}/stripe.com | jq '.ai_readiness | {score, grade}'</pre><h3>WordPress details</h3><pre>curl -s https://${host}/techcrunch.com | jq '.wordpress'</pre><h3>Get the scoring methodology</h3><pre>curl -s https://${host}/api/scoring | jq '.axis_weights'</pre><h3>Scripting: check multiple domains</h3><pre>for d in stripe.com github.com notion.so; do
   echo "=== $d ==="
   curl -s "https://${host}/$d" | jq '{domain: .domain, score: .domain_score.composite, tier: .domain_score.tier, ssl: .ssl.grade}'
-done</pre><p class="back"><a href="/">← Back to Yoke</a></p></body></html>`;
+done</pre><p class="back"><a href="/">← Back</a></p></body></html>`;
 }

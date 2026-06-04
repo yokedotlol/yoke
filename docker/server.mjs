@@ -24,6 +24,8 @@ const bindings = {
   SELF_DOMAINS: `${YOKE_DOMAIN},www.${YOKE_DOMAIN}`,
   FLY_PROBE_URL: "http://probe:8788",
   FLY_AUTH_SECRET: process.env.PROBE_SECRET || "",
+  SITE_NAME: process.env.SITE_NAME || "Yoke",
+  SITE_TAGLINE: process.env.SITE_TAGLINE || "open-source domain intelligence",
 };
 
 // Note: the worker code reads env.GOOGLE_PAGESPEED_API_KEY (not PAGESPEED_API_KEY)

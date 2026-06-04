@@ -2,6 +2,7 @@
 // Generates a downloadable PDF from cached analysis data
 
 import type { Env } from "./helpers";
+import { getBranding } from "./helpers";
 import { loadPdfFonts } from "./pdf-fonts";
 import { generatePdfReport } from "./pdf-report";
 import { signPayload, verifyPayload } from "./share";
@@ -44,15 +45,23 @@ function escapeHtml(s: string): string {
 }
 
 /** Branded HTML error page for missing/expired reports */
-function reportErrorPage(domain: string, baseUrl: string): Response {
+function reportErrorPage(
+  domain: string,
+  baseUrl: string,
+  siteName = "Yoke",
+  siteTagline = "open-source domain intelligence",
+): Response {
   const safeDomain = escapeHtml(domain);
   const safeBaseUrl = escapeHtml(baseUrl);
+  const safeSiteName = escapeHtml(siteName);
+  const safeSiteDomain = escapeHtml(baseUrl.replace(/^https?:\/\//, ""));
+  const safeTagline = escapeHtml(siteTagline);
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Report Unavailable — Yoke</title>
+  <title>Report Unavailable — ${safeSiteName}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
@@ -74,7 +83,7 @@ function reportErrorPage(domain: string, baseUrl: string): Response {
     <p>This report hasn't been generated yet or has expired.<br>
        Run a fresh analysis to generate a downloadable PDF.</p>
     <a class="btn" href="${safeBaseUrl}/${safeDomain}">Analyze ${safeDomain}</a>
-    <div class="brand">yoke.lol — open-source domain intelligence</div>
+    <div class="brand">${safeSiteDomain} — ${safeTagline}</div>
   </div>
 </body>
 </html>`;
@@ -87,34 +96,35 @@ function reportErrorPage(domain: string, baseUrl: string): Response {
 export async function handleReportDownload(request: Request, env: Env, domain: string): Promise<Response> {
   const url = new URL(request.url);
   const baseUrl = env.BASE_URL || url.origin;
+  const branding = getBranding(request, env);
   const sig = url.searchParams.get("sig");
   const tStr = url.searchParams.get("t");
 
   // Validate signature params
   if (!sig || !tStr) {
-    return reportErrorPage(domain, baseUrl);
+    return reportErrorPage(domain, baseUrl, branding.name, branding.tagline);
   }
 
   const ts = parseInt(tStr, 10);
   if (Number.isNaN(ts) || ts <= 0) {
-    return reportErrorPage(domain, baseUrl);
+    return reportErrorPage(domain, baseUrl, branding.name, branding.tagline);
   }
 
   // Verify HMAC signature
   const payload = `pdf:${domain}:${ts}`;
   const valid = await verifyPayload(payload, sig, env);
   if (!valid) {
-    return reportErrorPage(domain, baseUrl);
+    return reportErrorPage(domain, baseUrl, branding.name, branding.tagline);
   }
 
   // Look up cached analysis data
   if (!env.REFERENCE_DATA) {
-    return reportErrorPage(domain, baseUrl);
+    return reportErrorPage(domain, baseUrl, branding.name, branding.tagline);
   }
 
   const raw = await env.REFERENCE_DATA.get(`cache:analysis:${domain}`, "text");
   if (!raw) {
-    return reportErrorPage(domain, baseUrl);
+    return reportErrorPage(domain, baseUrl, branding.name, branding.tagline);
   }
 
   let data: Record<string, unknown>;
@@ -122,17 +132,18 @@ export async function handleReportDownload(request: Request, env: Env, domain: s
     const envelope = JSON.parse(raw) as { data: Record<string, unknown>; cached_at: number };
     data = envelope.data;
   } catch {
-    return reportErrorPage(domain, baseUrl);
+    return reportErrorPage(domain, baseUrl, branding.name, branding.tagline);
   }
 
   // Generate PDF
   try {
     const fontData = await loadPdfFonts(env);
-    const pdfBytes = await generatePdfReport(data, fontData);
+    const pdfBytes = await generatePdfReport(data, fontData, branding);
+    const filePrefix = branding.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     return new Response(pdfBytes, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="yoke-report-${domain}.pdf"`,
+        "Content-Disposition": `attachment; filename="${filePrefix}-report-${domain}.pdf"`,
         "Cache-Control": "private, max-age=3600",
         "Access-Control-Allow-Origin": "*",
       },

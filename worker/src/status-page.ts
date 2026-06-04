@@ -68,7 +68,11 @@ function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-export async function renderStatusPage(db: D1Database | undefined, baseUrl = "https://yoke.lol"): Promise<Response> {
+export async function renderStatusPage(
+  db: D1Database | undefined,
+  baseUrl = "https://yoke.lol",
+  siteName = "Yoke",
+): Promise<Response> {
   const data = await getStatusPageData(db);
 
   const totalErrors24h = data.apis.reduce((s, a) => s + a.errors_24h, 0);
@@ -87,8 +91,8 @@ export async function renderStatusPage(db: D1Database | undefined, baseUrl = "ht
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Yoke Status</title>
-  <meta name="description" content="Real-time status of Yoke's external API dependencies.">
+  <title>${siteName} Status</title>
+  <meta name="description" content="Real-time status of ${siteName}'s external API dependencies.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=optional" rel="stylesheet">
@@ -143,7 +147,7 @@ export async function renderStatusPage(db: D1Database | undefined, baseUrl = "ht
       <div class="logo"><a href="${baseUrl}">⚡ yoke<span>.lol</span></a></div>
       <h1>API Status</h1>
       <div class="overall"><span class="dot" style="background:${overallColor}"></span>${escHtml(overallLabel)}</div>
-      <p class="subtitle">Real-time health of external APIs that Yoke depends on. Each bar = 1 hour over the last 24h. <a href="/api/health" class="json-link">JSON</a></p>
+      <p class="subtitle">Real-time health of external APIs that ${siteName} depends on. Each bar = 1 hour over the last 24h. <a href="/api/health" class="json-link">JSON</a></p>
     </header>
     ${rows}
     <footer>

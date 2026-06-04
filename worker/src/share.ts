@@ -2,8 +2,8 @@
 // Route handlers for /r/:payload.:sig and /og/:payload.:sig.png (was .svg)
 // Compare share handlers: /c/:payload.:sig and /cog/:payload.:sig.png
 
-import type { Env } from "./helpers";
-import { getBaseUrl } from "./helpers";
+import type { Branding, Env } from "./helpers";
+import { getBaseUrl, getBranding } from "./helpers";
 import { svgToPng } from "./og/png-render";
 import { getHtmlSecurityHeaders } from "./spa";
 
@@ -252,7 +252,9 @@ const AXIS_ABBR_OG = ["SEC", "FND", "REP", "SPD", "DSC", "EML"];
 
 // ─── OG Image (SVG) ─────────────────────────────────────────────────
 
-function generateOgSvg(data: SharePayload): string {
+function generateOgSvg(data: SharePayload, brand?: Branding): string {
+  const brandName = brand?.nameUpper || "YOKE";
+  const brandDomain = brand?.domain || "yoke.lol";
   const domain = esc(data.d);
   const score = data.s;
   const tier = data.g;
@@ -298,7 +300,7 @@ function generateOgSvg(data: SharePayload): string {
   <rect x="0.5" y="0.5" width="1199" height="629" rx="0" fill="none" stroke="#334155" stroke-width="1"/>
 
   <!-- Yoke branding top-left -->
-  <text x="48" y="56" fill="#818cf8" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="22" font-weight="800" letter-spacing="1.5">YOKE</text>
+  <text x="48" y="56" fill="#818cf8" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="22" font-weight="800" letter-spacing="1.5">${brandName}</text>
 
   <!-- Domain name centered -->
   <text x="600" y="170" fill="#f1f5f9" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="42" font-weight="700" text-anchor="middle" letter-spacing="-0.5">${domain.length > 30 ? `${domain.substring(0, 30)}…` : domain}</text>
@@ -315,13 +317,15 @@ function generateOgSvg(data: SharePayload): string {
 
   <!-- Footer date -->
   <text x="1152" y="595" fill="#475569" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="13" text-anchor="end">Scanned ${dateStr}</text>
-  <text x="48" y="595" fill="#475569" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="13">yoke.lol</text>
+  <text x="48" y="595" fill="#475569" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="13">${brandDomain}</text>
 </svg>`;
 }
 
 // ─── Report card page ────────────────────────────────────────────────
 
-function generateReportPage(data: SharePayload, baseUrl: string, token: string): string {
+function generateReportPage(data: SharePayload, baseUrl: string, token: string, brand?: Branding): string {
+  const brandName = brand?.name || "Yoke";
+  const brandNameUpper = brand?.nameUpper || "YOKE";
   const domain = esc(data.d);
   const score = data.s;
   const tier = data.g;
@@ -357,10 +361,10 @@ function generateReportPage(data: SharePayload, baseUrl: string, token: string):
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>${domain} scored ${score} (${esc(tier)}) — Yoke</title>
+  <title>${domain} scored ${score} (${esc(tier)}) — ${brandName}</title>
   <meta name="description" content="Security ${data.a[0]} · Foundations ${data.a[1]} · Reputation ${data.a[2]} · Speed ${data.a[3]} · Discoverability ${data.a[4]} · Email ${data.a[5] ?? "N/A"} — Free domain intelligence report"/>
   <meta property="og:type" content="website"/>
-  <meta property="og:title" content="${domain} scored ${score} (${esc(tier)}) — Yoke"/>
+  <meta property="og:title" content="${domain} scored ${score} (${esc(tier)}) — ${brandName}"/>
   <meta property="og:description" content="Security ${data.a[0]} · Foundations ${data.a[1]} · Reputation ${data.a[2]} · Speed ${data.a[3]} · Discoverability ${data.a[4]} · Email ${data.a[5] ?? "N/A"} — Free domain intelligence report"/>
   <meta property="og:image" content="${ogImageUrl}"/>
   <meta property="og:image:type" content="image/png"/>
@@ -368,7 +372,7 @@ function generateReportPage(data: SharePayload, baseUrl: string, token: string):
   <meta property="og:image:height" content="630"/>
   <meta property="og:url" content="${shareUrl}"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="${domain} scored ${score} (${esc(tier)}) — Yoke"/>
+  <meta name="twitter:title" content="${domain} scored ${score} (${esc(tier)}) — ${brandName}"/>
   <meta name="twitter:description" content="Security ${data.a[0]} · Foundations ${data.a[1]} · Reputation ${data.a[2]} · Speed ${data.a[3]} · Discoverability ${data.a[4]} · Email ${data.a[5] ?? "N/A"}"/>
   <meta name="twitter:image" content="${ogImageUrl}"/>
   <link rel="canonical" href="${shareUrl}"/>
@@ -415,8 +419,8 @@ function generateReportPage(data: SharePayload, baseUrl: string, token: string):
 <body>
   <div class="card">
     <div class="brand">
-      <img src="${OX_LOGO_DATA_URI}" alt="Yoke" width="22" height="22" style="filter:brightness(0) invert(1);opacity:0.7"/>
-      <span class="brand-name">YOKE</span>
+      <img src="${OX_LOGO_DATA_URI}" alt="${brandName}" width="22" height="22" style="filter:brightness(0) invert(1);opacity:0.7"/>
+      <span class="brand-name">${brandNameUpper}</span>
       <span class="brand-sub">DOMAIN INTELLIGENCE</span>
     </div>
     <div class="domain">${domain}</div>
@@ -498,6 +502,9 @@ export async function handleSharePage(request: Request, env: Env, token: string)
   }
 
   const baseUrl = getBaseUrl(request, env);
+  const brand = getBranding(request, env);
+  const brandName = brand.name;
+  const _brandNameUpper = brand.nameUpper;
   const ua = request.headers.get("User-Agent") || "";
 
   if (isBotUA(ua)) {
@@ -508,9 +515,9 @@ export async function handleSharePage(request: Request, env: Env, token: string)
     const domain = esc(d.d);
     const html = `<!DOCTYPE html><html><head>
 <meta charset="utf-8"/>
-<title>${domain} scored ${d.s} (${esc(d.g)}) — Yoke</title>
+<title>${domain} scored ${d.s} (${esc(d.g)}) — ${brandName}</title>
 <meta property="og:type" content="website"/>
-<meta property="og:title" content="${domain} scored ${d.s} (${esc(d.g)}) — Yoke"/>
+<meta property="og:title" content="${domain} scored ${d.s} (${esc(d.g)}) — ${brandName}"/>
 <meta property="og:description" content="Security ${d.a[0]} · Foundations ${d.a[1]} · Reputation ${d.a[2]} · Speed ${d.a[3]} · Discoverability ${d.a[4]} · Email ${d.a[5] ?? "N/A"} — Free domain intelligence report"/>
 <meta property="og:image" content="${esc(ogImageUrl)}"/>
 <meta property="og:image:type" content="image/png"/>
@@ -518,7 +525,7 @@ export async function handleSharePage(request: Request, env: Env, token: string)
 <meta property="og:image:height" content="630"/>
 <meta property="og:url" content="${esc(shareUrl)}"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="${domain} scored ${d.s} (${esc(d.g)}) — Yoke"/>
+<meta name="twitter:title" content="${domain} scored ${d.s} (${esc(d.g)}) — ${brandName}"/>
 <meta name="twitter:description" content="Security ${d.a[0]} · Foundations ${d.a[1]} · Reputation ${d.a[2]} · Speed ${d.a[3]} · Discoverability ${d.a[4]} · Email ${d.a[5] ?? "N/A"}"/>
 <meta name="twitter:image" content="${esc(ogImageUrl)}"/>
 <link rel="canonical" href="${esc(shareUrl)}"/>
@@ -533,7 +540,7 @@ export async function handleSharePage(request: Request, env: Env, token: string)
   }
 
   // Browser: full report card page
-  const html = generateReportPage(parsed.data, baseUrl, token);
+  const html = generateReportPage(parsed.data, baseUrl, token, brand);
   return new Response(html, {
     headers: {
       "Content-Type": "text/html;charset=UTF-8",
@@ -555,7 +562,8 @@ export async function handleOgImage(_request: Request, env: Env, token: string):
     return new Response("Invalid token", { status: 400, headers: { "Content-Type": "text/plain" } });
   }
 
-  const svg = generateOgSvg(parsed.data);
+  const brand = getBranding(_request, env);
+  const svg = generateOgSvg(parsed.data, brand);
 
   // Render SVG→PNG inline (resvg-wasm)
   try {
@@ -591,7 +599,9 @@ export function matchCompareOgImagePath(path: string): string | null {
 
 // ─── Compare OG SVG ──────────────────────────────────────────────────
 
-function generateCompareOgSvg(data: CompareSharePayload): string {
+function generateCompareOgSvg(data: CompareSharePayload, brand?: Branding): string {
+  const brandName = brand?.nameUpper || "YOKE";
+  const brandDomain = brand?.domain || "yoke.lol";
   const d1 = esc(data.d1.length > 24 ? `${data.d1.substring(0, 24)}…` : data.d1);
   const d2 = esc(data.d2.length > 24 ? `${data.d2.substring(0, 24)}…` : data.d2);
   const gc1 = tierColor(data.g1);
@@ -664,7 +674,7 @@ function generateCompareOgSvg(data: CompareSharePayload): string {
 
   <!-- Yoke branding — same position as single-domain -->
   <image x="56" y="50" width="28" height="28" href="${OX_LOGO_DATA_URI}" filter="url(#invert)" opacity="0.7"/>
-  <text x="92" y="72" fill="#8b949e" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="18" font-weight="600" letter-spacing="2">YOKE</text>
+  <text x="92" y="72" fill="#8b949e" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="18" font-weight="600" letter-spacing="2">${brandName}</text>
   <text x="170" y="72" fill="#484f58" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="14">DOMAIN COMPARISON</text>
 
   <!-- Domain 1 name -->
@@ -700,14 +710,21 @@ function generateCompareOgSvg(data: CompareSharePayload): string {
   <text x="798" y="${legendY + 10}" fill="#8b949e" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="12">${d2}</text>
 
   <!-- Footer — same position as single-domain -->
-  <text x="60" y="585" fill="#484f58" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="13">yoke.lol — Free domain intelligence comparison</text>
+  <text x="60" y="585" fill="#484f58" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="13">${brandDomain} — Free domain intelligence comparison</text>
   <text x="1140" y="585" fill="#484f58" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="13" text-anchor="end">Analyzed ${new Date(data.t * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</text>
 </svg>`;
 }
 
 // ─── Compare report card page ────────────────────────────────────────
 
-function generateCompareReportPage(data: CompareSharePayload, baseUrl: string, token: string): string {
+function generateCompareReportPage(
+  data: CompareSharePayload,
+  baseUrl: string,
+  token: string,
+  brand?: Branding,
+): string {
+  const brandName = brand?.name || "Yoke";
+  const brandNameUpper = brand?.nameUpper || "YOKE";
   const d1 = esc(data.d1);
   const d2 = esc(data.d2);
   const gc1 = tierColor(data.g1);
@@ -751,10 +768,10 @@ function generateCompareReportPage(data: CompareSharePayload, baseUrl: string, t
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>${d1} vs ${d2} — Yoke Comparison</title>
+  <title>${d1} vs ${d2} — ${brandName} Comparison</title>
   <meta name="description" content="${d1} (${data.s1}/${esc(data.g1)}) vs ${d2} (${data.s2}/${esc(data.g2)}) — Domain intelligence comparison"/>
   <meta property="og:type" content="website"/>
-  <meta property="og:title" content="${d1} vs ${d2} — Yoke Comparison"/>
+  <meta property="og:title" content="${d1} vs ${d2} — ${brandName} Comparison"/>
   <meta property="og:description" content="${d1} scored ${data.s1} (${esc(data.g1)}) · ${d2} scored ${data.s2} (${esc(data.g2)}) — Domain intelligence comparison"/>
   <meta property="og:image" content="${ogImageUrl}"/>
   <meta property="og:image:type" content="image/png"/>
@@ -762,7 +779,7 @@ function generateCompareReportPage(data: CompareSharePayload, baseUrl: string, t
   <meta property="og:image:height" content="630"/>
   <meta property="og:url" content="${shareUrl}"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="${d1} vs ${d2} — Yoke Comparison"/>
+  <meta name="twitter:title" content="${d1} vs ${d2} — ${brandName} Comparison"/>
   <meta name="twitter:description" content="${d1} scored ${data.s1} (${esc(data.g1)}) · ${d2} scored ${data.s2} (${esc(data.g2)})"/>
   <meta name="twitter:image" content="${ogImageUrl}"/>
   <link rel="canonical" href="${shareUrl}"/>
@@ -804,8 +821,8 @@ function generateCompareReportPage(data: CompareSharePayload, baseUrl: string, t
 <body>
   <div class="card">
     <div class="brand">
-      <img src="${OX_LOGO_DATA_URI}" alt="Yoke" width="22" height="22" style="filter:brightness(0) invert(1);opacity:0.7"/>
-      <span class="brand-name">YOKE</span>
+      <img src="${OX_LOGO_DATA_URI}" alt="${brandName}" width="22" height="22" style="filter:brightness(0) invert(1);opacity:0.7"/>
+      <span class="brand-name">${brandNameUpper}</span>
       <span class="brand-sub">DOMAIN COMPARISON</span>
     </div>
     <div class="vs-header">
@@ -840,7 +857,7 @@ function generateCompareReportPage(data: CompareSharePayload, baseUrl: string, t
     </div>
     <div class="delta-badge"><span style="color:${delta > 0 ? "#3fb950" : delta < 0 ? "#f85149" : "#8b949e"}">${delta > 0 ? "+" : ""}${delta} point delta</span></div>
     <div class="axes">${axisBarsHtml}</div>
-    <a class="cta" href="${baseUrl}/compare/${esc(data.d1)}/${esc(data.d2)}" style="--cta-bg:${gc1}">⚡ Full comparison on Yoke</a>
+    <a class="cta" href="${baseUrl}/compare/${esc(data.d1)}/${esc(data.d2)}" style="--cta-bg:${gc1}">⚡ Full comparison on ${brandName}</a>
   </div>
   <div class="footer">
     <a href="${baseUrl}">${new URL(baseUrl).hostname}</a> — Free domain intelligence for everyone
@@ -866,6 +883,9 @@ export async function handleCompareSharePage(request: Request, env: Env, token: 
   }
 
   const baseUrl = getBaseUrl(request, env);
+  const brand = getBranding(request, env);
+  const brandName = brand.name;
+  const _brandNameUpper = brand.nameUpper;
   const ua = request.headers.get("User-Agent") || "";
 
   if (isBotUA(ua)) {
@@ -874,9 +894,9 @@ export async function handleCompareSharePage(request: Request, env: Env, token: 
     const shareUrl = `${baseUrl}/c/${token}`;
     const html = `<!DOCTYPE html><html><head>
 <meta charset="utf-8"/>
-<title>${esc(d.d1)} vs ${esc(d.d2)} — Yoke Comparison</title>
+<title>${esc(d.d1)} vs ${esc(d.d2)} — ${brandName} Comparison</title>
 <meta property="og:type" content="website"/>
-<meta property="og:title" content="${esc(d.d1)} vs ${esc(d.d2)} — Yoke Comparison"/>
+<meta property="og:title" content="${esc(d.d1)} vs ${esc(d.d2)} — ${brandName} Comparison"/>
 <meta property="og:description" content="${esc(d.d1)} scored ${d.s1} (${esc(d.g1)}) · ${esc(d.d2)} scored ${d.s2} (${esc(d.g2)}) — Domain intelligence comparison"/>
 <meta property="og:image" content="${esc(ogImageUrl)}"/>
 <meta property="og:image:type" content="image/png"/>
@@ -884,7 +904,7 @@ export async function handleCompareSharePage(request: Request, env: Env, token: 
 <meta property="og:image:height" content="630"/>
 <meta property="og:url" content="${esc(shareUrl)}"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="${esc(d.d1)} vs ${esc(d.d2)} — Yoke Comparison"/>
+<meta name="twitter:title" content="${esc(d.d1)} vs ${esc(d.d2)} — ${brandName} Comparison"/>
 <meta name="twitter:description" content="${esc(d.d1)} scored ${d.s1} (${esc(d.g1)}) · ${esc(d.d2)} scored ${d.s2} (${esc(d.g2)})"/>
 <meta name="twitter:image" content="${esc(ogImageUrl)}"/>
 <link rel="canonical" href="${esc(shareUrl)}"/>
@@ -898,7 +918,7 @@ export async function handleCompareSharePage(request: Request, env: Env, token: 
     });
   }
 
-  const html = generateCompareReportPage(parsed.data, baseUrl, token);
+  const html = generateCompareReportPage(parsed.data, baseUrl, token, brand);
   return new Response(html, {
     headers: {
       "Content-Type": "text/html;charset=UTF-8",
@@ -919,7 +939,8 @@ export async function handleCompareOgImage(_request: Request, env: Env, token: s
     return new Response("Invalid token", { status: 400, headers: { "Content-Type": "text/plain" } });
   }
 
-  const svg = generateCompareOgSvg(parsed.data);
+  const brand = getBranding(_request, env);
+  const svg = generateCompareOgSvg(parsed.data, brand);
 
   try {
     const png = await svgToPng(svg);
