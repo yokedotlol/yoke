@@ -492,31 +492,53 @@ export default {
     const spaResponse = await handleSPARoute(request, env, path);
     if (spaResponse) return spaResponse;
 
-    // GET /_/recent — internal ticker data for the SPA homepage (not a public API)
-    if (method === "GET" && path === "/_/recent") {
+    // GET /_/showcase — popular domains feed for the SPA homepage
+    // GET /_/recent — legacy alias, redirects to /_/showcase
+    if (method === "GET" && (path === "/_/showcase" || path === "/_/recent")) {
+      if (path === "/_/recent") {
+        return new Response(null, { status: 301, headers: { Location: "/_/showcase" } });
+      }
+      const feedMode = (env.SHOWCASE_FEED || "popular").toLowerCase();
+      if (feedMode === "off") return json({ domains: [] });
+
       try {
-        // Try KV first
-        let entries: Array<{
+        type ShowcaseEntry = {
           domain: string;
-          analyzed_at: string;
           score: number | null;
           tier: string | null;
           archetype: string | null;
           axes?: Record<string, number | null>;
-        }> | null = null;
+          scan_count?: number;
+        };
+        let entries: ShowcaseEntry[] | null = null;
 
+        // Try KV cache first
         if (env.REFERENCE_DATA) {
-          const raw = await env.REFERENCE_DATA.get("recent:index", "text");
+          const raw = await env.REFERENCE_DATA.get("showcase:index", "text");
           if (raw) entries = JSON.parse(raw);
         }
 
         // D1 fallback on KV miss
         if (!entries && env.STATS_DB) {
+          const orderClause =
+            feedMode === "recent" ? "ORDER BY MAX(scored_at) DESC" : "ORDER BY COUNT(*) DESC, MAX(scored_at) DESC";
+
           const rows = await env.STATS_DB.prepare(
-            `SELECT domain, composite_score, security_score, performance_score,
-                    reliability_score, trust_score, visibility_score, email_score,
-                    archetype, scored_at
-             FROM domain_scores ORDER BY scored_at DESC LIMIT 12`,
+            `SELECT domain,
+                    MAX(composite_score) as composite_score,
+                    MAX(security_score) as security_score,
+                    MAX(performance_score) as performance_score,
+                    MAX(reliability_score) as reliability_score,
+                    MAX(trust_score) as trust_score,
+                    MAX(visibility_score) as visibility_score,
+                    MAX(email_score) as email_score,
+                    MAX(archetype) as archetype,
+                    COUNT(*) as scan_count
+             FROM domain_scores
+             GROUP BY domain
+             HAVING COUNT(*) >= ${feedMode === "recent" ? 1 : 2}
+             ${orderClause}
+             LIMIT 20`,
           ).all<{
             domain: string;
             composite_score: number;
@@ -527,12 +549,11 @@ export default {
             visibility_score: number;
             email_score: number | null;
             archetype: string;
-            scored_at: string;
+            scan_count: number;
           }>();
           if (rows.results?.length) {
             entries = rows.results.map((r) => ({
               domain: r.domain,
-              analyzed_at: r.scored_at,
               score: r.composite_score,
               tier:
                 r.composite_score >= 90
@@ -545,6 +566,7 @@ export default {
                         ? "Weak"
                         : "Critical",
               archetype: r.archetype,
+              scan_count: r.scan_count,
               axes: {
                 security: r.security_score,
                 speed: r.performance_score,
@@ -557,11 +579,11 @@ export default {
           }
         }
 
-        if (!entries?.length) return json({ lookups: [] });
+        if (!entries?.length) return json({ domains: [] });
 
         // Enrich with composite percentile
         const dist = await getDistribution(env);
-        const enriched = entries.slice(0, 12).map((e) => {
+        const enriched = entries.slice(0, 20).map((e) => {
           if (dist && e.score != null) {
             return { ...e, composite_percentile: lookupCompositePercentile(dist, e.score) };
           }
@@ -569,11 +591,11 @@ export default {
         });
 
         return json({
-          lookups: enriched,
+          domains: enriched,
           ...(dist ? { percentile_sample_size: dist.sample_size } : {}),
         });
       } catch {
-        return json({ lookups: [] });
+        return json({ domains: [] });
       }
     }
 
@@ -705,7 +727,7 @@ export default {
           return addHeaders(resp, rl.headers);
         }
 
-        // GET /api/recent — removed (privacy: global search history should not be public API)
+        // GET /api/recent — removed; use /_/showcase for the public feed API
 
         // POST /api/subdomains
         if (method === "POST" && path === "/api/subdomains") {

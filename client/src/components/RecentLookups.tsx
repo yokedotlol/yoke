@@ -3,18 +3,18 @@ import { ordinal } from "../utils/format";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-interface RecentEntry {
+interface ShowcaseEntry {
   domain: string;
-  analyzed_at: string;
   score: number | null;
   tier: string | null;
   archetype: string | null;
   axes?: Record<string, number | null>;
+  scan_count?: number;
   composite_percentile?: number | null;
 }
 
-interface RecentResponse {
-  lookups: RecentEntry[];
+interface ShowcaseResponse {
+  domains: ShowcaseEntry[];
   percentile_sample_size?: number;
 }
 
@@ -74,15 +74,18 @@ const NULL_PATTERN =
 
 // ─── Component ───────────────────────────────────────────────────────
 
-export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void }) {
-  const [entries, setEntries] = useState<RecentEntry[]>([]);
+/** @deprecated Use ShowcaseFeed directly. This alias preserves backward compatibility. */
+export const RecentLookups = ShowcaseFeed;
+
+export function ShowcaseFeed({ onSelect }: { onSelect: (domain: string) => void }) {
+  const [entries, setEntries] = useState<ShowcaseEntry[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/_/recent")
-      .then((r) => (r.ok ? r.json() : { lookups: [] }))
-      .then((data: RecentResponse) => {
-        if (!cancelled && data.lookups?.length) setEntries(data.lookups);
+    fetch("/_/showcase")
+      .then((r) => (r.ok ? r.json() : { domains: [] }))
+      .then((data: ShowcaseResponse) => {
+        if (!cancelled && data.domains?.length) setEntries(data.domains);
       })
       .catch(() => {});
     return () => {
@@ -96,30 +99,30 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
   const hasAxisData = entries.some((e) => e.axes && Object.keys(e.axes).length > 0);
 
   if (!hasAxisData) {
-    return <RecentChips entries={entries} onSelect={onSelect} />;
+    return <ShowcaseChips entries={entries} onSelect={onSelect} />;
   }
 
   return (
     <div style={{ width: "100%", maxWidth: "820px", marginTop: "1.5rem" }}>
       {/* Responsive styles for feed */}
       <style>{`
-        .recent-feed-header, .recent-feed-row {
+        .showcase-feed-header, .showcase-feed-row {
           gap: 0.6rem;
         }
-        .recent-domain-col { flex: 0 0 140px; }
-        .recent-tier-col { /* auto-sized */ }
+        .showcase-domain-col { flex: 0 0 140px; }
+        .showcase-tier-col { /* auto-sized */ }
         @media (max-width: 640px) {
-          .recent-domain-col { flex: 0 0 100px !important; font-size: 10px !important; }
-          .recent-feed-header, .recent-feed-row { padding-left: 0.5rem !important; padding-right: 0.5rem !important; gap: 0.4rem !important; }
-          .recent-axis-header span { font-size: 8px !important; }
-          .recent-axis-cell span { font-size: 9px !important; }
+          .showcase-domain-col { flex: 0 0 100px !important; font-size: 10px !important; }
+          .showcase-feed-header, .showcase-feed-row { padding-left: 0.5rem !important; padding-right: 0.5rem !important; gap: 0.4rem !important; }
+          .showcase-axis-header span { font-size: 8px !important; }
+          .showcase-axis-cell span { font-size: 9px !important; }
         }
         @media (max-width: 440px) {
-          .recent-domain-col { flex: 0 0 72px !important; font-size: 9px !important; }
-          .recent-feed-header, .recent-feed-row { padding-left: 0.35rem !important; padding-right: 0.35rem !important; gap: 0.25rem !important; }
-          .recent-axis-header span { font-size: 7px !important; letter-spacing: 0 !important; }
-          .recent-axis-cell span { font-size: 8px !important; }
-          .recent-tier-label { display: none !important; }
+          .showcase-domain-col { flex: 0 0 72px !important; font-size: 9px !important; }
+          .showcase-feed-header, .showcase-feed-row { padding-left: 0.35rem !important; padding-right: 0.35rem !important; gap: 0.25rem !important; }
+          .showcase-axis-header span { font-size: 7px !important; letter-spacing: 0 !important; }
+          .showcase-axis-cell span { font-size: 8px !important; }
+          .showcase-tier-label { display: none !important; }
         }
       `}</style>
       <div
@@ -134,12 +137,12 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
           textAlign: "center",
         }}
       >
-        Recently Analyzed
+        Popular Domains
       </div>
 
       {/* Axis header row */}
       <div
-        className="recent-feed-header"
+        className="showcase-feed-header"
         style={{
           display: "flex",
           padding: "0 0.75rem",
@@ -147,8 +150,8 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
           alignItems: "center",
         }}
       >
-        <div className="recent-domain-col" />
-        <div className="recent-axis-header" style={{ flex: 1, display: "flex", gap: "1px", minWidth: 0 }}>
+        <div className="showcase-domain-col" />
+        <div className="showcase-axis-header" style={{ flex: 1, display: "flex", gap: "1px", minWidth: 0 }}>
           {AXIS_KEYS.map((key) => (
             <span
               key={key}
@@ -179,7 +182,7 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
             key={entry.domain}
             type="button"
             onClick={() => onSelect(entry.domain)}
-            className="recent-feed-row"
+            className="showcase-feed-row"
             style={{
               display: "flex",
               alignItems: "center",
@@ -204,7 +207,7 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
           >
             {/* Domain name */}
             <span
-              className="recent-domain-col"
+              className="showcase-domain-col"
               style={{
                 fontFamily: "var(--font-mono)",
                 fontSize: "12px",
@@ -238,7 +241,7 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
                 return (
                   <div
                     key={key}
-                    className="recent-axis-cell"
+                    className="showcase-axis-cell"
                     title={`${AXIS_LABELS[key]}: ${isNull ? "N/A" : `${val} (${t.label})`}`}
                     style={{
                       flex: 1,
@@ -297,7 +300,7 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
                 </span>
               )}
               <span
-                className="recent-tier-label"
+                className="showcase-tier-label"
                 style={{
                   minWidth: "60px",
                   textAlign: "right",
@@ -322,7 +325,7 @@ export function RecentLookups({ onSelect }: { onSelect: (domain: string) => void
 
 // ─── Fallback chip display (no axis data) ────────────────────────────
 
-function RecentChips({ entries, onSelect }: { entries: RecentEntry[]; onSelect: (domain: string) => void }) {
+function ShowcaseChips({ entries, onSelect }: { entries: ShowcaseEntry[]; onSelect: (domain: string) => void }) {
   return (
     <div style={{ width: "100%", maxWidth: "700px", marginTop: "1.5rem" }}>
       <div
@@ -337,7 +340,7 @@ function RecentChips({ entries, onSelect }: { entries: RecentEntry[]; onSelect: 
           textAlign: "center",
         }}
       >
-        Recently Analyzed
+        Popular Domains
       </div>
       <div
         style={{
@@ -352,7 +355,7 @@ function RecentChips({ entries, onSelect }: { entries: RecentEntry[]; onSelect: 
             key={entry.domain}
             type="button"
             onClick={() => onSelect(entry.domain)}
-            className="recent-chip"
+            className="showcase-chip"
             style={{
               display: "inline-flex",
               alignItems: "center",

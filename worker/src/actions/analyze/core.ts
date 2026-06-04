@@ -1264,24 +1264,27 @@ async function runAnalysisCore(
           }
           const entry = {
             domain,
-            analyzed_at: new Date().toISOString(),
             score: ds?.composite ?? null,
             tier: ds?.tier ?? null,
             archetype: ds?.archetype?.detected ?? null,
             axes,
           };
-          const raw = await env.REFERENCE_DATA.get("recent:index", "text");
-          const existing: (typeof entry)[] = raw ? JSON.parse(raw) : [];
-          // Prepend, deduplicate by domain, cap at 20
-          const updated = [entry, ...existing.filter((e) => e.domain !== domain)].slice(0, 20);
-          await env.REFERENCE_DATA.put("recent:index", JSON.stringify(updated), {
+          const raw = await env.REFERENCE_DATA.get("showcase:index", "text");
+          const existing: (typeof entry & { scan_count?: number })[] = raw ? JSON.parse(raw) : [];
+          // Update or insert — bump scan_count for popularity tracking
+          const prev = existing.find((e) => e.domain === domain);
+          const scan_count = (prev?.scan_count ?? 0) + 1;
+          const updated = [{ ...entry, scan_count }, ...existing.filter((e) => e.domain !== domain)]
+            .sort((a, b) => (b.scan_count ?? 0) - (a.scan_count ?? 0))
+            .slice(0, 30);
+          await env.REFERENCE_DATA.put("showcase:index", JSON.stringify(updated), {
             expirationTtl: 86400, // 24h TTL
           });
         } catch {
-          /* recent ticker update is non-critical */
+          /* showcase feed update is non-critical */
         }
       } else {
-        // Unreachable sites skip the recent lookups feed
+        // Unreachable sites skip the showcase feed
       }
     })(),
   );
