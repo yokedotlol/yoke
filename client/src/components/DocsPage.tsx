@@ -718,6 +718,37 @@ export default function DocsPage() {
           scoring rather than penalized. Your score reflects only what we could actually measure.
           A banner in the Score Breakdown indicates when this applies.
         </P>
+
+        <h3
+          style={{
+            fontFamily: "var(--font-ui)",
+            fontSize: 14,
+            fontWeight: 600,
+            color: "var(--text)",
+            margin: "24px 0 10px",
+          }}
+        >
+          AI Readiness Score
+        </h3>
+        <P>
+          Separate from the six-axis composite, Yoke calculates an AI Readiness score (0–100)
+          that measures how well a domain is prepared for AI agents and LLM crawlers. This
+          appears in the Tech Stack tab and is graded A–F. It checks:
+        </P>
+        <ul style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--dim)", margin: "8px 0 8px 20px", lineHeight: 1.7 }}>
+          <li><strong style={{ color: "var(--text)" }}>llms.txt / llms-full.txt</strong> — structured content files for LLM consumption</li>
+          <li><strong style={{ color: "var(--text)" }}>robots.txt AI bot rules</strong> — whether GPTBot, ClaudeBot, and Bingbot are allowed or blocked</li>
+          <li><strong style={{ color: "var(--text)" }}>Structured data (JSON-LD)</strong> — schema.org markup that helps AI understand page content</li>
+          <li><strong style={{ color: "var(--text)" }}>Open Graph tags</strong> — metadata for rich previews in AI-generated citations</li>
+          <li><strong style={{ color: "var(--text)" }}>RSS/Atom feed</strong> — machine-readable content syndication</li>
+          <li><strong style={{ color: "var(--text)" }}>ANS record</strong> — DNS-based agent namespace discovery (<code>_ans.</code> TXT record)</li>
+          <li><strong style={{ color: "var(--text)" }}>DNS-AID record</strong> — agent identity discovery (<code>_agents.</code> TXT record)</li>
+          <li><strong style={{ color: "var(--text)" }}>agent.json</strong> — well-known endpoint for agent capability negotiation</li>
+        </ul>
+        <P>
+          AI Readiness does not affect the composite domain score. It{"'"}s an independent metric
+          for sites that want to optimize for the emerging AI agent ecosystem.
+        </P>
       </Section>
 
       {/* ── Signal Reference ─────────────────────────────────────── */}
