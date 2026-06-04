@@ -40,7 +40,7 @@ Yoke's release pipeline:
 
 ### Release Process
 - Is the versioning strategy clear? (SemVer? CalVer? Something else?)
-- Is CHANGELOG.md kept up to date?
+- Is docs/CHANGELOG.md kept up to date?
 - Are git tags used correctly?
 - Is the Homebrew tap updated automatically on release?
 - Are GoReleaser configurations correct? (Cross-compilation targets, checksums, etc.)

@@ -91,9 +91,9 @@ End with **Questions for Kurt** — documentation decisions that depend on produ
 ## Key Files
 - `README.md`
 - `CONTRIBUTING.md`
-- `CHANGELOG.md`
+- `docs/CHANGELOG.md`
 - `LICENSE`
-- `THIRD_PARTY_NOTICES.md`
+- `docs/THIRD-PARTY-NOTICES.md`
 - `docs/` directory
 - `worker/src/index.ts` (API routes/docs endpoint)
 - `cli/` (CLI help text)

@@ -5,7 +5,7 @@
 **Free, open-source domain intelligence — DNS, WHOIS, SSL, security, tech stack, performance, breaches, AI analysis, and more. Web, API, CLI, and Chrome extension.**
 
 [![CI](https://github.com/yokedotlol/yoke/actions/workflows/ci.yml/badge.svg)](https://github.com/yokedotlol/yoke/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/yokedotlol/yoke/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/yokedotlol/yoke/blob/main/docs/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/fghkhjlelidaepapcdfjifnlcjmkgpcj?label=Chrome%20Extension)](https://chromewebstore.google.com/detail/yoke/fghkhjlelidaepapcdfjifnlcjmkgpcj)
 
@@ -189,4 +189,4 @@ The **[.ai/reviews/](.ai/reviews/)** directory contains a 20-panel expert review
 
 ## License
 
-[MIT](LICENSE) · [Third-Party Notices](THIRD_PARTY_NOTICES.md) · [Data Sources](docs/DATA-SOURCES.md)
+[MIT](LICENSE) · [Third-Party Notices](docs/THIRD-PARTY-NOTICES.md) · [Data Sources](docs/DATA-SOURCES.md)

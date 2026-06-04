@@ -99,7 +99,7 @@ Each panel should end with a **Questions for the maintainer** section — places
 - CI/CD: `.github/workflows/ci.yml`
 - Tests: `tests/*.test.ts`
 - Deploy: `deploy.sh`
-- Licenses: `LICENSE` (MIT), `THIRD_PARTY_NOTICES.md`
+- Licenses: `LICENSE` (MIT), `docs/THIRD-PARTY-NOTICES.md`
 
 ## Evolution
 

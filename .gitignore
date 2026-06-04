@@ -49,11 +49,6 @@ cli/yoke
 *.zip
 
 # Calibration data (large JSON files)
-calibration/results/
-calibration/post-calibration/results/
-calibration/post-phase3/results/
-calibration/*.log
-calibration/analysis-output.txt
 
 # Internal planning docs (not for public repo)
 BACKLOG.md
@@ -71,9 +66,6 @@ yoke-todo.md
 HATCH-NOTES.md
 DEVOPS-AUDIT.md
 docs/internal/
-calibration/raw/
-calibration/corpus-raw.json
 
 # Go build artifacts
 fly-proxy/yoke-probe
-calibration/

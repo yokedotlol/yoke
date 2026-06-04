@@ -20,7 +20,7 @@ Yoke is an MIT-licensed open-source project that:
 ### License Compliance
 - Is the MIT license appropriate for this project?
 - Are all bundled dependencies' licenses compatible with MIT? Check:
-  - `THIRD_PARTY_NOTICES.md` — is it complete?
+  - `docs/THIRD-PARTY-NOTICES.md` — is it complete?
   - `node_modules/` — are there any GPL, AGPL, or SSPL dependencies?
   - `fly-proxy/go.mod` — Go dependency licenses
   - `cli/go.mod` — CLI dependency licenses
