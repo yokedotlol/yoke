@@ -256,7 +256,7 @@ export const fingerprints: Fingerprint[] = [
     name: "WordPress VIP",
     category: "Hosting",
     patterns: {
-      headers: { "x-vip-go": /./ },
+      headers: { "x-vip-go": /./, "x-powered-by": /wordpress vip/i },
       htmlPatterns: [/wp-content\/client-mu-plugins/, /wpvip\.com/],
     },
   },

@@ -137,6 +137,11 @@ describe("Hosting/CDN Detection", () => {
     expect(result.provider).toBe("WordPress VIP");
   });
 
+  it("should detect WordPress VIP via x-powered-by header", () => {
+    const result = detectHosting(null, { "x-powered-by": "WordPress VIP <https://wpvip.com>" });
+    expect(result.provider).toBe("WordPress VIP");
+  });
+
   it("should detect WordPress VIP via HTML pattern", () => {
     const result = detectHosting('<link href="https://wpvip.com/cdn/file.css">', {});
     expect(result.provider).toBe("WordPress VIP");
