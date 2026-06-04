@@ -190,7 +190,14 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
   // Client-side rendered pages — serve the SPA shell
   if (
     (method === "GET" || method === "HEAD") &&
-    (path === "/" || path === "/cli" || path === "/about" || path === "/docs" || path === "/privacy" || path === "/terms" || path === "/status" || path === "/usage")
+    (path === "/" ||
+      path === "/cli" ||
+      path === "/about" ||
+      path === "/docs" ||
+      path === "/privacy" ||
+      path === "/terms" ||
+      path === "/status" ||
+      path === "/usage")
   ) {
     const indexHtml = await getIndexHtml(env, request.url);
     return htmlResponse(indexHtml, { "Cache-Control": "no-cache" }, baseUrl);
