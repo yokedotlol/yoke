@@ -859,32 +859,24 @@ async function runAnalysisCore(
   // These three async operations are independent — run them concurrently
   // and tick the progress bar as each resolves.
 
-  const legalPromise = httpProbeSucceeded
-    ? detectLegalPages(html, domain, env)
-    : Promise.resolve({
-        pages_found: [],
-        cookie_consent_detected: false,
-        consent_provider: null,
-      } as Awaited<ReturnType<typeof detectLegalPages>>);
+  const legalPromise = detectLegalPages(httpProbeSucceeded ? html : "", domain, env);
   const wpPromise = wpDetails
     ? probeWordPressSecurity(domain, fetchWithTimeout).catch(() => null)
     : Promise.resolve(null);
-  const trustPromise = httpProbeSucceeded
-    ? checkTrustSignals({
-        headers: effectiveHeaders,
-        securityTxt: securityTxt,
-        emailAuth,
-        dnssec: dnssecResult,
-        ssl: sslResult,
-        caaRecords: caaRecordsForTrust,
-        wellKnown: wellKnown,
-        waf: wafDetection,
-        html,
-        hosting,
-        domain,
-        env,
-      })
-    : Promise.resolve(null);
+  const trustPromise = checkTrustSignals({
+    headers: httpProbeSucceeded ? effectiveHeaders : null,
+    securityTxt: securityTxt,
+    emailAuth,
+    dnssec: dnssecResult,
+    ssl: sslResult,
+    caaRecords: caaRecordsForTrust,
+    wellKnown: wellKnown,
+    waf: httpProbeSucceeded ? wafDetection : null,
+    html: httpProbeSucceeded ? html : "",
+    hosting,
+    domain,
+    env,
+  });
 
   // Await all three in parallel, ticking progress as each settles
   const [legalResult, wpProbesResult, trustResult] = await Promise.all([
