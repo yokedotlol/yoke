@@ -206,11 +206,11 @@ const SEED_DOMAINS = [
   "shodan.io",
   "securityheaders.com",
   "ssllabs.com",
-  "1password.com",
   "bitwarden.com",
   "lastpass.com",
   "proton.me",
   "mullvad.net",
+  "tailscale.com",
   // Travel & transport
   "airbnb.com",
   "booking.com",
@@ -260,6 +260,18 @@ const SEED_DOMAINS = [
   "rivian.com",
   "waymo.com",
   "cruise.com",
+  // Additional variety — dev tools & hosting
+  "linode.com",
+  "vultr.com",
+  "hetzner.com",
+  "bunny.net",
+  "deno.com",
+  "bun.sh",
+  "rust-lang.org",
+  "golang.org",
+  "python.org",
+  "ziglang.org",
+  "htmx.org",
 ] as const;
 
 // ─── Fisher-Yates shuffle for unbiased random selection ─────────────
