@@ -971,7 +971,7 @@ function ProbeBlockedBanner({ siteUnreachable }: { siteUnreachable: boolean }) {
         <div>
           {description} Scores reflect only DNS, SSL, WHOIS, and email authentication data.{" "}
           <a
-            href="/about"
+            href="/docs#faq"
             style={{ color: "var(--accent)", textDecoration: "none" }}
             onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
             onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}

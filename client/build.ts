@@ -223,7 +223,7 @@ import { copyFileSync, cpSync } from "fs";
 const assetsDir = join(import.meta.dir, "..", "assets", "logo");
 copyFileSync(join(assetsDir, "mark-transparent-512.png"), join(outdir, "logo.png"));
 copyFileSync(join(assetsDir, "icon-32.png"), join(outdir, "favicon.ico"));
-copyFileSync(join(import.meta.dir, "..", "assets", "og-banner.png"), join(outdir, "og-banner.png"));
+copyFileSync(join(import.meta.dir, "..", "assets", "og-banner-v3.png"), join(outdir, "og-banner.png"));
 
 // Copy self-hosted fonts to dist
 cpSync(join(import.meta.dir, "public", "fonts"), join(outdir, "fonts"), { recursive: true });

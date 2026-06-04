@@ -4,6 +4,7 @@ import { analyzeStream, type RateLimitInfo, type StreamEvent } from "./api";
 import AboutPage from "./components/AboutPage";
 import CliPage from "./components/CliPage";
 import { ApiTeaser, CurlBar } from "./components/CurlShowcase";
+import DocsPage from "./components/DocsPage";
 import { DomainScore } from "./components/DomainScore";
 import { DomainSignals, ExternalTools } from "./components/DomainSignals";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -684,6 +685,11 @@ export function App() {
     return <AboutPage />;
   }
 
+  // Route: /docs → Documentation
+  if (window.location.pathname === "/docs") {
+    return <DocsPage />;
+  }
+
   const [domain, setDomain] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [autoLoaded, setAutoLoaded] = useState(false);
@@ -1289,6 +1295,17 @@ export function App() {
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--dim)")}
           >
             API
+          </a>
+          <span style={{ color: "var(--border)" }} aria-hidden="true">
+            ·
+          </span>
+          <a
+            href="/docs"
+            style={{ color: "var(--dim)", textDecoration: "none", transition: "color 0.15s" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--dim)")}
+          >
+            Docs
           </a>
           <span style={{ color: "var(--border)" }} aria-hidden="true">
             ·

@@ -379,7 +379,10 @@ export default function AboutPage() {
 
         <P style={{ marginTop: 16 }}>
           Every deduction is visible in the <strong style={{ color: "var(--text)" }}>Score Breakdown</strong> tab of
-          your scan results — nothing is hidden.
+          your scan results — nothing is hidden.{" "}
+          <a href="/docs#signals" style={{ color: "var(--accent)", textDecoration: "none" }}>
+            See our full signal reference →
+          </a>
         </P>
       </Section>
 
