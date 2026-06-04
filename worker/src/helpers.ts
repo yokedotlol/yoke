@@ -119,11 +119,24 @@ export async function probeHeadWithFallback(
   if (!forceFly) {
     try {
       const resp = await fetchWithTimeout(url, { method: "HEAD", redirect: "follow", timeout });
-      return {
-        ok: resp.ok && resp.status === 200,
-        status: resp.status,
-        contentType: resp.headers.get("content-type") ?? "",
-      };
+      if (resp.ok && resp.status === 200) {
+        return { ok: true, status: resp.status, contentType: resp.headers.get("content-type") ?? "" };
+      }
+      // HEAD returned non-200 (e.g. Akamai 403) — retry with GET.
+      // Many WAFs block HEAD but allow GET. We only need status + content-type,
+      // so cancel the body immediately to stay light.
+      try {
+        const getResp = await fetchWithTimeout(url, { redirect: "follow", timeout });
+        getResp.body?.cancel().catch(() => {});
+        return {
+          ok: getResp.ok && getResp.status === 200,
+          status: getResp.status,
+          contentType: getResp.headers.get("content-type") ?? "",
+        };
+      } catch {
+        // GET also failed — return the original HEAD result
+        return { ok: false, status: resp.status, contentType: resp.headers.get("content-type") ?? "" };
+      }
     } catch {
       // Direct fetch failed (timeout, network error, CF block) — fall through to Fly
     }
