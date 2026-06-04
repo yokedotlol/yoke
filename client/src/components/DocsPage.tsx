@@ -1,10 +1,6 @@
-import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Shield, Zap, Layers, Star, Search, Mail } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Layers, Mail, Search, Shield, Star, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  AXIS_WEIGHTS,
-  SIGNAL_REGISTRY,
-  TIER_THRESHOLDS,
-} from "../../../worker/src/config/signal-registry";
+import { AXIS_WEIGHTS, SIGNAL_REGISTRY } from "../../../worker/src/config/signal-registry";
 
 // ─── Reusable sub-components ────────────────────────────────────────
 
@@ -23,11 +19,7 @@ const P = ({ children, style }: { children: React.ReactNode; style?: React.CSSPr
   </p>
 );
 
-function Section({
-  title,
-  id,
-  children,
-}: { title: string; id?: string; children: React.ReactNode }) {
+function Section({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
   return (
     <div id={id} style={{ marginBottom: 48, scrollMarginTop: 24 }}>
       <h2
@@ -53,7 +45,11 @@ function Collapsible({
   title,
   children,
   defaultOpen = false,
-}: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   const toggle = useCallback(() => setOpen((v) => !v), []);
   return (
@@ -115,10 +111,7 @@ function Collapsible({
 
 // ─── Axis display helpers ───────────────────────────────────────────
 
-const AXIS_DISPLAY: Record<
-  string,
-  { label: string; description: string; icon: React.ReactNode }
-> = {
+const AXIS_DISPLAY: Record<string, { label: string; description: string; icon: React.ReactNode }> = {
   security: {
     label: "Security",
     description: "HTTPS, security headers, WAF, SSL/TLS certificate quality, vulnerabilities",
@@ -257,11 +250,7 @@ function SignalCard({ id, signal }: { id: string; signal: (typeof SIGNAL_REGISTR
 function AxisSignalGroup({ axis, isFirst }: { axis: string; isFirst: boolean }) {
   const [open, setOpen] = useState(isFirst);
   const display = AXIS_DISPLAY[axis];
-  const signals = useMemo(
-    () =>
-      Object.entries(SIGNAL_REGISTRY).filter(([, def]) => def.axis === axis),
-    [axis],
-  );
+  const signals = useMemo(() => Object.entries(SIGNAL_REGISTRY).filter(([, def]) => def.axis === axis), [axis]);
 
   if (!display || signals.length === 0) return null;
 
@@ -343,28 +332,28 @@ const FAQ_ITEMS: { q: string; a: string; persona: string }[] = [
   {
     persona: "sysadmin",
     q: "Why does my score change between scans?",
-    a: "Scan results can vary because external data sources (PageSpeed, Shodan, breach databases) update independently. Your server's response time, load balancing, and CDN behavior can also produce slightly different results. Additionally, DNS may return different IPs from different locations. Cached results are served for up to 24 hours — add ?nocache to force a fresh scan.",
+    a: "Scan results can vary because external data sources (PageSpeed, Shodan, breach databases) update independently. Your server's response time, load balancing, and CDN behavior can also produce slightly different results. Additionally, DNS may return different IPs from different locations. Cached results are served for up to 24 hours — click Re-analyze on a cached result to force a fresh scan.",
   },
   {
     persona: "sysadmin",
-    q: "What does \"HTTP probe blocked\" mean?",
+    q: 'What does "HTTP probe blocked" mean?',
     a: "Your site's bot protection (WAF, Cloudflare, etc.) blocked our automated scanner from fetching your pages. We can still analyze DNS, SSL, WHOIS, and email authentication, but signals that require page access — like security headers, Core Web Vitals, and structured data — are excluded from scoring. Your score reflects only what we could measure, and blocked signals don't count against you.",
   },
   {
     persona: "sysadmin",
     q: "How do I whitelist Yoke's scanner?",
-    a: "Yoke scans from two locations: Cloudflare Workers (DNS, API orchestration) and a Fly.io proxy (HTTP probes, SSL checks, geolocation). If you want full coverage, allow the User-Agent \"Yoke/1.0\" in your WAF rules. However, Yoke is designed to produce fair scores even when blocked — blocked signals are excluded, not penalized.",
+    a: 'Yoke scans from two locations: Cloudflare Workers (DNS, API orchestration) and a Fly.io proxy (HTTP probes, SSL checks, geolocation). If you want full coverage, allow the User-Agent "Yoke/1.0" in your WAF rules. However, Yoke is designed to produce fair scores even when blocked — blocked signals are excluded, not penalized.',
   },
   // Freelancer
   {
     persona: "freelancer",
     q: "How do I improve my score?",
-    a: "Open the Score Breakdown tab to see every deduction, grouped by axis. Items under \"Issues\" are things found that hurt the score. Items under \"Improvements\" are things we looked for but didn't find. Each item shows an effort estimate and a fix description. Focus on the highest-deduction items first for the biggest impact.",
+    a: 'Open the Score Breakdown tab to see every deduction, grouped by axis. Items under "Issues" are things found that hurt the score. Items under "Improvements" are things we looked for but didn\'t find. Each item shows an effort estimate and a fix description. Focus on the highest-deduction items first for the biggest impact.',
   },
   {
     persona: "freelancer",
     q: "What's the difference between Issues, Improvements, and Not Assessed?",
-    a: "\"Issues\" are problems we found (misconfigured SSL, missing security headers, etc.) — these have the largest deductions. \"Improvements\" are signals we expected but didn't detect (missing DMARC, no structured data, etc.) — these have smaller deductions. \"Not Assessed\" are signals that aren't applicable or couldn't be checked. Only Issues and Improvements affect the score.",
+    a: '"Issues" are problems we found (misconfigured SSL, missing security headers, etc.) — these have the largest deductions. "Improvements" are signals we expected but didn\'t detect (missing DMARC, no structured data, etc.) — these have smaller deductions. "Not Assessed" are signals that aren\'t applicable or couldn\'t be checked. Only Issues and Improvements affect the score.',
   },
   {
     persona: "freelancer",
@@ -406,12 +395,12 @@ const FAQ_ITEMS: { q: string; a: string; persona: string }[] = [
   {
     persona: "smb",
     q: "My site works fine — why is the score low?",
-    a: "\"Works fine\" and \"well-configured\" are different things. Your site might load correctly but be missing security headers, have an outdated TLS configuration, lack email authentication, or be missing SEO best practices. Yoke checks 156 signals across security, performance, infrastructure, reputation, discoverability, and email. Open the Score Breakdown to see exactly what was deducted and why.",
+    a: '"Works fine" and "well-configured" are different things. Your site might load correctly but be missing security headers, have an outdated TLS configuration, lack email authentication, or be missing SEO best practices. Yoke checks 156 signals across security, performance, infrastructure, reputation, discoverability, and email. Open the Score Breakdown to see exactly what was deducted and why.',
   },
   {
     persona: "smb",
     q: "What should I fix first?",
-    a: "Open the Score Breakdown tab and look at the \"Issues\" section — these are sorted by impact. The items at the top cost the most points. Many fixes are quick: adding security headers, setting up DMARC, or enabling HTTPS redirects. Each item shows an effort estimate to help you prioritize. Use the \"What if?\" toggle to simulate how fixing specific items would change your score.",
+    a: 'Open the Score Breakdown tab and look at the "Issues" section — these are sorted by impact. The items at the top cost the most points. Many fixes are quick: adding security headers, setting up DMARC, or enabling HTTPS redirects. Each item shows an effort estimate to help you prioritize. Use the "What if?" toggle to simulate how fixing specific items would change your score.',
   },
 ];
 
@@ -463,9 +452,7 @@ export default function DocsPage() {
         >
           Documentation
         </h1>
-        <P style={{ margin: 0 }}>
-          How Yoke scores domains, what each signal means, and answers to common questions.
-        </P>
+        <P style={{ margin: 0 }}>How Yoke scores domains, what each signal means, and answers to common questions.</P>
         <nav
           style={{
             display: "flex",
@@ -499,10 +486,9 @@ export default function DocsPage() {
       {/* ── Scoring Methodology ──────────────────────────────────── */}
       <Section title="Scoring Methodology" id="scoring">
         <P>
-          <strong style={{ color: "var(--text)" }}>Budget-based deductive model.</strong> Every
-          axis starts at 100 points. Points are deducted for issues found during the scan and for
-          expected signals that weren't detected. The result is a score from 0 to 100 for each
-          axis, combined into a single composite score.
+          <strong style={{ color: "var(--text)" }}>Budget-based deductive model.</strong> Every axis starts at 100
+          points. Points are deducted for issues found during the scan and for expected signals that weren't detected.
+          The result is a score from 0 to 100 for each axis, combined into a single composite score.
         </P>
 
         <h3
@@ -597,10 +583,9 @@ export default function DocsPage() {
           Composite Score & Tiers
         </h3>
         <P>
-          The composite score is a weighted average of all six axis scores. If any single axis
-          drops below 40, the composite is capped at the Moderate tier maximum (74) regardless
-          of how well other axes perform. This prevents a critical weakness from being masked by
-          strong performance elsewhere.
+          The composite score is a weighted average of all six axis scores. If any single axis drops below 40, the
+          composite is capped at the Moderate tier maximum (74) regardless of how well other axes perform. This prevents
+          a critical weakness from being masked by strong performance elsewhere.
         </P>
         <div style={{ overflowX: "auto" }}>
           <table
@@ -675,10 +660,9 @@ export default function DocsPage() {
           Absent Signal Penalty
         </h3>
         <P>
-          Signals we look for but don't find incur a smaller deduction than active issues,
-          weighted by how common they are across the web. Missing HTTPS (which 95%+ of sites
-          have) costs more than missing HTTP/3 (which only ~30% have). This IDF-influenced
-          penalty prevents unfair scoring for emerging best practices that aren't yet widely
+          Signals we look for but don't find incur a smaller deduction than active issues, weighted by how common they
+          are across the web. Missing HTTPS (which 95%+ of sites have) costs more than missing HTTP/3 (which only ~30%
+          have). This IDF-influenced penalty prevents unfair scoring for emerging best practices that aren't yet widely
           adopted.
         </P>
 
@@ -694,11 +678,10 @@ export default function DocsPage() {
           Deductive Scoring
         </h3>
         <P>
-          Yoke detects domain archetypes — e-commerce, SaaS, institutional, content, marketing,
-          infrastructure, and general — for display context, but all domains are scored against
-          the same criteria. Some signals only apply when specific technologies are detected
-          (WordPress-specific checks, cookie-related headers), and signals that aren't applicable
-          are excluded rather than penalized.
+          Yoke detects domain archetypes — e-commerce, SaaS, institutional, content, marketing, infrastructure, and
+          general — for display context, but all domains are scored against the same criteria. Some signals only apply
+          when specific technologies are detected (WordPress-specific checks, cookie-related headers), and signals that
+          aren't applicable are excluded rather than penalized.
         </P>
 
         <h3
@@ -713,10 +696,9 @@ export default function DocsPage() {
           "Not Assessed" Signals
         </h3>
         <P>
-          When our HTTP probe is blocked by a site's bot protection, signals that require page
-          access (security headers, Core Web Vitals, tech detection, etc.) are excluded from
-          scoring rather than penalized. Your score reflects only what we could actually measure.
-          A banner in the Score Breakdown indicates when this applies.
+          When our HTTP probe is blocked by a site's bot protection, signals that require page access (security headers,
+          Core Web Vitals, tech detection, etc.) are excluded from scoring rather than penalized. Your score reflects
+          only what we could actually measure. A banner in the Score Breakdown indicates when this applies.
         </P>
 
         <h3
@@ -731,32 +713,62 @@ export default function DocsPage() {
           AI Readiness Score
         </h3>
         <P>
-          Separate from the six-axis composite, Yoke calculates an AI Readiness score (0–100)
-          that measures how well a domain is prepared for AI agents and LLM crawlers. This
-          appears in the Tech Stack tab and is graded A–F. It checks:
+          Separate from the six-axis composite, Yoke calculates an AI Readiness score (0–100) that measures how well a
+          domain is prepared for AI agents and LLM crawlers. This appears in the Tech Stack tab and is graded A–F. It
+          checks:
         </P>
-        <ul style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--dim)", margin: "8px 0 8px 20px", lineHeight: 1.7 }}>
-          <li><strong style={{ color: "var(--text)" }}>llms.txt / llms-full.txt</strong> — structured content files for LLM consumption</li>
-          <li><strong style={{ color: "var(--text)" }}>robots.txt AI bot rules</strong> — whether GPTBot, ClaudeBot, and Bingbot are allowed or blocked</li>
-          <li><strong style={{ color: "var(--text)" }}>Structured data (JSON-LD)</strong> — schema.org markup that helps AI understand page content</li>
-          <li><strong style={{ color: "var(--text)" }}>Open Graph tags</strong> — metadata for rich previews in AI-generated citations</li>
-          <li><strong style={{ color: "var(--text)" }}>RSS/Atom feed</strong> — machine-readable content syndication</li>
-          <li><strong style={{ color: "var(--text)" }}>ANS record</strong> — DNS-based agent namespace discovery (<code>_ans.</code> TXT record)</li>
-          <li><strong style={{ color: "var(--text)" }}>DNS-AID record</strong> — agent identity discovery (<code>_agents.</code> TXT record)</li>
-          <li><strong style={{ color: "var(--text)" }}>agent.json</strong> — well-known endpoint for agent capability negotiation</li>
+        <ul
+          style={{
+            fontFamily: "var(--font-ui)",
+            fontSize: 13,
+            color: "var(--dim)",
+            margin: "8px 0 8px 20px",
+            lineHeight: 1.7,
+          }}
+        >
+          <li>
+            <strong style={{ color: "var(--text)" }}>llms.txt / llms-full.txt</strong> — structured content files for
+            LLM consumption
+          </li>
+          <li>
+            <strong style={{ color: "var(--text)" }}>robots.txt AI bot rules</strong> — whether GPTBot, ClaudeBot, and
+            Bingbot are allowed or blocked
+          </li>
+          <li>
+            <strong style={{ color: "var(--text)" }}>Structured data (JSON-LD)</strong> — schema.org markup that helps
+            AI understand page content
+          </li>
+          <li>
+            <strong style={{ color: "var(--text)" }}>Open Graph tags</strong> — metadata for rich previews in
+            AI-generated citations
+          </li>
+          <li>
+            <strong style={{ color: "var(--text)" }}>RSS/Atom feed</strong> — machine-readable content syndication
+          </li>
+          <li>
+            <strong style={{ color: "var(--text)" }}>ANS record</strong> — DNS-based agent namespace discovery (
+            <code>_ans.</code> TXT record)
+          </li>
+          <li>
+            <strong style={{ color: "var(--text)" }}>DNS-AID record</strong> — agent identity discovery (
+            <code>_agents.</code> TXT record)
+          </li>
+          <li>
+            <strong style={{ color: "var(--text)" }}>agent.json</strong> — well-known endpoint for agent capability
+            negotiation
+          </li>
         </ul>
         <P>
-          AI Readiness does not affect the composite domain score. It{"'"}s an independent metric
-          for sites that want to optimize for the emerging AI agent ecosystem.
+          AI Readiness does not affect the composite domain score. It{"'"}s an independent metric for sites that want to
+          optimize for the emerging AI agent ecosystem.
         </P>
       </Section>
 
       {/* ── Signal Reference ─────────────────────────────────────── */}
       <Section title="Signal Reference" id="signals">
         <P>
-          Yoke evaluates {totalSignals} signals across six axes. Each signal can detect a good
-          configuration, a problem, or nothing (absent). Below is the complete registry — the
-          same data that drives scoring.
+          Yoke evaluates {totalSignals} signals across six axes. Each signal can detect a good configuration, a problem,
+          or nothing (absent). Below is the complete registry — the same data that drives scoring.
         </P>
         <P style={{ marginBottom: 16 }}>
           <strong style={{ color: "var(--text)" }}>Legend:</strong>{" "}
@@ -818,7 +830,13 @@ export default function DocsPage() {
           href="https://github.com/yokedotlol/yoke"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: "var(--accent)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}
+          style={{
+            color: "var(--accent)",
+            textDecoration: "none",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+          }}
         >
           GitHub <ExternalLink size={10} />
         </a>

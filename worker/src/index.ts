@@ -485,18 +485,70 @@ export default {
 
     // GET /_/recent — internal ticker data for the SPA homepage (not a public API)
     if (method === "GET" && path === "/_/recent") {
-      if (!env.REFERENCE_DATA) return json({ lookups: [] });
       try {
-        const raw = await env.REFERENCE_DATA.get("recent:index", "text");
-        if (!raw) return json({ lookups: [] });
-        const entries = JSON.parse(raw) as Array<{
+        // Try KV first
+        let entries: Array<{
           domain: string;
           analyzed_at: string;
           score: number | null;
           tier: string | null;
           archetype: string | null;
           axes?: Record<string, number | null>;
-        }>;
+        }> | null = null;
+
+        if (env.REFERENCE_DATA) {
+          const raw = await env.REFERENCE_DATA.get("recent:index", "text");
+          if (raw) entries = JSON.parse(raw);
+        }
+
+        // D1 fallback on KV miss
+        if (!entries && env.STATS_DB) {
+          const rows = await env.STATS_DB.prepare(
+            `SELECT domain, composite_score, security_score, performance_score,
+                    reliability_score, trust_score, visibility_score, email_score,
+                    archetype, scored_at
+             FROM domain_scores ORDER BY scored_at DESC LIMIT 12`,
+          ).all<{
+            domain: string;
+            composite_score: number;
+            security_score: number;
+            performance_score: number;
+            reliability_score: number;
+            trust_score: number;
+            visibility_score: number;
+            email_score: number | null;
+            archetype: string;
+            scored_at: string;
+          }>();
+          if (rows.results?.length) {
+            entries = rows.results.map((r) => ({
+              domain: r.domain,
+              analyzed_at: r.scored_at,
+              score: r.composite_score,
+              tier:
+                r.composite_score >= 90
+                  ? "Excellent"
+                  : r.composite_score >= 78
+                    ? "Strong"
+                    : r.composite_score >= 60
+                      ? "Moderate"
+                      : r.composite_score >= 40
+                        ? "Weak"
+                        : "Critical",
+              archetype: r.archetype,
+              axes: {
+                security: r.security_score,
+                speed: r.performance_score,
+                foundations: r.reliability_score,
+                reputation: r.trust_score,
+                discoverability: r.visibility_score,
+                email: r.email_score,
+              },
+            }));
+          }
+        }
+
+        if (!entries?.length) return json({ lookups: [] });
 
         // Enrich with composite percentile
         const dist = await getDistribution(env);

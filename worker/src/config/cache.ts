@@ -1,8 +1,8 @@
 // ─── Centralized Cache TTL Configuration ─────────────────────────────
 // All cache TTL values in one place for easy tuning.
 
-/** Default analysis cache: 1 hour. Override with CACHE_TTL_HOURS env var. */
-export const ANALYSIS_CACHE_TTL_MS = 60 * 60 * 1000;
+/** Default analysis cache: 24 hours. Override with CACHE_TTL_HOURS env var. */
+export const ANALYSIS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /** Get analysis cache TTL, respecting CACHE_TTL_HOURS env override. */
 export function getAnalysisCacheTtlMs(env?: { CACHE_TTL_HOURS?: string }): number {
@@ -22,5 +22,5 @@ export const AI_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 /** HIBP breach catalog: 24 hours */
 export const BREACH_CATALOG_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-/** Per-domain breach results: 6 hours */
-export const BREACH_RESULT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+/** Per-domain breach results: 24 hours */
+export const BREACH_RESULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
