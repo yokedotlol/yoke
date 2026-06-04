@@ -191,22 +191,23 @@ jobs:
           cd worker && bun install && cd ..
 
       - name: Smoke tests (with retry)
+        env:
+          CF_SMOKE_SECRET: ${{ secrets.CF_SMOKE_SECRET }}
         run: |
-          # ── Diagnostic pre-flight ──
-          echo "=== DIAGNOSTIC: Full curl -v to homepage ==="
-          curl -v --max-time 15 https://yoke.lol/ 2>&1 | head -60
-          echo ""
-          echo "=== DIAGNOSTIC: HTTP status code ==="
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://yoke.lol/)
-          echo "Status: $HTTP_CODE"
-          echo ""
-          echo "=== DIAGNOSTIC: Response body (first 500 chars) ==="
-          curl -s --max-time 15 https://yoke.lol/ | head -c 500
-          echo ""
-          echo "=== END DIAGNOSTICS ==="
+          # Smoke tests use a bypass header so Cloudflare Bot Fight Mode
+          # doesn't challenge GitHub Actions runner IPs with JS challenges.
+          # Set CF_SMOKE_SECRET as a GitHub repo secret AND create a matching
+          # Cloudflare WAF custom rule to skip managed challenge when
+          # X-Smoke-Test header matches the secret value.
+          SMOKE_HEADER=""
+          if [ -n "$CF_SMOKE_SECRET" ]; then
+            SMOKE_HEADER="-H X-Smoke-Test:${CF_SMOKE_SECRET}"
+            echo "Using smoke test bypass header"
+          else
+            echo "::warning::CF_SMOKE_SECRET not set — smoke tests may fail due to Cloudflare Bot Fight Mode"
+          fi
 
           # Retry helper: retries a command up to N times with backoff
-          # Usage: retry <max_attempts> <delay_secs> <description> <command...>
           retry() {
             local max=$1 delay=$2 desc=$3
             shift 3
@@ -221,9 +222,11 @@ jobs:
               fi
             done
             echo "::error::$desc — failed after $max attempts"
-            # Show diagnostic on final failure
-            echo "=== FINAL FAILURE DIAGNOSTIC ==="
-            curl -v --max-time 15 https://yoke.lol/ 2>&1 | head -40
+            echo "=== DIAGNOSTIC ==="
+            curl -s -o /dev/null -w "HTTP %{http_code}" --max-time 10 $SMOKE_HEADER https://yoke.lol/
+            echo ""
+            curl -s --max-time 10 $SMOKE_HEADER https://yoke.lol/ | head -c 300
+            echo ""
             echo "=== END ==="
             return 1
           }
@@ -231,25 +234,25 @@ jobs:
           echo "Waiting for edge propagation..."
           # 1. HTML homepage — wait longest here since it's the first check after deploy
           retry 6 10 "HTML homepage" bash -c \
-            'curl -sf --max-time 15 https://yoke.lol/ | grep -q "<title>"'
+            "curl -sf --max-time 15 $SMOKE_HEADER https://yoke.lol/ | grep -q '<title>'"
 
           # 2. Version header
-          retry 3 5 "X-Yoke-Version header" bash -c '
-            VERSION=$(curl -sI --max-time 10 https://yoke.lol/api/docs | grep -i x-yoke-version | awk "{print \$2}" | tr -d "\r")
-            [ -n "$VERSION" ] && echo "$VERSION" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+" && echo "Deployed: $VERSION"
-          '
+          retry 3 5 "X-Yoke-Version header" bash -c "
+            VERSION=\$(curl -sI --max-time 10 $SMOKE_HEADER https://yoke.lol/api/docs | grep -i x-yoke-version | awk '{print \$2}' | tr -d '\r')
+            [ -n \"\$VERSION\" ] && echo \"\$VERSION\" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+' && echo \"Deployed: \$VERSION\"
+          "
 
           # 3. API docs
           retry 3 5 "API docs" bash -c \
-            'curl -sf --max-time 15 https://yoke.lol/api/docs | grep -qi "api"'
+            "curl -sf --max-time 15 $SMOKE_HEADER https://yoke.lol/api/docs | grep -qi 'api'"
 
           # 4. JSON API (longer timeout — runs a real analysis)
           retry 3 10 "JSON API (example.com)" bash -c \
-            'curl -sf --max-time 90 -H "Accept: application/json" "https://yoke.lol/example.com" | jq -e ".domain" > /dev/null'
+            "curl -sf --max-time 90 $SMOKE_HEADER -H 'Accept: application/json' 'https://yoke.lol/example.com' | jq -e '.domain' > /dev/null"
 
           # 5. Status page
           retry 3 5 "Status page" bash -c \
-            'curl -sf --max-time 15 https://yoke.lol/status | grep -qi "status"'
+            "curl -sf --max-time 15 $SMOKE_HEADER https://yoke.lol/status | grep -qi 'status'"
 
           echo ""
           echo "All smoke tests passed ✅"
