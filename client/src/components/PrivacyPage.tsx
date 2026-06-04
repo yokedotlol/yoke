@@ -41,20 +41,58 @@ export default function PrivacyPage() {
         <BookOpen size={24} /> Privacy Policy
       </h1>
       <p style={{ color: "var(--dim)", fontSize: "0.85rem", marginBottom: "2rem" }}>
-        <strong>Last updated:</strong> May 2026
+        <strong>Last updated:</strong> June 2026
       </p>
 
       <Section title="What We Collect">
         <p>
-          When you analyze a domain, we collect only the domain name you submit. We do not use cookies, trackers, or
+          When you analyze a domain, we collect the domain name you submit. We do not use cookies, trackers, or
           fingerprinting. No accounts, no emails, no personal information.
         </p>
       </Section>
 
+      <Section title="Rate Limiting & IP Handling">
+        <p>
+          To prevent abuse, Yoke enforces per-IP rate limits. Your IP address is{" "}
+          <strong>never stored in raw form</strong>. Instead, we immediately hash it using SHA-256 with a daily-rotating
+          salt. The resulting hash is used only to count requests within a rate-limit window — it cannot be reversed to
+          recover your IP address, and it changes every day.
+        </p>
+        <p>
+          Rate-limit records are automatically cleaned up within hours. No raw IP addresses are written to any database
+          or log at any point in the request lifecycle.
+        </p>
+      </Section>
+
+      <Section title="Anonymous Analytics">
+        <p>Yoke collects anonymous, aggregated request metadata to operate the service:</p>
+        <ul style={{ paddingLeft: "1.5rem", margin: "0.75rem 0" }}>
+          <li>
+            <strong>Visitor hash</strong> — the same daily-salted SHA-256 hash used for rate limiting, for unique
+            visitor counting
+          </li>
+          <li>
+            <strong>Country code</strong> — derived from Cloudflare's{" "}
+            <code style={{ background: "var(--surface)", padding: "2px 6px", borderRadius: 4, fontSize: "0.9em" }}>
+              cf-ipcountry
+            </code>{" "}
+            header (2-letter code only, no geolocation)
+          </li>
+          <li>
+            <strong>Client type</strong> — whether the request came from a browser, CLI, API client, or extension
+          </li>
+          <li>
+            <strong>Request metadata</strong> — endpoint, analyzed domain, HTTP status code, response latency
+          </li>
+        </ul>
+        <p>None of this is linked to an identity. There are no user accounts, sessions, or tracking pixels.</p>
+      </Section>
+
       <Section title="Caching">
         <p>
-          Analysis results are cached in our database for up to 24 hours to improve performance. Cached data includes
-          only publicly available DNS, WHOIS, SSL, and HTTP header information about the domains you analyze.
+          Analysis results are cached for up to 24 hours to improve performance. Cached data includes only publicly
+          available DNS, WHOIS, SSL, and HTTP header information about the domains you analyze. Cache hits do not count
+          against rate limits.
         </p>
       </Section>
 
@@ -84,8 +122,8 @@ export default function PrivacyPage() {
             That's it — there's nothing to delete on our side because we never stored it.
           </li>
           <li>
-            <strong>Without a key:</strong> You still get 10 AI analyses per hour using Yoke's shared platform key. No
-            key required for any other feature.
+            <strong>Without a key:</strong> You still get 3 AI analyses per day using Yoke's shared platform key. No key
+            required for any other feature.
           </li>
         </ul>
       </Section>
@@ -93,8 +131,15 @@ export default function PrivacyPage() {
       <Section title="Third-Party Services">
         <p>
           Analyses may query public APIs including DNS resolvers (Google, Cloudflare), RDAP/WHOIS registries, Shodan
-          InternetDB, PageSpeed Insights, and others. Each service has its own privacy policy. When you use a BYO key,
-          your AI requests go to{" "}
+          InternetDB, PageSpeed Insights, Have I Been Pwned, Brandfetch, and others. Each service has its own privacy
+          policy. A full list of data sources is available at{" "}
+          <a
+            href="https://github.com/yokedotlol/yoke/blob/main/docs/DATA-SOURCES.md"
+            style={{ color: "var(--accent)" }}
+          >
+            DATA-SOURCES.md
+          </a>
+          . When you use a BYO key, your AI requests go to{" "}
           <a href="https://openrouter.ai/privacy" style={{ color: "var(--accent)" }}>
             OpenRouter
           </a>
@@ -102,14 +147,58 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="Analytics">
+      <Section title="Infrastructure">
         <p>
           Yoke is served through{" "}
           <a href="https://www.cloudflare.com/" style={{ color: "var(--accent)" }}>
-            Cloudflare
+            Cloudflare Workers
           </a>
-          , which collects anonymous server-side request metrics (request count, country, response time). We use no
-          client-side analytics scripts.
+          . Cloudflare collects anonymous server-side request metrics (traffic volume, country, status codes) as part of
+          its infrastructure. No cookies, no client-side tracking. See{" "}
+          <a href="https://www.cloudflare.com/privacypolicy/" style={{ color: "var(--accent)" }}>
+            Cloudflare's privacy policy
+          </a>{" "}
+          for details.
+        </p>
+      </Section>
+
+      <Section title="Data Retention">
+        <p>
+          Rate-limit hashes are cleaned up automatically within hours. Analytics data is retained indefinitely in
+          aggregate form but contains no personal identifiers. Domain analysis results are cached for up to 24 hours.
+          Domain scores and scan history are retained to power the{" "}
+          <a href="/_/showcase" style={{ color: "var(--accent)" }}>
+            popular domains
+          </a>{" "}
+          feed and percentile rankings.
+        </p>
+      </Section>
+
+      <Section title="GDPR">
+        <p>
+          Yoke does not store personal data as defined under GDPR. IP addresses are hashed before storage and cannot be
+          reversed. No cookies, accounts, or tracking identifiers are used. If you have questions about data handling,{" "}
+          <a href="https://github.com/yokedotlol/yoke/issues" style={{ color: "var(--accent)" }}>
+            open an issue
+          </a>
+          .
+        </p>
+      </Section>
+
+      <Section title="Open Source">
+        <p>
+          Yoke is{" "}
+          <a href="https://github.com/yokedotlol/yoke" style={{ color: "var(--accent)" }}>
+            open source
+          </a>{" "}
+          (MIT license). You can audit exactly what data is collected and how it's handled. You can even{" "}
+          <a
+            href="https://github.com/yokedotlol/yoke/blob/main/docs/SELF-HOSTING.md"
+            style={{ color: "var(--accent)" }}
+          >
+            host it yourself
+          </a>{" "}
+          with full control.
         </p>
       </Section>
 
