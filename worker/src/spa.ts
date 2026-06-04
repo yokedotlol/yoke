@@ -3,7 +3,7 @@
 
 import type { Env } from "./helpers";
 import { getBaseUrl, YOKE_VERSION } from "./helpers";
-import { ABOUT_HTML, PRIVACY_HTML, TERMS_HTML } from "./pages";
+import { buildPdfUrl } from "./pdf-route";
 import { buildShareUrl } from "./share";
 import { trackUsage } from "./usage-tracking";
 
@@ -187,19 +187,10 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
       headers: { Location: "https://raw.githubusercontent.com/yokedotlol/yoke/main/cli/install.sh" },
     });
   }
-  if ((method === "GET" || method === "HEAD") && path === "/privacy") {
-    return htmlResponse(PRIVACY_HTML, { "Cache-Control": "public, max-age=86400" }, baseUrl);
-  }
-  if ((method === "GET" || method === "HEAD") && path === "/terms") {
-    return htmlResponse(TERMS_HTML, { "Cache-Control": "public, max-age=86400" }, baseUrl);
-  }
-  if ((method === "GET" || method === "HEAD") && path === "/about") {
-    return htmlResponse(ABOUT_HTML, { "Cache-Control": "public, max-age=86400" }, baseUrl);
-  }
   // Client-side rendered pages — serve the SPA shell
   if (
     (method === "GET" || method === "HEAD") &&
-    (path === "/" || path === "/cli" || path === "/status" || path === "/usage")
+    (path === "/" || path === "/cli" || path === "/about" || path === "/docs" || path === "/privacy" || path === "/terms" || path === "/status" || path === "/usage")
   ) {
     const indexHtml = await getIndexHtml(env, request.url);
     return htmlResponse(indexHtml, { "Cache-Control": "public, max-age=3600" }, baseUrl);
@@ -300,6 +291,7 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
     const analyzedAt = (dataRecord.analyzed_at as string) || new Date().toISOString();
 
     let shareUrl: string | null = null;
+    let pdfUrl: string | null = null;
     if (domainScore?.composite != null && domainScore.tier && domainScore.axes) {
       shareUrl = await buildShareUrl(
         clean,
@@ -310,6 +302,7 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
         baseUrl,
         env,
       );
+      pdfUrl = await buildPdfUrl(clean, analyzedAt, baseUrl, env);
     }
 
     dataRecord._meta = {
@@ -318,6 +311,7 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
       docs: `${baseUrl}/api/docs`,
       source: new URL(baseUrl).hostname,
       ...(shareUrl ? { share_url: shareUrl } : {}),
+      ...(pdfUrl ? { pdf_url: pdfUrl } : {}),
     };
 
     // Inject percentiles (non-blocking, swallow errors)

@@ -23,13 +23,17 @@ export async function buildPdfUrl(
   baseUrl: string,
   env: Env,
 ): Promise<string | null> {
-  if (!env.SHARE_SECRET) return null;
+  if (!env.SHARE_SECRET) {
+    console.error("[yoke:pdf] buildPdfUrl: SHARE_SECRET not configured");
+    return null;
+  }
   try {
     const ts = Math.floor(new Date(analyzedAt).getTime() / 1000);
     const payload = `pdf:${domain}:${ts}`;
     const sig = await signPayload(payload, env);
     return `${baseUrl}/report/${domain}?sig=${encodeURIComponent(sig)}&t=${ts}`;
-  } catch {
+  } catch (err) {
+    console.error("[yoke:pdf] buildPdfUrl failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }

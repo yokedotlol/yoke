@@ -10,11 +10,13 @@ import { DomainSignals, ExternalTools } from "./components/DomainSignals";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SkeletonPanel } from "./components/Panel";
 import { type PanelDef, PanelGrid, ResetLayoutButton } from "./components/PanelLayout";
+import PrivacyPage from "./components/PrivacyPage";
 import { RecentLookups } from "./components/RecentLookups";
 import { ScreenshotPanel, TrancoPanel } from "./components/ReputationPanels";
 import { ShareBar } from "./components/ShareBar";
 // Eagerly loaded components (needed for Overview tab and landing page)
 import { TabBar, type TabId } from "./components/TabBar";
+import TermsPage from "./components/TermsPage";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { VitalsStrip } from "./components/VitalsStrip";
 import type { AnalysisResult } from "./utils/types";
@@ -688,6 +690,16 @@ export function App() {
   // Route: /docs → Documentation
   if (window.location.pathname === "/docs") {
     return <DocsPage />;
+  }
+
+  // Route: /privacy → Privacy Policy
+  if (window.location.pathname === "/privacy") {
+    return <PrivacyPage />;
+  }
+
+  // Route: /terms → Terms of Service
+  if (window.location.pathname === "/terms") {
+    return <TermsPage />;
   }
 
   const [domain, setDomain] = useState("");

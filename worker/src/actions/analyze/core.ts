@@ -1211,25 +1211,26 @@ async function runAnalysisCore(
 
   // Cache result + recent lookup (non-blocking)
   // Skip caching when the site is unreachable — transient failures (deploys, blips)
-  // shouldn't poison the cache for 24h
+  // Cache the analysis. Unreachable sites use a shorter TTL so transient outages
+  // don't poison the cache for the full window.
   const siteIsUp = result.status?.is_up !== false;
   backgroundWork(
     env,
     (async () => {
       if (!env.REFERENCE_DATA) return;
       const cacheTtlSec = Math.max(60, Math.ceil(getAnalysisCacheTtlMs(env) / 1000));
+      const ttl = siteIsUp ? cacheTtlSec : Math.min(cacheTtlSec, 300); // 5min for down sites
+
+      try {
+        const envelope = { data: result, cached_at: Date.now() };
+        await env.REFERENCE_DATA.put(`cache:analysis:${domain}`, JSON.stringify(envelope), {
+          expirationTtl: ttl,
+        });
+      } catch (e) {
+        console.warn(`[yoke:cache] KV write failed for ${domain}:`, e instanceof Error ? e.message : e);
+      }
 
       if (siteIsUp) {
-        try {
-          const envelope = { data: result, cached_at: Date.now() };
-          await env.REFERENCE_DATA.put(`cache:analysis:${domain}`, JSON.stringify(envelope), {
-            expirationTtl: cacheTtlSec,
-          });
-        } catch (e) {
-          console.warn(`[yoke:cache] KV write failed for ${domain}:`, e instanceof Error ? e.message : e);
-        }
-
-        // Update recent lookups ticker (non-critical, swallow errors)
         try {
           const ds = result.domain_score as
             | {
@@ -1266,7 +1267,7 @@ async function runAnalysisCore(
           /* recent ticker update is non-critical */
         }
       } else {
-        // Skip cache write for unreachable sites silently
+        // Unreachable sites skip the recent lookups feed
       }
     })(),
   );
