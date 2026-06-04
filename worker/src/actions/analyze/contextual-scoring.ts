@@ -4462,10 +4462,14 @@ export function calculateDomainScore(opts: {
 
     // Count scoreable findings — exclude meta-signals that just indicate checks couldn't run
     const scoreableFindings = axisFindings.filter(
-      (f) => !f.signal.startsWith("http_blocked_") && !f.signal.startsWith("site_unreachable_"),
+      (f) => !f.signal.startsWith("http_blocked_") && !f.signal.startsWith("site_unreachable"),
     );
 
-    if (scoreableFindings.length < 3) {
+    // If site is unreachable, the axis can't be meaningfully assessed —
+    // DNS-only signals would inflate the score despite the site being down.
+    const hasSiteUnreachable = axisFindings.some((f) => f.signal.startsWith("site_unreachable"));
+
+    if (hasSiteUnreachable || scoreableFindings.length < 3) {
       // "Not Assessed" — too few findings to produce a meaningful score.
       // Prevents sparse axes from inflating or deflating unfairly.
       axisScores[axis] = { score: null, weight: AXIS_WEIGHTS[axis], findings: axisFindings, not_measured: true };
