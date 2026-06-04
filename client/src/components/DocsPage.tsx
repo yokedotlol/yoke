@@ -691,14 +691,14 @@ export default function DocsPage() {
             margin: "24px 0 10px",
           }}
         >
-          Context-Aware Scoring
+          Deductive Scoring
         </h3>
         <P>
           Yoke detects domain archetypes — e-commerce, SaaS, institutional, content, marketing,
-          infrastructure, and general — and adjusts signal severity accordingly. For example, an
-          e-commerce site without proper cookie security headers is more severe than the same
-          issue on a static blog. Some signals only apply when specific technologies are detected
-          (WordPress-specific checks, cookie-related headers).
+          infrastructure, and general — for display context, but all domains are scored against
+          the same criteria. Some signals only apply when specific technologies are detected
+          (WordPress-specific checks, cookie-related headers), and signals that aren't applicable
+          are excluded rather than penalized.
         </P>
 
         <h3
