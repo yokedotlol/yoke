@@ -132,7 +132,7 @@ const html = `<!DOCTYPE html>
       },
       "featureList": [
         "DNS record lookup (A, AAAA, MX, NS, TXT, CNAME, SOA)",
-        "SSL/TLS certificate analysis with SSL Labs grading",
+        "SSL/TLS certificate analysis with direct TLS probe grading",
         "WHOIS and RDAP registration data",
         "Security header audit and scoring",
         "Technology stack detection (frameworks, CMS, CDN, WAF)",
