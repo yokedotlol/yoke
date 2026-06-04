@@ -260,3 +260,12 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **What changed:** Complete rewrite of `/privacy` page. New sections: Rate Limiting & IP Handling, Anonymous Analytics, Data Retention, GDPR. Updated "What We Collect" to honestly describe hashed IP storage for rate limiting and anonymous request metadata.
 **Why:** The old policy said "we collect only the domain name you submit" which was inaccurate — we also store hashed IPs for rate limiting and anonymous analytics metadata. For a security/privacy tool, an inaccurate privacy policy is a credibility problem. The new policy is thorough and honest.
 **Directive:** Keep the privacy policy in sync with actual data handling. Any new data collection must be reflected in `/privacy` before shipping.
+
+### 2026-06-04 — Legal/trust probes run independently of main HTTP probe
+
+**What changed:** Removed the `httpProbeSucceeded` gate on `detectLegalPages()` and `checkTrustSignals()` in `core.ts`. Both now always run. When the main HTTP probe fails, empty HTML and null headers are passed so link-extraction yields nothing, but the HEAD→GET path probes still fire against well-known URLs (`/privacy`, `/about`, `/terms`, etc.).
+**Why:** Sites behind WAFs (Akamai, Cloudflare, etc.) may return 403 on `/` while specific legal/trust paths remain accessible. Gating these probes on the main probe meant losing signal unnecessarily.
+**Implementation:** `probeHeadWithFallback()` already uses GET with `body.cancel()` when HEAD fails — status + content-type only, no payload downloaded.
+**Directive:** Legal and trust probes are independent of the main HTTP probe. Don't re-gate them.
+
+---
