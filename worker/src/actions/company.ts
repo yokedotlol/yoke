@@ -64,7 +64,7 @@ async function enrichFromBrandfetch(
   try {
     const res = await fetchWithTimeout(`https://api.brandfetch.io/v2/search/${encodeURIComponent(domain)}`, {
       timeout: 5000,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; YokeBot/1.0)" },
+      headers: { "User-Agent": "Yoke/2.0 (+https://yoke.lol)" },
     });
     if (!res.ok) {
       if (statsDb)

@@ -199,6 +199,18 @@ export function getFlyProbeUrl(env: Env): string {
   return env.FLY_PROBE_URL || DEFAULT_FLY_PROBE_URL;
 }
 
+/** SHA-256 hash of IP + daily salt — privacy-safe rate-limit key.
+ *  Truncated to 16 hex chars: enough for uniqueness, not reversible. */
+export async function hashIp(ip: string): Promise<string> {
+  const day = new Date().toISOString().slice(0, 10);
+  const data = new TextEncoder().encode(`${ip}:${day}`);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 16);
+}
+
 /** Get auth headers for Fly probe requests from env, without module-level mutation. */
 export function getFlyAuthHeaders(env: Env): Record<string, string> {
   if (env.FLY_AUTH_SECRET) {

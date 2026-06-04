@@ -48,7 +48,7 @@ async function fetchGoogleNews(query: string): Promise<NewsArticle[]> {
 
 export async function getNews(kv: KVNamespace, rawDomain: string, statsDb?: D1Database) {
   const domain = normalizeDomain(rawDomain);
-  const cached = await getFromCache(kv, domain, "news", 60 * 60 * 1000);
+  const cached = await getFromCache(kv, domain, "news", 4 * 60 * 60 * 1000);
   if (cached) {
     const c = cached as { google_news: NewsArticle[]; hacker_news: HnStory[] };
     return { google_news: c.google_news, hacker_news: c.hacker_news, cached: true };

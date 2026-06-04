@@ -44,6 +44,7 @@ import {
   cleanDomain,
   getBaseUrl,
   getFromCache,
+  hashIp,
   safeFetchWithRedirects,
   YOKE_VERSION,
 } from "./helpers";
@@ -460,10 +461,11 @@ export default {
     // GET /report/:domain — PDF report download
     const reportDomain = method === "GET" ? matchReportPath(path) : null;
     if (reportDomain) {
-      const reportIP =
+      const reportIP = await hashIp(
         request.headers.get("cf-connecting-ip") ||
-        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        "unknown";
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+          "unknown",
+      );
       const rl = await checkRateLimit(env.STATS_DB, reportIP, "/report", env);
       if (rl.blocked) {
         trackRequest(env, request, { endpoint: "report", domain: reportDomain, status: 429, latencyMs: 0 });
@@ -493,11 +495,7 @@ export default {
     if (spaResponse) return spaResponse;
 
     // GET /_/showcase — popular domains feed for the SPA homepage
-    // GET /_/recent — legacy alias, redirects to /_/showcase
-    if (method === "GET" && (path === "/_/showcase" || path === "/_/recent")) {
-      if (path === "/_/recent") {
-        return new Response(null, { status: 301, headers: { Location: "/_/showcase" } });
-      }
+    if (method === "GET" && path === "/_/showcase") {
       const feedMode = (env.SHOWCASE_FEED || "popular").toLowerCase();
       if (feedMode === "off") return json({ domains: [] });
 
@@ -625,10 +623,11 @@ export default {
 
     // API routes
     if (path.startsWith("/api/")) {
-      const clientIP =
+      const clientIP = await hashIp(
         request.headers.get("cf-connecting-ip") ||
-        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        "unknown";
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+          "unknown",
+      );
       const _t0 = Date.now();
       const _track = (endpoint: string, status: number, domain?: string) => {
         trackRequest(env, request, { endpoint, domain, status, latencyMs: Date.now() - _t0 });
