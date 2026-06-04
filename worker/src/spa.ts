@@ -193,7 +193,7 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
     (path === "/" || path === "/cli" || path === "/about" || path === "/docs" || path === "/privacy" || path === "/terms" || path === "/status" || path === "/usage")
   ) {
     const indexHtml = await getIndexHtml(env, request.url);
-    return htmlResponse(indexHtml, { "Cache-Control": "public, max-age=3600" }, baseUrl);
+    return htmlResponse(indexHtml, { "Cache-Control": "no-cache" }, baseUrl);
   }
 
   // ── Domain path: content negotiation ──
@@ -425,5 +425,5 @@ export async function serveAssetOrFallback(request: Request, env: Env): Promise<
 
   // No matching asset — SPA fallback: serve index.html for client-side routing
   const indexHtml = await getIndexHtml(env, request.url);
-  return htmlResponse(indexHtml, { "Cache-Control": "public, max-age=3600" }, baseUrl);
+  return htmlResponse(indexHtml, { "Cache-Control": "no-cache" }, baseUrl);
 }
