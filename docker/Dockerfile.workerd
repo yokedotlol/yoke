@@ -1,9 +1,11 @@
 # ── Stage 1: Build the Yoke client (SPA) ──────────────────────────
 FROM oven/bun:1-slim AS client-builder
-WORKDIR /build
+WORKDIR /build/client
 COPY client/package.json client/bun.lock* ./
 RUN bun install --frozen-lockfile 2>/dev/null || bun install
 COPY client/ ./
+# Client imports signal-registry from worker source (monorepo cross-ref)
+COPY worker/src/config/ /build/worker/src/config/
 RUN bun run build
 
 # ── Stage 2: Build the Yoke worker ────────────────────────────────
@@ -28,7 +30,7 @@ RUN apt-get update && apt-get install -y coreutils && rm -rf /var/lib/apt/lists/
 WORKDIR /app
 
 # Client dist (baked into image; entrypoint copies to shared volume for Caddy)
-COPY --from=client-builder /build/dist /app/client-dist-src
+COPY --from=client-builder /build/client/dist /app/client-dist-src
 
 # Worker artifacts
 COPY --from=worker-builder /build/worker/dist/worker.js worker/dist/worker.js
