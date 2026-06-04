@@ -205,6 +205,15 @@ function detectManagedHosting(
   // Flywheel
   if (h("x-fw-hash") || h("x-fw-serve") || h("x-fw-type")) return "Flywheel";
 
+  // WordPress VIP
+  if (
+    /wordpress vip/i.test(h("x-powered-by")) ||
+    h("x-vip-go") ||
+    /client-mu-plugins/i.test(html) ||
+    /wpvip\.com/i.test(html)
+  )
+    return "WordPress VIP";
+
   // WordPress.com / Automattic
   if (
     h("x-powered-by").includes("WordPress.com") ||

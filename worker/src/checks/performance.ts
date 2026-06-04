@@ -1,4 +1,5 @@
 import { checkPageSpeed } from "../actions/analyze/performance";
+import { getFlyProbeUrl } from "../helpers";
 import type { Check } from "./types";
 
 export const performanceCheck: Check = {
@@ -26,6 +27,7 @@ export const performanceCheck: Check = {
       ctx.env.FLY_AUTH_SECRET,
       ctx.env.STATS_DB,
       "mobile",
+      getFlyProbeUrl(ctx.env),
     ),
 };
 
@@ -54,5 +56,6 @@ export const performanceDesktopCheck: Check = {
       ctx.env.FLY_AUTH_SECRET,
       ctx.env.STATS_DB,
       "desktop",
+      getFlyProbeUrl(ctx.env),
     ),
 };

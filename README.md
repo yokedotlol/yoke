@@ -173,7 +173,6 @@ npx wrangler kv namespace create REFERENCE_DATA
 
 # Configure, build, deploy
 cp worker/wrangler.toml.example worker/wrangler.toml   # edit with your IDs
-cp og-worker/wrangler.toml.example og-worker/wrangler.toml
 bash deploy.sh --cf
 ```
 

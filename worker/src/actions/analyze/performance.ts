@@ -15,6 +15,7 @@ export async function checkPageSpeed(
   flyAuthSecret?: string,
   statsDb?: D1Database,
   strategy: Strategy = "mobile",
+  flyProbeUrl?: string,
 ): Promise<PerformanceResult> {
   const cacheType = strategy === "desktop" ? "performance_desktop" : "performance";
   const kvKey = `cache:${cacheType}:${domain}`;
@@ -36,7 +37,7 @@ export async function checkPageSpeed(
 
   // Try Fly proxy first (more reliable, avoids CF egress issues)
   try {
-    const flyUrl = `https://yoke-probe.fly.dev/pagespeed?domain=${encodeURIComponent(domain)}&strategy=${strategy}`;
+    const flyUrl = `${flyProbeUrl || "https://yoke-probe.fly.dev"}/pagespeed?domain=${encodeURIComponent(domain)}&strategy=${strategy}`;
     const headers: Record<string, string> = {};
     if (flyAuthSecret) {
       headers.Authorization = `Bearer ${flyAuthSecret}`;
