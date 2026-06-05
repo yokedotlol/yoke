@@ -1390,6 +1390,24 @@ export function App() {
           </span>
           <ResetLayoutButton />
         </nav>
+        <a
+          href={`/${window.location.hostname}`}
+          style={{ display: "inline-block", opacity: 0.7, transition: "opacity 0.15s" }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = "1";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = "0.7";
+          }}
+          title={`Yoke score for ${window.location.hostname}`}
+        >
+          <img
+            src={`/badge/${window.location.hostname}.svg`}
+            alt={`Yoke score for ${window.location.hostname}`}
+            height="20"
+            style={{ verticalAlign: "middle" }}
+          />
+        </a>
       </footer>
     </main>
   );

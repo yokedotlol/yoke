@@ -1,7 +1,8 @@
 // ─── Scheduled Handler: Badge Pre-warm ───────────────────────────────
-// CF Workers scheduled event handler. Runs every 4h via wrangler.toml
-// cron trigger. Sweeps badge_domains table, checks KV for each domain,
-// re-analyzes only domains with missing or expired badge cache entries.
+// CF Workers scheduled event handler. Runs hourly via wrangler.toml
+// cron trigger. Sweeps badge_domains table (most stale first), checks
+// KV for each domain, re-analyzes only domains with missing or expired
+// badge cache entries. Time-budgeted to 10 minutes per run.
 //
 // Also callable via POST /api/admin/badge-sweep for self-hosters.
 
@@ -12,31 +13,40 @@ import { logInfo, logWarn } from "./logger";
 /** Stale threshold for pre-warm: 24h (more aggressive than SWR's 20h) */
 const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
-/** Max concurrent domain refreshes per sweep run */
+/** Max concurrent domain refreshes per batch */
 const CONCURRENCY_CAP = 5;
+
+/** Wall-clock budget per sweep run (10 minutes) */
+const BUDGET_MS = 10 * 60 * 1000;
 
 export interface SweepResult {
   checked: number;
   refreshed: number;
+  skipped: number;
   errors: number;
+  budget_exhausted: boolean;
 }
 
 /**
  * Run the badge pre-warm sweep. Called by both the scheduled handler
  * and the admin badge-sweep endpoint.
+ *
+ * Processes domains ordered by last_requested ASC (most stale first).
+ * Stops when the 10-minute wall-clock budget is exhausted.
  */
 export async function badgeSweep(env: Env): Promise<SweepResult> {
-  const result: SweepResult = { checked: 0, refreshed: 0, errors: 0 };
+  const result: SweepResult = { checked: 0, refreshed: 0, skipped: 0, errors: 0, budget_exhausted: false };
+  const startTime = Date.now();
 
   if (!env.STATS_DB || !env.REFERENCE_DATA) {
     logWarn("[yoke:badge-sweep] Missing STATS_DB or REFERENCE_DATA binding");
     return result;
   }
 
-  // Fetch all tracked badge domains
+  // Fetch all tracked badge domains, most stale first
   let domains: string[];
   try {
-    const rows = await env.STATS_DB.prepare("SELECT domain FROM badge_domains ORDER BY last_requested DESC").all<{
+    const rows = await env.STATS_DB.prepare("SELECT domain FROM badge_domains ORDER BY last_requested ASC").all<{
       domain: string;
     }>();
     domains = rows.results.map((r) => r.domain);
@@ -55,10 +65,17 @@ export async function badgeSweep(env: Env): Promise<SweepResult> {
     return result;
   }
 
-  // Process in batches with concurrency cap
+  // Process in batches with concurrency cap, respecting time budget
   const { runAnalysis } = await import("./actions/analyze/core");
 
   for (let i = 0; i < domains.length; i += CONCURRENCY_CAP) {
+    // Check budget before starting a new batch
+    if (Date.now() - startTime >= BUDGET_MS) {
+      result.skipped = domains.length - i;
+      result.budget_exhausted = true;
+      break;
+    }
+
     const batch = domains.slice(i, i + CONCURRENCY_CAP);
     const promises = batch.map(async (domain) => {
       result.checked++;
@@ -85,8 +102,18 @@ export async function badgeSweep(env: Env): Promise<SweepResult> {
   logInfo("[yoke:badge-sweep] Sweep complete", {
     checked: result.checked,
     refreshed: result.refreshed,
+    skipped: result.skipped,
     errors: result.errors,
+    budget_exhausted: result.budget_exhausted,
+    elapsed_ms: Date.now() - startTime,
   });
+
+  if (result.skipped > 0) {
+    logWarn("[yoke:badge-sweep] Budget exhausted — skipped domains remain. Consider increasing cron frequency.", {
+      skipped: result.skipped,
+      total: domains.length,
+    });
+  }
 
   return result;
 }

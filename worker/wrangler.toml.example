@@ -30,10 +30,10 @@ binding = "REFERENCE_DATA"
 # pattern = "yourdomain.com/*"
 # zone_name = "yourdomain.com"
 
-# Badge pre-warm cron — refreshes badge cache for tracked domains every 4 hours
+# Badge pre-warm cron — refreshes badge cache for tracked domains every hour
 # Self-hosters can also use POST /api/admin/badge-sweep instead
 [triggers]
-crons = ["0 */4 * * *"]
+crons = ["0 */1 * * *"]
 
 # OG image rendering is now built into the main worker (og/ directory).
 # The separate og-worker service binding is no longer needed.

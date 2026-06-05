@@ -48,7 +48,7 @@
 | Chrome Extension ID | fghkhjlelidaepapcdfjifnlcjmkgpcj |
 | Themes | 12 |
 | API endpoints | 24 total (13 public documented at `/api/docs`) |
-| Cron triggers | Badge pre-warm every 4h (`0 */4 * * *`) |
+| Cron triggers | Badge pre-warm hourly (`0 */1 * * *`) |
 | UptimeRobot | Monitoring `/api/health`, status page linked from `/status` footer |
 
 ### Self-Hosted Instance (yoke-test.lol)

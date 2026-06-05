@@ -130,7 +130,11 @@ describe("Badge Sweep", () => {
     const result = await badgeSweep(env);
     expect(result).toHaveProperty("checked");
     expect(result).toHaveProperty("refreshed");
+    expect(result).toHaveProperty("skipped");
     expect(result).toHaveProperty("errors");
+    expect(result).toHaveProperty("budget_exhausted");
+    expect(result.budget_exhausted).toBe(false);
+    expect(result.skipped).toBe(0);
   });
 
   it("handles missing STATS_DB gracefully", async () => {

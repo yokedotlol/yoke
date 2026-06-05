@@ -5,9 +5,10 @@
 **Free, open-source domain intelligence — DNS, WHOIS, SSL, security, tech stack, performance, breaches, AI analysis, and more. Web, API, CLI, and Chrome extension.**
 
 [![CI](https://github.com/yokedotlol/yoke/actions/workflows/ci.yml/badge.svg)](https://github.com/yokedotlol/yoke/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-2.2.0-blue)](https://github.com/yokedotlol/yoke/blob/main/docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue)](https://github.com/yokedotlol/yoke/blob/main/docs/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/fghkhjlelidaepapcdfjifnlcjmkgpcj?label=Chrome%20Extension)](https://chromewebstore.google.com/detail/yoke/fghkhjlelidaepapcdfjifnlcjmkgpcj)
+[![Yoke](https://yoke.lol/badge/yoke.lol.svg)](https://yoke.lol/yoke.lol)
 
 **[Try it → yoke.lol](https://yoke.lol)** · **[API Docs](https://yoke.lol/api/docs)** · **[CLI](#cli)** · **[Chrome Extension](https://chromewebstore.google.com/detail/yoke/fghkhjlelidaepapcdfjifnlcjmkgpcj)** · **[Status](https://yoke.lol/status)**
 

@@ -338,7 +338,7 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **Badge cache strategy — 4 layers:**
 1. **Natural traffic** — every analysis writes a `badge:<domain>` KV entry (~200 bytes, 48h TTL) as a side effect. Most badge domains stay warm from normal Yoke usage.
 2. **Stale-while-revalidate** — badge request checks `analyzedAt`; if >20h old, serves current data immediately and kicks off background re-analysis via `waitUntil`.
-3. **Pre-warm cron (every 4h)** — CF Workers scheduled handler sweeps `badge_domains` D1 table, re-analyzes only domains with missing or expired cache entries.
+3. **Pre-warm cron (hourly)** — CF Workers scheduled handler sweeps `badge_domains` D1 table, re-analyzes only domains with missing or expired cache entries.
 4. **Cold start** — first-ever badge request for an unscanned domain returns a neutral gray "not yet scanned" badge and triggers background analysis.
 
 **Infrastructure:**
