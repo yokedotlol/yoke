@@ -1,4 +1,9 @@
 {$YOKE_DOMAIN} {
+    # Security headers applied to all responses
+    header {
+        X-Frame-Options "SAMEORIGIN"
+    }
+
     # Static assets from the client build
     @static {
         path /assets/* /fonts/* /manifest.json /apple-touch-icon.png /og-banner.png /favicon.ico
