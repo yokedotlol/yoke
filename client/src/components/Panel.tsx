@@ -328,3 +328,63 @@ export function ErrorState({ message }: { message: string }) {
 export function SectionHeader({ title }: { title: string }) {
   return <div className="section-header">{title}</div>;
 }
+
+// ─── Human-readable labels for degraded upstream providers ──────────
+
+const DEGRADED_LABELS: Record<string, string> = {
+  performance: "PageSpeed (Mobile)",
+  performance_desktop: "PageSpeed (Desktop)",
+  cert_transparency: "Certificate Transparency",
+  tranco_rank: "Tranco Ranking",
+  breaches: "Breach Data",
+  shodan: "Shodan",
+  greynoise: "GreyNoise",
+  wayback: "Wayback Machine",
+  rdap: "WHOIS / RDAP",
+  carbon: "Website Carbon",
+  ssl: "SSL / TLS",
+  crux: "Chrome UX Report",
+  ip_info: "IP Geolocation",
+  blocklists: "Blocklists",
+  email_auth: "Email Auth",
+  green_hosting: "Green Hosting",
+  dnssec: "DNSSEC",
+  security_txt: "Security.txt",
+  well_known: "Well-Known",
+  dns_propagation: "DNS Propagation",
+  ripe_routing: "RIPE Routing",
+  connection_timing: "Connection Timing",
+  outage_links: "Outage Detection",
+  social_accounts: "Social Accounts",
+  _status: "Status Check",
+  _robots_sitemap: "Robots & Sitemap",
+  llms_txt: "LLMs.txt",
+  ans: "AI Agent Readiness",
+};
+
+/**
+ * Subtle inline notice shown when an upstream API was unavailable (circuit breaker open).
+ * Pass the degraded array from `data._meta?.degraded` and the provider key(s) this panel depends on.
+ */
+export function DegradedNotice({ degraded, providers }: { degraded?: string[]; providers: string | string[] }) {
+  if (!degraded?.length) return null;
+  const keys = Array.isArray(providers) ? providers : [providers];
+  const affected = keys.filter((k) => degraded.includes(k));
+  if (!affected.length) return null;
+
+  const labels = affected.map((k) => DEGRADED_LABELS[k] ?? k);
+  return (
+    <div
+      className="px-3 py-1.5"
+      style={{
+        color: "var(--dim)",
+        fontSize: "10px",
+        fontStyle: "italic",
+        fontFamily: "var(--font-ui)",
+        borderTop: "1px solid var(--border)",
+      }}
+    >
+      ⚠ {labels.join(", ")} temporarily unavailable — data may be incomplete
+    </div>
+  );
+}

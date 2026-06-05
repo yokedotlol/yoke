@@ -366,6 +366,7 @@ export interface AnalysisResult {
   _meta?: {
     share_url?: string;
     pdf_url?: string;
+    degraded?: string[];
   };
 }
 

@@ -333,6 +333,59 @@ function hasEnoughForTabs(partial: Partial<AnalysisResult>): boolean {
   return !!partial.dns;
 }
 
+// ─── Degraded Provider Banner ──────────────────────────────────
+
+const DEGRADED_LABELS: Record<string, string> = {
+  performance: "PageSpeed (Mobile)",
+  performance_desktop: "PageSpeed (Desktop)",
+  cert_transparency: "Certificate Transparency",
+  tranco_rank: "Tranco Ranking",
+  breaches: "Breach Data",
+  shodan: "Shodan",
+  greynoise: "GreyNoise",
+  wayback: "Wayback Machine",
+  rdap: "WHOIS / RDAP",
+  carbon: "Website Carbon",
+  ssl: "SSL / TLS",
+  crux: "Chrome UX Report",
+  ip_info: "IP Geolocation",
+  blocklists: "Blocklists",
+  email_auth: "Email Auth",
+  green_hosting: "Green Hosting",
+  dnssec: "DNSSEC",
+  security_txt: "Security.txt",
+  well_known: "Well-Known",
+  dns_propagation: "DNS Propagation",
+  ripe_routing: "RIPE Routing",
+  connection_timing: "Connection Timing",
+  outage_links: "Outage Detection",
+  social_accounts: "Social Accounts",
+  _status: "Status Check",
+  _robots_sitemap: "Robots & Sitemap",
+  llms_txt: "LLMs.txt",
+  ans: "AI Agent Readiness",
+};
+
+function DegradedBanner({ providers }: { providers: string[] }) {
+  const labels = providers.map((k) => DEGRADED_LABELS[k] ?? k);
+  return (
+    <div
+      className="rounded-lg px-3 py-2"
+      style={{
+        background: "color-mix(in srgb, var(--warning) 8%, var(--surface))",
+        border: "1px solid color-mix(in srgb, var(--warning) 25%, transparent)",
+        color: "var(--dim)",
+        fontSize: "11px",
+        fontFamily: "var(--font-ui)",
+      }}
+    >
+      <span style={{ color: "var(--warning)", marginRight: "6px" }}>⚠</span>
+      Some data sources temporarily unavailable: {labels.join(", ")}. Results may be incomplete — try again later for
+      full analysis.
+    </div>
+  );
+}
+
 // ─── Tab Content Components ────────────────────────────────────
 
 function OverviewTab({ data, streaming }: { data: AnalysisResult; streaming?: boolean }) {
@@ -348,6 +401,9 @@ function OverviewTab({ data, streaming }: { data: AnalysisResult; streaming?: bo
     <div className="space-y-3">
       {/* Domain Score — the headline */}
       <DomainScore data={data} />
+
+      {/* Circuit breaker: degraded upstream notice */}
+      {data._meta?.degraded && data._meta.degraded.length > 0 && <DegradedBanner providers={data._meta.degraded} />}
 
       {/* Vitals Strip + Hosting badges */}
       <div className="space-y-2">

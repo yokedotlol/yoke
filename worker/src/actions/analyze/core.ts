@@ -5,6 +5,7 @@
 import { logApiError, pruneApiErrors } from "../../api-errors";
 import { registry } from "../../checks/registry";
 import type { CheckContext } from "../../checks/types";
+import { isCircuitOpen, recordFailure, recordSuccess } from "../../circuit-breaker";
 import { getAnalysisCacheTtlMs } from "../../config/cache";
 import { backgroundWork, type Env, fetchWithTimeout, normalizeDomain } from "../../helpers";
 import { type BreachResult } from "../breaches";
@@ -501,9 +502,37 @@ async function runAnalysisCore(
   // This prevents a single slow API from blocking the entire analysis pipeline.
   const PER_CHECK_TIMEOUT_MS = 30_000;
 
+  // ── Circuit breaker: pre-check which upstreams are down ─────────
+  // Read circuit state for all checks in parallel (KV reads are cheap).
+  // Checks with open circuits are skipped entirely — they return defaults
+  // immediately instead of waiting for a timeout we already know is coming.
+  const degradedProviders: string[] = [];
+  const circuitStates = new Map<string, boolean>();
+  if (env.REFERENCE_DATA) {
+    const circuitChecks = registry.map(async (check) => {
+      const open = await isCircuitOpen(env.REFERENCE_DATA!, check.key);
+      circuitStates.set(check.key, open);
+      if (open) degradedProviders.push(check.key);
+    });
+    await Promise.all(circuitChecks);
+  }
+
   // Launch all Phase 2 checks from the registry (one file per check — see worker/src/checks/)
+  // Checks with tripped circuits are skipped — they resolve to defaults immediately.
   const checks = registry.map((check) => {
     const timeoutMs = check.timeout ?? PER_CHECK_TIMEOUT_MS;
+
+    // Circuit is open — skip this check entirely
+    if (circuitStates.get(check.key)) {
+      return {
+        key: check.key,
+        promise: Promise.resolve(check.default),
+        label: check.label,
+        default: check.default,
+        skipped: true,
+      };
+    }
+
     return {
       key: check.key,
       promise: Promise.race([
@@ -514,6 +543,7 @@ async function runAnalysisCore(
       ]),
       label: check.label,
       default: check.default,
+      skipped: false,
     };
   });
 
@@ -536,12 +566,18 @@ async function runAnalysisCore(
   const results: Record<string, unknown> = {};
   let completed = 0;
 
-  const wrappedPromises = checks.map(({ key, promise, label, default: defaultValue }) =>
+  const wrappedPromises = checks.map(({ key, promise, label, default: defaultValue, skipped }) =>
     promise.then(
       (value) => {
         results[key] = value;
         completed++;
-        const sendPromise = onResult(key, value, completed, totalWithPostChecks, label);
+
+        // Record success with circuit breaker (only when we actually called the upstream)
+        if (!skipped && env.REFERENCE_DATA) {
+          backgroundWork(env, recordSuccess(env.REFERENCE_DATA!, key));
+        }
+
+        const sendPromise = onResult(key, value, completed, totalWithPostChecks, label, skipped ? true : undefined);
 
         // When _status arrives, compute and send early enhanced status.
         // NOTE: HTTP probe may still be in-flight at this point (runs concurrently
@@ -589,6 +625,10 @@ async function runAnalysisCore(
           message: String(err).slice(0, 200),
           domain,
         });
+        // Record failure with circuit breaker
+        if (env.REFERENCE_DATA) {
+          backgroundWork(env, recordFailure(env.REFERENCE_DATA!, key));
+        }
         return onResult(key, defaultValue, completed, totalWithPostChecks, label, true);
       },
     ),
@@ -1041,6 +1081,8 @@ async function runAnalysisCore(
     cookie_consent: cookieConsentResult,
     network_health: networkHealth,
     social_accounts: socialAccountsResult,
+    // Circuit breaker: list of providers that were skipped due to open circuits
+    ...(degradedProviders.length > 0 ? { _meta: { degraded: degradedProviders } } : {}),
   };
 
   // ── Post-analysis: score logging, caching, cleanup ───────────────
@@ -1218,14 +1260,18 @@ async function runAnalysisCore(
   // Cache result + recent lookup (non-blocking)
   // Skip caching when the site is unreachable — transient failures (deploys, blips)
   // Cache the analysis. Unreachable sites use a shorter TTL so transient outages
-  // don't poison the cache for the full window.
+  // don't poison the cache for the full window. Degraded results (circuit breaker
+  // skipped some providers) also use a shorter TTL so real data replaces them quickly.
   const siteIsUp = result.status?.is_up !== false;
+  const hasDegradedProviders = degradedProviders.length > 0;
   backgroundWork(
     env,
     (async () => {
       if (!env.REFERENCE_DATA) return;
       const cacheTtlSec = Math.max(60, Math.ceil(getAnalysisCacheTtlMs(env) / 1000));
-      const ttl = siteIsUp ? cacheTtlSec : Math.min(cacheTtlSec, 300); // 5min for down sites
+      let ttl = cacheTtlSec;
+      if (!siteIsUp) ttl = Math.min(cacheTtlSec, 300); // 5min for down sites
+      if (hasDegradedProviders) ttl = Math.min(ttl, 600); // 10min when degraded
 
       try {
         const envelope = { data: result, cached_at: Date.now() };
