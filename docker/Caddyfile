@@ -1,11 +1,13 @@
 # ── MTA-STS policy endpoint ────────────────────────────────────────
+# MX hosts must match your domain's MX records exactly.
+# Default: Cloudflare Email Routing. Override via MTA_STS_MX_* env vars.
 mta-sts.{$YOKE_DOMAIN} {
     handle /.well-known/mta-sts.txt {
         respond `version: STSv1
 mode: enforce
-mx: route1.mx.cloudflare.net
-mx: route2.mx.cloudflare.net
-mx: route3.mx.cloudflare.net
+mx: {$MTA_STS_MX_1}
+mx: {$MTA_STS_MX_2}
+mx: {$MTA_STS_MX_3}
 max_age: 604800` 200 {
             close
         }

@@ -13,6 +13,9 @@ services:
       - caddy_config:/config
     environment:
       - YOKE_DOMAIN=${YOKE_DOMAIN}
+      - MTA_STS_MX_1=${MTA_STS_MX_1:-route1.mx.cloudflare.net}
+      - MTA_STS_MX_2=${MTA_STS_MX_2:-route2.mx.cloudflare.net}
+      - MTA_STS_MX_3=${MTA_STS_MX_3:-route3.mx.cloudflare.net}
     depends_on:
       workerd:
         condition: service_started

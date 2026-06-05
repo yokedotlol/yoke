@@ -644,6 +644,9 @@ Set via `npx wrangler secret put` (Cloudflare), workerd config bindings (bare me
 | `RATE_LIMIT_SUBDOMAIN` | Optional | Max subdomain scans/hr per IP (default: 30, 0 = disable) |
 | `RATE_LIMIT_AVAILABILITY` | Optional | Max availability checks/hr per IP (default: 60, 0 = disable) |
 | `CACHE_TTL_HOURS` | Optional | Analysis cache TTL in hours (default: 24, 0 = disable) |
+| `MTA_STS_MX_1` | Optional | MTA-STS MX host #1 (default: `route1.mx.cloudflare.net`) |
+| `MTA_STS_MX_2` | Optional | MTA-STS MX host #2 (default: `route2.mx.cloudflare.net`) |
+| `MTA_STS_MX_3` | Optional | MTA-STS MX host #3 (default: `route3.mx.cloudflare.net`) |
 
 ---
 
