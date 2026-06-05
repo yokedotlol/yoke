@@ -1,5 +1,4 @@
 import { checkPageSpeed } from "../actions/analyze/performance";
-import { getFlyProbeUrl } from "../helpers";
 import type { Check } from "./types";
 
 export const performanceCheck: Check = {
@@ -18,17 +17,7 @@ export const performanceCheck: Check = {
     screenshot: null,
   },
   timeout: 65_000,
-  run: (ctx) =>
-    checkPageSpeed(
-      ctx.domain,
-      ctx.httpResponseTimeMs,
-      ctx.env.REFERENCE_DATA,
-      ctx.env.GOOGLE_PAGESPEED_API_KEY,
-      ctx.env.FLY_AUTH_SECRET,
-      ctx.env.STATS_DB,
-      "mobile",
-      getFlyProbeUrl(ctx.env),
-    ),
+  run: (ctx) => checkPageSpeed(ctx.domain, ctx.httpResponseTimeMs, ctx.env, "mobile"),
 };
 
 export const performanceDesktopCheck: Check = {
@@ -47,15 +36,5 @@ export const performanceDesktopCheck: Check = {
     screenshot: null,
   },
   timeout: 65_000,
-  run: (ctx) =>
-    checkPageSpeed(
-      ctx.domain,
-      ctx.httpResponseTimeMs,
-      ctx.env.REFERENCE_DATA,
-      ctx.env.GOOGLE_PAGESPEED_API_KEY,
-      ctx.env.FLY_AUTH_SECRET,
-      ctx.env.STATS_DB,
-      "desktop",
-      getFlyProbeUrl(ctx.env),
-    ),
+  run: (ctx) => checkPageSpeed(ctx.domain, ctx.httpResponseTimeMs, ctx.env, "desktop"),
 };

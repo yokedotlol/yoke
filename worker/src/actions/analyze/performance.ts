@@ -1,6 +1,6 @@
 import { logApiError } from "../../api-errors";
 import { PERF_CACHE_TTL_MS } from "../../config/cache";
-import { fetchWithTimeout } from "../../helpers";
+import { type Env, fetchWithTimeout, flyProbeFetch, getFlyProbeUrl } from "../../helpers";
 import type { CompressionResult, CruxResult, PerformanceResult } from "./types";
 
 // ─── PageSpeed ───────────────────────────────────────────────────────
@@ -10,20 +10,16 @@ type Strategy = "mobile" | "desktop";
 export async function checkPageSpeed(
   domain: string,
   ttfbFallback: number | null,
-  kv?: KVNamespace,
-  apiKey?: string,
-  flyAuthSecret?: string,
-  statsDb?: D1Database,
+  env: Env,
   strategy: Strategy = "mobile",
-  flyProbeUrl?: string,
 ): Promise<PerformanceResult> {
   const cacheType = strategy === "desktop" ? "performance_desktop" : "performance";
   const kvKey = `cache:${cacheType}:${domain}`;
 
   // Check KV cache (24h TTL)
-  if (kv) {
+  if (env.REFERENCE_DATA) {
     try {
-      const raw = await kv.get(kvKey, "text");
+      const raw = await env.REFERENCE_DATA.get(kvKey, "text");
       if (raw) {
         const envelope = JSON.parse(raw) as { data: PerformanceResult; cached_at: number };
         if (Date.now() - envelope.cached_at < PERF_CACHE_TTL_MS) {
@@ -37,22 +33,20 @@ export async function checkPageSpeed(
 
   // Try Fly proxy first (more reliable, avoids CF egress issues)
   try {
-    const flyUrl = `${flyProbeUrl || "https://yoke-probe.fly.dev"}/pagespeed?domain=${encodeURIComponent(domain)}&strategy=${strategy}`;
-    const headers: Record<string, string> = {};
-    if (flyAuthSecret) {
-      headers.Authorization = `Bearer ${flyAuthSecret}`;
-    }
-    const res = await fetchWithTimeout(flyUrl, { timeout: 65000, headers });
-    if (res.ok) {
+    const flyUrl = `${getFlyProbeUrl(env)}/pagespeed?domain=${encodeURIComponent(domain)}&strategy=${strategy}`;
+    const res = await flyProbeFetch(flyUrl, env, { timeout: 65000 });
+    if (res && res.ok) {
       const result = (await res.json()) as PerformanceResult;
       // Ensure strategy field reflects what we asked for
       result.strategy = strategy;
       if (result.score != null) {
         // Cache successful results for 24h
-        if (kv) {
+        if (env.REFERENCE_DATA) {
           try {
             const envelope = { data: result, cached_at: Date.now() };
-            await kv.put(kvKey, JSON.stringify(envelope), { expirationTtl: Math.ceil(PERF_CACHE_TTL_MS / 1000) });
+            await env.REFERENCE_DATA.put(kvKey, JSON.stringify(envelope), {
+              expirationTtl: Math.ceil(PERF_CACHE_TTL_MS / 1000),
+            });
           } catch {
             /* ignore */
           }
@@ -60,8 +54,8 @@ export async function checkPageSpeed(
         return result;
       }
       // Fly proxy returned error (e.g., rate limited), fall through
-    } else if (statsDb) {
-      logApiError(statsDb, {
+    } else if (res && env.STATS_DB) {
+      logApiError(env.STATS_DB, {
         api: "fly-probe",
         status: res.status,
         message: `PageSpeed ${strategy} proxy failed`,
@@ -70,8 +64,8 @@ export async function checkPageSpeed(
     }
   } catch (e) {
     console.error(`[PageSpeed/${strategy}] Fly proxy error:`, e instanceof Error ? e.message : String(e));
-    if (statsDb)
-      logApiError(statsDb, {
+    if (env.STATS_DB)
+      logApiError(env.STATS_DB, {
         api: "fly-probe",
         status: 0,
         message: `PageSpeed ${strategy} proxy: ${String(e).slice(0, 150)}`,
@@ -80,11 +74,13 @@ export async function checkPageSpeed(
   }
 
   // Fallback to direct API
-  const directResult = await tryPageSpeedDirect(domain, ttfbFallback, kv, apiKey, statsDb, strategy);
-  if (kv && directResult.score != null) {
+  const directResult = await tryPageSpeedDirect(domain, ttfbFallback, env, strategy);
+  if (env.REFERENCE_DATA && directResult.score != null) {
     try {
       const envelope = { data: directResult, cached_at: Date.now() };
-      await kv.put(kvKey, JSON.stringify(envelope), { expirationTtl: Math.ceil(PERF_CACHE_TTL_MS / 1000) });
+      await env.REFERENCE_DATA.put(kvKey, JSON.stringify(envelope), {
+        expirationTtl: Math.ceil(PERF_CACHE_TTL_MS / 1000),
+      });
     } catch {
       /* ignore */
     }
@@ -95,9 +91,7 @@ export async function checkPageSpeed(
 async function tryPageSpeedDirect(
   domain: string,
   ttfbFallback: number | null,
-  _kv?: KVNamespace,
-  apiKey?: string,
-  statsDb?: D1Database,
+  env: Env,
   strategy: Strategy = "mobile",
 ): Promise<PerformanceResult> {
   const empty: PerformanceResult = {
@@ -113,19 +107,24 @@ async function tryPageSpeedDirect(
     screenshot: null,
   };
   try {
-    const keyParam = apiKey ? `&key=${apiKey}` : "";
+    const keyParam = env.GOOGLE_PAGESPEED_API_KEY ? `&key=${env.GOOGLE_PAGESPEED_API_KEY}` : "";
     const res = await fetchWithTimeout(
       `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=https://${encodeURIComponent(domain)}&strategy=${strategy}&category=performance${keyParam}`,
       { timeout: 60000 },
     );
     if (res.status === 429) {
-      if (statsDb)
-        logApiError(statsDb, { api: "pagespeed", status: 429, message: `Rate limited (${strategy})`, domain });
+      if (env.STATS_DB)
+        logApiError(env.STATS_DB, { api: "pagespeed", status: 429, message: `Rate limited (${strategy})`, domain });
       return { ...empty, error: "Rate limited — try again later" };
     }
     if (!res.ok) {
-      if (statsDb)
-        logApiError(statsDb, { api: "pagespeed", status: res.status, message: `API error (${strategy})`, domain });
+      if (env.STATS_DB)
+        logApiError(env.STATS_DB, {
+          api: "pagespeed",
+          status: res.status,
+          message: `API error (${strategy})`,
+          domain,
+        });
       return { ...empty, error: `API error (${res.status})` };
     }
     const data = (await res.json()) as {
@@ -159,18 +158,13 @@ async function tryPageSpeedDirect(
 
 // ─── CrUX API ────────────────────────────────────────────────────────
 
-export async function checkCrux(
-  domain: string,
-  apiKey?: string,
-  kv?: KVNamespace,
-  statsDb?: D1Database,
-): Promise<CruxResult | null> {
-  if (!apiKey) return null;
+export async function checkCrux(domain: string, env: Env): Promise<CruxResult | null> {
+  if (!env.GOOGLE_PAGESPEED_API_KEY) return null;
 
   // Check cache (24h TTL)
-  if (kv) {
+  if (env.REFERENCE_DATA) {
     try {
-      const raw = await kv.get(`cache:crux:${domain}`, "text");
+      const raw = await env.REFERENCE_DATA.get(`cache:crux:${domain}`, "text");
       if (raw) {
         const envelope = JSON.parse(raw) as { data: CruxResult | null; cached_at: number };
         if (Date.now() - envelope.cached_at < PERF_CACHE_TTL_MS) {
@@ -188,12 +182,15 @@ export async function checkCrux(
     const origins = domain.startsWith("www.") ? [`https://${domain}`] : [`https://${domain}`, `https://www.${domain}`];
 
     for (const origin of origins) {
-      const res = await fetchWithTimeout(`https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=${apiKey}`, {
-        timeout: 10000,
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ origin }),
-      });
+      const res = await fetchWithTimeout(
+        `https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=${env.GOOGLE_PAGESPEED_API_KEY}`,
+        {
+          timeout: 10000,
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ origin }),
+        },
+      );
 
       if (res.status === 404 || res.status === 400) {
         // No CrUX data for this origin — try next
@@ -202,8 +199,8 @@ export async function checkCrux(
 
       if (res.status === 403) {
         console.error("[CrUX] API not enabled (403). Enable 'Chrome UX Report API' in Google Cloud Console.");
-        if (statsDb)
-          logApiError(statsDb, {
+        if (env.STATS_DB)
+          logApiError(env.STATS_DB, {
             api: "crux",
             status: 403,
             message: "CrUX API not enabled — enable in Cloud Console",
@@ -213,7 +210,8 @@ export async function checkCrux(
       }
 
       if (!res.ok) {
-        if (statsDb) logApiError(statsDb, { api: "crux", status: res.status, message: "CrUX API error", domain });
+        if (env.STATS_DB)
+          logApiError(env.STATS_DB, { api: "crux", status: res.status, message: "CrUX API error", domain });
         return null;
       }
 
@@ -221,10 +219,10 @@ export async function checkCrux(
       const result = parseCruxResponse(data);
 
       // Cache result
-      if (kv) {
+      if (env.REFERENCE_DATA) {
         try {
           const envelope = { data: result, cached_at: Date.now() };
-          await kv.put(`cache:crux:${domain}`, JSON.stringify(envelope), {
+          await env.REFERENCE_DATA?.put(`cache:crux:${domain}`, JSON.stringify(envelope), {
             expirationTtl: Math.ceil(PERF_CACHE_TTL_MS / 1000),
           });
         } catch {
@@ -236,10 +234,10 @@ export async function checkCrux(
     }
 
     // No CrUX data for any origin variant — cache the null result
-    if (kv) {
+    if (env.REFERENCE_DATA) {
       try {
         const envelope = { data: null, cached_at: Date.now() };
-        await kv.put(`cache:crux:${domain}`, JSON.stringify(envelope), {
+        await env.REFERENCE_DATA?.put(`cache:crux:${domain}`, JSON.stringify(envelope), {
           expirationTtl: Math.ceil(PERF_CACHE_TTL_MS / 1000),
         });
       } catch {
@@ -249,7 +247,8 @@ export async function checkCrux(
     return null;
   } catch (e) {
     console.error("[CrUX] API error:", e instanceof Error ? e.message : String(e));
-    if (statsDb) logApiError(statsDb, { api: "crux", status: 0, message: `CrUX: ${String(e).slice(0, 150)}`, domain });
+    if (env.STATS_DB)
+      logApiError(env.STATS_DB, { api: "crux", status: 0, message: `CrUX: ${String(e).slice(0, 150)}`, domain });
     return null;
   }
 }
