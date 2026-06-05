@@ -36,7 +36,7 @@ fi
 ACTUAL_ADF=$(grep -oP 'ABSENT_DEDUCTION_FACTOR\s*=\s*\K[0-9.]+' worker/src/actions/analyze/contextual-scoring.ts | head -1)
 INVARIANT_ADF=$(grep -oP 'ABSENT_DEDUCTION_FACTOR = \K[0-9]+\.[0-9]+' .ai/INVARIANTS.md 2>/dev/null || echo "0")
 
-if [ "$ACTUAL_ADF" != "$INVARIANT_ADF" ]; then
+if [ "$(echo "$ACTUAL_ADF" | sed 's/0*$//')" != "$(echo "$INVARIANT_ADF" | sed 's/0*$//')" ]; then
   warn "ABSENT_DEDUCTION_FACTOR: INVARIANTS.md says $INVARIANT_ADF, code has $ACTUAL_ADF"
 else
   ok "ABSENT_DEDUCTION_FACTOR: $ACTUAL_ADF"
@@ -82,7 +82,7 @@ fi
 TIER_CHECK=$(node -e "
 const fs = require('fs');
 const c = fs.readFileSync('worker/src/config/signal-registry.ts','utf8');
-const expected = [{tier:'Excellent',min:90},{tier:'Strong',min:75},{tier:'Moderate',min:60},{tier:'Weak',min:40},{tier:'Critical',min:0}];
+const expected = [{tier:'Excellent',min:90},{tier:'Strong',min:78},{tier:'Moderate',min:60},{tier:'Weak',min:40},{tier:'Critical',min:0}];
 let ok = true;
 for (const e of expected) {
   if (!c.includes('\"' + e.tier + '\"') || !c.includes('min: ' + e.min)) {

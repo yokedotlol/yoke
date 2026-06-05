@@ -9,7 +9,7 @@
 
 | Component | Version | Source |
 |-----------|---------|--------|
-| Worker (service) | 2.1.0 | `YOKE_VERSION` in `worker/src/helpers.ts` |
+| Worker (service) | 2.2.0 | `YOKE_VERSION` in `worker/src/helpers.ts` |
 | CLI | 1.5.0 | `cli/` GoReleaser tag `cli/v1.5.0` |
 | MCP Server | 1.0.0 | `mcp/package.json` |
 | Chrome Extension | 1.5.0 | `extension/manifest.json` (submitted + live on CWS) |
@@ -20,7 +20,7 @@
 |--------|-------|
 | Scoring model | Deductive (budget-based, start at 100) |
 | Axes | 6: Security, Speed, Foundations, Reputation, Discoverability, Email |
-| Signal count | 157 |
+| Signal count | 156 |
 | Composite method | Weighted arithmetic mean + outlier floor cap |
 | Tier labels | Excellent, Strong, Moderate, Weak, Critical |
 | Absent penalty | 0.30 × (1 + goodPrevalence) per signal (IDF-influenced) |
@@ -33,7 +33,7 @@
 | Metric | Value |
 |--------|-------|
 | Total tests | 548 |
-| Test files | 13 |
+| Test files | 14 |
 | Calibration tests | 293 (in `scoring-calibration.test.ts`) |
 
 ## Infrastructure
