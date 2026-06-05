@@ -4,6 +4,32 @@ All notable changes to Yoke are documented here.
 
 > **Scope:** This changelog tracks the **Service (Worker + Client)** version. The CLI and MCP Server version independently via their own release tags (`cli/vX.Y.Z` and `mcp/vX.Y.Z`).
 
+## [2.2.0] — 2026-06-05
+
+### Features
+- **Composite modifier badge** — displays balance qualifier alongside the composite score based on axis standard deviation: ⚖️ Balanced (σ<8), ↕️ Uneven (σ 8–15), or 🔀 Lopsided (σ>15). Shows per-axis risk warnings when any axis tier is ≥2 below composite. New `compositeModifier` and `compositeStdDev` fields in the API response and `?summary` endpoint.
+- **Circuit breakers** — KV-backed circuit breaker pattern for all 28 upstream API providers. Three states (closed → open → half-open) with per-provider thresholds (PageSpeed: 8 failures / 180s reset, default: 5 / 120s). Open circuits fail fast instead of waiting for timeouts. Degraded results cached with 10-minute TTL (vs 24h normal) so real data replaces them quickly. Yellow warning banner in the UI lists which data sources are temporarily unavailable. `_meta.degraded` array in API responses.
+- **`DISABLE_ANALYTICS` env var** — self-hosters can set this to skip usage tracking (`trackUsage()` and tab view tracking). Rate limiting is unaffected. Added to the environment variable reference in the self-hosting guide.
+- **AI model disclosure** — small attribution line ("Analysis by DeepSeek V3 via OpenRouter") below AI analysis results, matching the MaxMind GeoLite2 attribution style.
+
+### Tech Stack Detection
+- **256 technology fingerprints** — expanded from 35 in two rounds (35 → 169 → 256). 33 categories total including 9 new categories: Email Marketing, Form Builder, Reviews, Accessibility, Mapping, Personalization, CDP, Scheduling, and Database. All patterns written from scratch (MIT-compatible, no GPLv3 data).
+
+### Improvements
+- **`prefers-reduced-motion`** — CSS media query disables animations for users who prefer reduced motion.
+- **MaxMind GeoLite2 attribution** — required attribution added to the IP geolocation map component.
+- **LRU block cache** — `blockCache` in the worker capped at 1,024 entries to prevent unbounded memory growth.
+- **Standardized error envelope** — new `jsonError(error, code, status)` helper; all public API errors now return `{ error, code, status }`.
+- **Theme contrast fixes** — Botanical `--dim` changed to `#597351` (4.61:1) and Rosé `--dim` changed to `#7e6069` (4.93:1), both now pass WCAG AA ≥4.5:1.
+- **SSE protocol documented** — block comment at the top of `analyze-stream.ts` documenting the streaming event format (`phase` → `result` → `done`/`error`).
+
+### Documentation
+- **Self-hosting guide consolidated** — merged two overlapping guides into one comprehensive document at `docs/SELF-HOSTING.md` covering all three deployment paths (Cloudflare Workers, Docker Compose, bare metal). Root `SELF-HOSTING.md` is now a thin pointer.
+- **README refreshed** — updated counts: 256 fingerprints (was "100+"), 157 scoring signals, 29 WAF providers (was "11+"), 25+ CMP patterns (was "13+"), 130 subdomain prefixes (was "157").
+- **CLI and extension READMEs** — added `cli/README.md` and `extension/README.md` with installation, usage, configuration, and development instructions.
+- **566 tests passing** — up from 548 (18 new tests for circuit breakers).
+- **GitHub issues #5 and #7 closed** — circuit breakers and self-hosting docs.
+
 ## [2.1.0] — 2026-06-04
 
 ### Privacy & Security
