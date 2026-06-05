@@ -1,5 +1,5 @@
 import { logApiError } from "../../api-errors";
-import { type Env, fetchWithTimeout, flyProbeFetch, getFlyProbeUrl } from "../../helpers";
+import { type Env, fetchWithTimeout, flyProbeFetch, getFlyProbeUrl, isBlockedUrl } from "../../helpers";
 import type { BlocklistResult, DnsRecord, DnssecResult, IpInfo, ShodanResult, SslResult } from "./types";
 
 // ─── IP Geolocation ──────────────────────────────────────────────────
@@ -452,7 +452,9 @@ export async function checkStatus(
       if (res.status >= 300 && res.status < 400) {
         const location = res.headers.get("location");
         if (location) {
-          currentUrl = location.startsWith("http") ? location : new URL(location, currentUrl).href;
+          const nextUrl = location.startsWith("http") ? location : new URL(location, currentUrl).href;
+          if (isBlockedUrl(nextUrl)) break; // SSRF protection: don't follow redirects to private IPs
+          currentUrl = nextUrl;
           continue;
         }
       }

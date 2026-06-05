@@ -64,6 +64,17 @@ Re-check all open findings from the last Yoke review in docs/internal/reviews/.
 4. **Cross-panel synthesis** — Look for patterns spanning multiple panels. Deduplicate and note reinforcement.
 5. **Present findings** — Walk through each section: what's good, what's bad, recommendations, and open questions
 
+## Scope Rules
+
+Reviewers **must limit findings to what is observable in the repository and the live deployed site.** Specifically:
+
+- **Do not flag `.env` files, local config, or developer workstation state.** These are standard development artifacts and are gitignored. Their existence is not a finding.
+- **Do not flag secrets, tokens, or credentials that are not committed to the repo.** Environment variables referenced in code are expected to be populated at runtime — that's how every 12-factor app works.
+- **Do not speculate about CI/CD secrets, hosting provider dashboards, or infrastructure state** that isn't visible in repo contents or the live site.
+- **Focus on what ships:** committed source, deployed behavior, published artifacts (npm packages, Docker images, docs). If it's not in the repo or on the live site, it's not in scope.
+
+A finding about a `.env` file or local secret is a reviewer error, not a project issue.
+
 ## Panel Output Format
 
 Every panel uses this finding structure:

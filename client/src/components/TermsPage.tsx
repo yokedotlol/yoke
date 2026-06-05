@@ -73,10 +73,10 @@ export default function TermsPage() {
           </a>
           . You may self-host, fork, or contribute. Third-party dependencies are listed in{" "}
           <a
-            href="https://github.com/yokedotlol/yoke/blob/main/THIRD_PARTY_NOTICES.md"
+            href="https://github.com/yokedotlol/yoke/blob/main/docs/THIRD-PARTY-NOTICES.md"
             style={{ color: "var(--accent)" }}
           >
-            THIRD_PARTY_NOTICES.md
+            THIRD-PARTY-NOTICES.md
           </a>
           .
         </p>

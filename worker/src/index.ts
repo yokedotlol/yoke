@@ -907,7 +907,16 @@ export default {
                 "SELECT COUNT(*) as scans, COUNT(DISTINCT domain) as uniq, AVG(composite_score) as avg_score FROM domain_scores WHERE scored_at >= datetime('now', '-1 day')",
               ).first<{ scans: number; uniq: number; avg_score: number | null }>(),
               env.STATS_DB.prepare(
-                "SELECT tier, ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM domain_scores WHERE scored_at >= datetime('now', '-7 days')), 0) as pct FROM domain_scores WHERE scored_at >= datetime('now', '-7 days') GROUP BY tier",
+                `SELECT
+                  CASE
+                    WHEN composite_score >= 90 THEN 'Excellent'
+                    WHEN composite_score >= 78 THEN 'Strong'
+                    WHEN composite_score >= 60 THEN 'Moderate'
+                    WHEN composite_score >= 40 THEN 'Weak'
+                    ELSE 'Critical'
+                  END as tier,
+                  ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM domain_scores WHERE scored_at >= datetime('now', '-7 days')), 0) as pct
+                FROM domain_scores WHERE scored_at >= datetime('now', '-7 days') GROUP BY tier`,
               ).all<{ tier: string; pct: number }>(),
             ]);
             const tierDist: Record<string, number> = {
