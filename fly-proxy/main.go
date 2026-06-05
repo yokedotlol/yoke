@@ -263,12 +263,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Health check — requires auth, returns traffic tier (green/yellow/red)
+	// Health check — unauthenticated for Fly's health checks, returns traffic tier
 	if r.URL.Path == "/" || r.URL.Path == "/health" {
-		if !checkAuth(r) {
-			http.Error(w, `{"error":"unauthorized"}`, 403)
-			return
-		}
 		w.Header().Set("Content-Type", "application/json")
 		serviceName := os.Getenv("SERVICE_NAME")
 		if serviceName == "" {
