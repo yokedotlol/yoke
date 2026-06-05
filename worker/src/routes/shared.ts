@@ -175,6 +175,7 @@ export async function checkRateLimit(
         JSON.stringify({
           error: "Rate limit exceeded",
           code: "RATE_LIMITED",
+          status: 429,
           limit: config.limit,
           remaining: 0,
           reset: cachedResetAt,
@@ -230,6 +231,7 @@ export async function checkRateLimit(
           JSON.stringify({
             error: "Rate limit exceeded",
             code: "RATE_LIMITED",
+            status: 429,
             limit: config.limit,
             remaining: 0,
             reset: resetAt,

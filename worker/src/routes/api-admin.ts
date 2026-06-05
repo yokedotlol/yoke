@@ -198,7 +198,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       domain = body.domain ?? null;
     }
     if (!domain || typeof domain !== "string") {
-      return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+      return jsonError("domain is required", "MISSING_DOMAIN", 400);
     }
     domain = cleanDomain(domain);
 
@@ -656,6 +656,16 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
           description: "Scoring methodology — all thresholds, weights, and severity bands",
           rate_limit: "none",
           note: "Cache hits do not count against rate limits.",
+        },
+        "GET /badge/{domain}.svg": {
+          description:
+            "Embeddable SVG badge showing domain score. Query params: ?axis=security|speed|foundations|reputation|discoverability|email (specific axis), ?label=Custom (override label), ?style=flat-square (sharp corners). Cached 5 min, background refresh.",
+          rate_limit: "none",
+        },
+        "GET /badge/{domain}.json": {
+          description:
+            "Shields.io-compatible endpoint JSON for domain score badges. Same query params as the SVG endpoint. Use with https://img.shields.io/endpoint?url=...",
+          rate_limit: "none",
         },
       },
       rate_limiting: {

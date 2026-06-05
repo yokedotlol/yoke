@@ -14,7 +14,7 @@ import {
   matchSharePath,
 } from "../share";
 import { handleSPARoute, matchDomainPath } from "../spa";
-import { checkRateLimit, json, type RouteContext } from "./shared";
+import { checkRateLimit, jsonError, type RouteContext } from "./shared";
 
 /** Handle page-level routes (share cards, reports, SPA).
  *  Returns a Response if matched, null otherwise. */
@@ -75,7 +75,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // ── Method guard: reject DELETE/PUT/PATCH on domain paths ──
   if ((method === "DELETE" || method === "PUT" || method === "PATCH") && matchDomainPath(path)) {
-    return json({ error: "Method not allowed", code: "METHOD_NOT_ALLOWED" }, 405);
+    return jsonError("Method not allowed", "METHOD_NOT_ALLOWED", 405);
   }
 
   // ── SPA routes: static pages, domain paths with content negotiation, compare paths ──

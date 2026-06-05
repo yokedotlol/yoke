@@ -19,9 +19,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return rl.blocked;
     }
     const body = await parseBody<{ domain?: string; force?: boolean }>(request);
-    if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
-    if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
+    if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getCompanyInfo(env.REFERENCE_DATA!, domain, body.force, env.STATS_DB);
     if (!result.cached) await rl.record();
     await trackUsage(env.STATS_DB, "company", !!env.DISABLE_ANALYTICS);
@@ -37,9 +37,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return rl.blocked;
     }
     const body = await parseBody<{ domain?: string }>(request);
-    if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
-    if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
+    if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getNews(env.REFERENCE_DATA!, domain, env.STATS_DB);
     if (!result.cached) await rl.record();
     await trackUsage(env.STATS_DB, "news", !!env.DISABLE_ANALYTICS);
@@ -55,9 +55,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return rl.blocked;
     }
     const body = await parseBody<{ domain?: string }>(request);
-    if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
-    if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
+    if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getSocialAccounts(env.REFERENCE_DATA!, domain, env);
     if (!result.cached) await rl.record();
     await trackUsage(env.STATS_DB, "social", !!env.DISABLE_ANALYTICS);
@@ -73,7 +73,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return rl.blocked;
     }
     const body = await parseBody<{ ip?: string }>(request);
-    if (!body.ip) return json({ error: "ip is required", code: "MISSING_IP" }, 400);
+    if (!body.ip) return jsonError("ip is required", "MISSING_IP", 400);
     const ip = body.ip.trim();
     // Validate IPv4 or IPv6 format
     const ipv4Re = /^(\d{1,3}\.){3}\d{1,3}$/;
@@ -96,9 +96,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return rl.blocked;
     }
     const body = await parseBody<{ domain?: string }>(request);
-    if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
-    if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
+    if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     // CF Workers expose request.cf with IncomingRequestCfProperties
     const cf = (request as Request & { cf?: { colo?: string; country?: string; city?: string } }).cf;
     const result = await checkGlobalAvailability(domain, { colo: cf?.colo, country: cf?.country, city: cf?.city }, env);

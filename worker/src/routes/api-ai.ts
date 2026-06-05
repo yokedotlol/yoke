@@ -10,10 +10,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   // POST /api/ai-analysis — AI-powered domain analysis (10/hr per IP)
   if (method === "POST" && path === "/api/ai-analysis") {
     const body = await parseBody<{ domain?: string; stream?: boolean; model?: string }>(request);
-    if (!body.domain || typeof body.domain !== "string")
-      return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain || typeof body.domain !== "string") return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
-    if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
+    if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     // Track usage only after validation succeeds
     await trackUsage(env.STATS_DB, "ai-analysis", !!env.DISABLE_ANALYTICS);
     // BYO API key passthrough — when present, use the client's OpenRouter key
@@ -29,10 +28,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/ai-prompt", env);
     if (rl.blocked) return rl.blocked;
     const body = await parseBody<{ domain?: string }>(request);
-    if (!body.domain || typeof body.domain !== "string")
-      return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain || typeof body.domain !== "string") return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
-    if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
+    if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const normalized = domain.toLowerCase();
     const analysisCache = (await getFromCache(env.REFERENCE_DATA!, normalized, "analysis", 60 * 60 * 1000)) as Record<
       string,

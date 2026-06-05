@@ -615,8 +615,8 @@ export const fingerprints: Fingerprint[] = [
     name: "Tailwind CSS",
     category: "JS Library",
     patterns: {
-      htmlPatterns: [/class="[^"]*(?:flex|grid|text-|bg-|p-|m-|w-|h-)[^"]*"/i],
       cssUrls: [/tailwind(?:css)?(?:\.min)?\.css/i],
+      htmlPatterns: [/tailwindcss/i, /tailwind\.config/i],
     },
   },
   {
@@ -706,9 +706,7 @@ export const fingerprints: Fingerprint[] = [
     name: "Django",
     category: "Server",
     patterns: {
-      headers: { "x-frame-options": /sameorigin/i },
-      htmlPatterns: [/csrfmiddlewaretoken/i, /django/i],
-      cookies: ["csrftoken"],
+      htmlPatterns: [/csrfmiddlewaretoken/i, /django\.contrib/i, /django-formset/i, /__django_/i],
     },
   },
   {

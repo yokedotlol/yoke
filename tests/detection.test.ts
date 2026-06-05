@@ -163,3 +163,64 @@ describe("Hosting/CDN Detection", () => {
     expect(result.waf).toBeNull();
   });
 });
+
+// ─── Django Detection (False Positive Prevention) ─────────────────────
+
+describe("Django Detection", () => {
+  it("should detect Django from csrfmiddlewaretoken", () => {
+    const html = '<input type="hidden" name="csrfmiddlewaretoken" value="abc123">';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Django")).toBeDefined();
+  });
+
+  it("should detect Django from django.contrib references", () => {
+    const html = '<script src="/static/django.contrib.admin/js/core.js"></script>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Django")).toBeDefined();
+  });
+
+  it("should NOT detect Django from x-frame-options: sameorigin alone", () => {
+    const result = detectTechStack({ "x-frame-options": "SAMEORIGIN" }, "");
+    expect(result.find((r) => r.name === "Django")).toBeUndefined();
+  });
+
+  it("should NOT detect Django from generic page mentioning 'django' in text", () => {
+    const html = "<html><body>Learn how to build with Django framework</body></html>";
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Django")).toBeUndefined();
+  });
+
+  it("should NOT detect Django on a React/Next.js site", () => {
+    const html = '<div id="__next" data-reactroot=""><div class="flex bg-white p-4">Hello</div></div>';
+    const result = detectTechStack({ "x-frame-options": "SAMEORIGIN" }, html);
+    expect(result.find((r) => r.name === "Django")).toBeUndefined();
+  });
+});
+
+// ─── Tailwind CSS Detection (False Positive Prevention) ───────────────
+
+describe("Tailwind CSS Detection", () => {
+  it("should detect Tailwind from CSS URL", () => {
+    const html = '<link rel="stylesheet" href="/css/tailwind.min.css">';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Tailwind CSS")).toBeDefined();
+  });
+
+  it("should detect Tailwind from tailwindcss reference", () => {
+    const html = '<link rel="stylesheet" href="/assets/tailwindcss.css">';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Tailwind CSS")).toBeDefined();
+  });
+
+  it("should NOT detect Tailwind from generic utility class names", () => {
+    const html = '<div class="flex grid text-center bg-white p-4 m-2 w-full h-screen">Hello</div>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Tailwind CSS")).toBeUndefined();
+  });
+
+  it("should NOT detect Tailwind on Bootstrap sites", () => {
+    const html = '<link rel="stylesheet" href="/css/bootstrap.min.css"><div class="flex p-4 text-center">Hello</div>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Tailwind CSS")).toBeUndefined();
+  });
+});

@@ -43,7 +43,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   const rawDomain = rest.slice(0, dotSvg ? -4 : -5);
   const domain = cleanDomain(rawDomain);
   if (!domain) {
-    return new Response(JSON.stringify({ error: "Invalid domain format", code: "INVALID_DOMAIN" }), {
+    return new Response(JSON.stringify({ error: "Invalid domain format", code: "INVALID_DOMAIN", status: 400 }), {
       status: 400,
       headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
@@ -54,6 +54,22 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   const labelParam = url.searchParams.get("label");
   const styleParam = url.searchParams.get("style") as "flat" | "flat-square" | null;
   const style = styleParam === "flat-square" ? "flat-square" : "flat";
+
+  // Validate axis parameter if provided
+  const VALID_AXES = new Set(["security", "speed", "foundations", "reputation", "discoverability", "email"]);
+  if (axisParam && !VALID_AXES.has(axisParam.toLowerCase())) {
+    return new Response(
+      JSON.stringify({
+        error: `Invalid axis: "${axisParam}". Valid axes: ${[...VALID_AXES].join(", ")}`,
+        code: "INVALID_AXIS",
+        status: 400,
+      }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+      },
+    );
+  }
 
   // White-label badge label
   const siteName = env.SITE_NAME || "Yoke";

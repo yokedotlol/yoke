@@ -1,11 +1,18 @@
 // SPA serving logic — ported from build_combined.py
 // Handles: content negotiation, OG tag injection, security headers, static pages, asset passthrough
 
+import { runAnalysis } from "./actions/analyze/core";
+import { finalizeResult } from "./actions/analyze/finalize";
 import { tierFromComposite } from "./config/signal-registry";
 import type { Env } from "./helpers";
-import { getBaseUrl, getBranding, MIN_CLIENT_VERSION, YOKE_VERSION } from "./helpers";
-import { buildPdfUrl } from "./pdf-route";
-import { buildShareUrl } from "./share";
+import {
+  CORS_HEADERS,
+  cleanDomain as cleanDomainHelper,
+  getBaseUrl,
+  getBranding,
+  MIN_CLIENT_VERSION,
+  YOKE_VERSION,
+} from "./helpers";
 import { trackUsage } from "./usage-tracking";
 
 // ─── Security Headers ────────────────────────────────────────────────
@@ -277,6 +284,22 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
 
 // ─── Domain JSON (Content Negotiation) ───────────────────────────────
 
+/** Standard JSON response headers for content-negotiated GET /{domain} path */
+function jsonHeaders(baseUrl: string, isCached: boolean): Record<string, string> {
+  return {
+    "Content-Type": "application/json;charset=UTF-8",
+    ...CORS_HEADERS,
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "frame-ancestors 'self' https://*.chromiumapp.org chrome-extension://*",
+    "X-Yoke-Cache": isCached ? "HIT" : "MISS",
+    "X-Yoke-Version": YOKE_VERSION,
+    "X-Yoke-Min-Client": MIN_CLIENT_VERSION,
+    "X-Yoke-Docs": `${baseUrl}/api/docs`,
+    "Cache-Control": "public, max-age=3600",
+    Vary: "Accept",
+  };
+}
+
 async function serveDomainJSON(request: Request, env: Env, domain: string): Promise<Response> {
   const url = new URL(request.url);
   const pretty = url.searchParams.has("pretty");
@@ -284,94 +307,44 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
   const baseUrl = getBaseUrl(request, env);
 
   try {
-    // Reuse the existing analyze endpoint by synthesizing a POST request.
-    // We import dynamically to avoid circular dependency issues — the analyze
-    // function is already wired up in index.ts, so we call the worker itself
-    // via internal routing. But to keep it simple, we directly import.
-    const { analyzeDomain } = await import("./actions/analyze");
-    const { cleanDomain } = await import("./helpers");
-
-    const clean = cleanDomain(domain);
+    const clean = cleanDomainHelper(domain);
     if (!clean) {
-      return jsonResponse({ error: "Invalid domain format" }, 400);
+      return new Response(JSON.stringify({ error: "Invalid domain format", code: "INVALID_DOMAIN", status: 400 }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+      });
     }
 
-    const analyzeResp = await analyzeDomain(clean, env, false);
-    // Track usage for the GET /{domain} shortcut — mirrors POST /api/analyze tracking
-    if (env.STATS_DB) {
-      trackUsage(env.STATS_DB, "analyze", !!env.DISABLE_ANALYTICS).catch(() => {});
-    }
-    const data = await analyzeResp.json();
+    // Use the same runAnalysis + finalizeResult path as POST /api/analyze
+    const coreResult = await runAnalysis(clean, env, false);
+    const resultData = coreResult.data as Record<string, unknown>;
 
-    // Add _meta field
-    const dataRecord = data as Record<string, unknown>;
-    const domainScore = dataRecord.domain_score as
-      | {
-          composite?: number;
-          tier?: string;
-          axes?: Record<string, { score?: number }>;
-          balance?: string;
-          balanceStdDev?: number;
-        }
-      | undefined;
-    const analyzedAt = (dataRecord.analyzed_at as string) || new Date().toISOString();
+    // Shared enrichment: share URLs, badge URLs, percentiles, badge cache write
+    await finalizeResult(clean, resultData, request, env);
 
-    let shareUrl: string | null = null;
-    let pdfUrl: string | null = null;
-    if (domainScore?.composite != null && domainScore.tier && domainScore.axes) {
-      shareUrl = await buildShareUrl(
-        clean,
-        domainScore.composite,
-        domainScore.tier,
-        domainScore.axes,
-        analyzedAt,
-        baseUrl,
-        env,
-      );
-      pdfUrl = await buildPdfUrl(clean, analyzedAt, baseUrl, env);
-    }
+    // Track usage — mirrors POST /api/analyze tracking
+    trackUsage(env.STATS_DB, "analyze", !!env.DISABLE_ANALYTICS).catch(() => {});
 
-    dataRecord._meta = {
-      api_version: YOKE_VERSION,
-      analyzed_at: new Date().toISOString(),
-      docs: `${baseUrl}/api/docs`,
-      source: new URL(baseUrl).hostname,
-      ...(shareUrl ? { share_url: shareUrl } : {}),
-      ...(pdfUrl ? { pdf_url: pdfUrl } : {}),
-    };
-
-    // Inject percentiles (non-blocking, swallow errors)
-    try {
-      if (domainScore?.composite != null && domainScore.axes) {
-        const { getPercentiles } = await import("./percentiles");
-        const pctile = await getPercentiles(env, {
-          composite: domainScore.composite,
-          security: domainScore.axes.security?.score,
-          speed: domainScore.axes.speed?.score,
-          foundations: domainScore.axes.foundations?.score,
-          reputation: domainScore.axes.reputation?.score,
-          discoverability: domainScore.axes.discoverability?.score,
-        });
-        if (pctile) {
-          dataRecord.percentiles = pctile;
-        }
-      }
-    } catch {
-      /* percentile injection is non-critical */
-    }
+    const isCached = coreResult.kind === "cached";
 
     // ── Summary mode: return compact ~500 byte response ──
-    const isCached = !!(data as Record<string, unknown>).cached;
     if (summary) {
+      const domainScore = resultData.domain_score as
+        | {
+            composite?: number;
+            tier?: string;
+            axes?: Record<string, { score?: number }>;
+            balance?: string;
+            balanceStdDev?: number;
+          }
+        | undefined;
+      const analyzedAt = (resultData.analyzed_at as string) || new Date().toISOString();
       const axes: Record<string, { score: number | null; tier: string }> = {};
       if (domainScore?.axes) {
         for (const [axis, info] of Object.entries(domainScore.axes)) {
           const axisInfo = info as { score?: number };
           const s = axisInfo.score ?? null;
-          axes[axis] = {
-            score: s,
-            tier: s != null ? tierFromComposite(s) : "Unknown",
-          };
+          axes[axis] = { score: s, tier: s != null ? tierFromComposite(s) : "Unknown" };
         }
       }
       const summaryData = {
@@ -385,67 +358,26 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
         axes,
         scanned_at: analyzedAt,
         full_results: `${baseUrl}/${clean}`,
-        _meta: {
-          summary: true,
-          api_version: YOKE_VERSION,
-          source: new URL(baseUrl).hostname,
-        },
+        _meta: { summary: true, api_version: YOKE_VERSION, source: new URL(baseUrl).hostname },
       };
       const summaryBody = pretty ? JSON.stringify(summaryData, null, 2) : JSON.stringify(summaryData);
-      return new Response(summaryBody, {
-        status: analyzeResp.status,
-        headers: {
-          "Content-Type": "application/json;charset=UTF-8",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, X-OpenRouter-Key, Authorization",
-          "Access-Control-Expose-Headers": "X-Yoke-Version, X-Yoke-Min-Client",
-          "X-Content-Type-Options": "nosniff",
-          "Content-Security-Policy": "frame-ancestors 'self' https://*.chromiumapp.org chrome-extension://*",
-          "X-Yoke-Cache": isCached ? "HIT" : "MISS",
-          "X-Yoke-Version": YOKE_VERSION,
-          "X-Yoke-Min-Client": MIN_CLIENT_VERSION,
-          "X-Yoke-Docs": `${baseUrl}/api/docs`,
-          "Cache-Control": "public, max-age=3600",
-          Vary: "Accept",
-        },
-      });
+      return new Response(summaryBody, { headers: jsonHeaders(baseUrl, isCached) });
     }
 
-    const body = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
-
-    return new Response(body, {
-      status: analyzeResp.status,
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, X-OpenRouter-Key, Authorization",
-        "Access-Control-Expose-Headers": "X-Yoke-Version, X-Yoke-Min-Client",
-        "X-Content-Type-Options": "nosniff",
-        "Content-Security-Policy": "frame-ancestors 'self' https://*.chromiumapp.org chrome-extension://*",
-        "X-Yoke-Cache": isCached ? "HIT" : "MISS",
-        "X-Yoke-Version": YOKE_VERSION,
-        "X-Yoke-Min-Client": MIN_CLIENT_VERSION,
-        "X-Yoke-Docs": `${baseUrl}/api/docs`,
-        "Cache-Control": "public, max-age=3600",
-        Vary: "Accept",
-      },
-    });
+    const body = pretty ? JSON.stringify(resultData, null, 2) : JSON.stringify(resultData);
+    return new Response(body, { headers: jsonHeaders(baseUrl, isCached) });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Analysis failed";
-    return jsonResponse({ error: msg, _meta: { api_version: YOKE_VERSION, docs: `${baseUrl}/api/docs` } }, 500);
+    return new Response(
+      JSON.stringify({
+        error: msg,
+        code: "ANALYSIS_FAILED",
+        status: 500,
+        _meta: { api_version: YOKE_VERSION, docs: `${baseUrl}/api/docs` },
+      }),
+      { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+    );
   }
-}
-
-function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-    },
-  });
 }
 
 // ─── Asset Passthrough + SPA Fallback ────────────────────────────────

@@ -8,7 +8,16 @@ import { getSubdomains } from "../actions/subdomains";
 import { getDomainSuggestions } from "../actions/suggestions";
 import { CORS_HEADERS, cleanDomain } from "../helpers";
 import { trackUsage } from "../usage-tracking";
-import { addHeaders, checkRateLimit, json, parseBody, type RouteContext, rateLimitNoop, timingSafeEq } from "./shared";
+import {
+  addHeaders,
+  checkRateLimit,
+  json,
+  jsonError,
+  parseBody,
+  type RouteContext,
+  rateLimitNoop,
+  timingSafeEq,
+} from "./shared";
 
 export async function handle(rc: RouteContext): Promise<Response | null> {
   const { request, url, path, method, env, clientIP, track: _track } = rc;
@@ -25,10 +34,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return rl.blocked;
     }
     const body = await parseBody<{ domain?: string; force?: boolean }>(request);
-    if (!body.domain || typeof body.domain !== "string")
-      return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain || typeof body.domain !== "string") return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
-    if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
+    if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const skipCache = body.force === true;
     await trackUsage(env.STATS_DB, "analyze", !!env.DISABLE_ANALYTICS);
     // Support SSE streaming when client requests it
@@ -40,6 +48,13 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return analyzeDomainStream(domain, env, request, skipCache, rl.headers);
     }
     const coreResult = await runAnalysis(domain, env, skipCache);
+
+    // NXDOMAIN — domain doesn't exist
+    if (coreResult.kind === "nxdomain") {
+      _track("analyze", 422, domain);
+      return addHeaders(jsonError(`Domain not registered (NXDOMAIN): ${domain}`, "DOMAIN_NOT_FOUND", 422), rl.headers);
+    }
+
     // Only consume rate-limit credit for non-cached results
     if (coreResult.kind !== "cached") await rl.record();
 
@@ -62,11 +77,10 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return rl.blocked;
     }
     const body = await parseBody<{ domain1?: string; domain2?: string }>(request);
-    if (!body.domain1 || !body.domain2)
-      return json({ error: "domain1 and domain2 are required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain1 || !body.domain2) return jsonError("domain1 and domain2 are required", "MISSING_DOMAIN", 400);
     const d1 = cleanDomain(body.domain1);
     const d2 = cleanDomain(body.domain2);
-    if (!d1 || !d2) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
+    if (!d1 || !d2) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     await trackUsage(env.STATS_DB, "compare", !!env.DISABLE_ANALYTICS);
     await rl.record();
     const resp = await compareDomains({ domain1: d1, domain2: d2 }, env);
@@ -82,9 +96,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return rl.blocked;
     }
     const body = await parseBody<{ domain?: string }>(request);
-    if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
-    if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
+    if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
     if (!result.cached) await rl.record();
     await trackUsage(env.STATS_DB, "subdomains", !!env.DISABLE_ANALYTICS);
@@ -101,11 +115,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     }
     const domain = cleanDomain(url.searchParams.get("domain") || "");
     if (!domain)
-      return json(
-        {
-          error: "domain query parameter is required (e.g., /api/subdomains?domain=example.com)",
-          code: "MISSING_DOMAIN",
-        },
+      return jsonError(
+        "domain query parameter is required (e.g., /api/subdomains?domain=example.com)",
+        "MISSING_DOMAIN",
         400,
       );
     const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
@@ -123,9 +135,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return rl.blocked;
     }
     const body = await parseBody<{ domain?: string }>(request);
-    if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
-    if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
+    if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await scanSubdomains(env.REFERENCE_DATA!, domain);
     if (!result.cached) await rl.record();
     await trackUsage(env.STATS_DB, "subdomain-scan", !!env.DISABLE_ANALYTICS);
@@ -138,7 +150,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/suggestions", env);
     if (rl.blocked) return rl.blocked;
     const body = await parseBody<{ domain?: string }>(request);
-    if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
+    if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const result = await getDomainSuggestions(body.domain, env);
     await rl.record();
     await trackUsage(env.STATS_DB, "suggestions", !!env.DISABLE_ANALYTICS);
