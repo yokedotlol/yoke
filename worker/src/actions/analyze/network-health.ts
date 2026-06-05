@@ -2,7 +2,7 @@
 // DNS propagation, RIPE routing, outage page detection, connection timing.
 // All checks degrade gracefully — null on failure, never throws.
 
-import { type Env, fetchWithTimeout, getFlyAuthHeaders, getFlyProbeUrl } from "../../helpers";
+import { type Env, fetchWithTimeout, flyProbeFetch, getFlyProbeUrl } from "../../helpers";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -335,11 +335,10 @@ export async function checkConnectionTiming(domain: string, env: Env): Promise<C
   if (!probeUrl) return null;
 
   try {
-    const res = await fetchWithTimeout(`${probeUrl}/probe-timing?host=${encodeURIComponent(domain)}`, {
+    const res = await flyProbeFetch(`${probeUrl}/probe-timing?host=${encodeURIComponent(domain)}`, env, {
       timeout: 8000,
-      headers: getFlyAuthHeaders(env),
     });
-    if (!res.ok) return null;
+    if (!res?.ok) return null;
 
     const data = (await res.json()) as {
       dns_ms: number;

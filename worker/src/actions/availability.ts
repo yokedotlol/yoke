@@ -11,7 +11,7 @@
 // the probe originated.
 
 import { logApiError } from "../api-errors";
-import { type Env, fetchWithTimeout, getFlyAuthHeaders, getFlyProbeUrl } from "../helpers";
+import { type Env, fetchWithTimeout, flyProbeFetch, getFlyProbeUrl } from "../helpers";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -125,11 +125,12 @@ async function checkHostProbes(
   permanent_link: string | null;
 } | null> {
   // Step 1: Start the check
-  let startRes: Response;
+  let startRes: Response | null;
   try {
-    startRes = await fetchWithTimeout(
+    startRes = await flyProbeFetch(
       `${getFlyProbeUrl(env)}/check-http?host=${encodeURIComponent(domain)}&max_nodes=20`,
-      { timeout: 10000, headers: { Accept: "application/json", ...getFlyAuthHeaders(env) } },
+      env,
+      { timeout: 10000, headers: { Accept: "application/json" } },
     );
   } catch (e) {
     logApiError(env.STATS_DB, {
@@ -140,10 +141,10 @@ async function checkHostProbes(
     });
     return null;
   }
-  if (!startRes.ok) {
+  if (!startRes?.ok) {
     logApiError(env.STATS_DB, {
       api: "fly-probe",
-      status: startRes.status,
+      status: startRes?.status ?? 0,
       message: "check-host start failed",
       domain,
     });
@@ -165,11 +166,11 @@ async function checkHostProbes(
   for (let attempt = 0; attempt < 3; attempt++) {
     await sleep(attempt === 0 ? 3000 : 2000);
     try {
-      const pollRes = await fetchWithTimeout(`${getFlyProbeUrl(env)}/check-result/${check.request_id}`, {
+      const pollRes = await flyProbeFetch(`${getFlyProbeUrl(env)}/check-result/${check.request_id}`, env, {
         timeout: 10000,
-        headers: { Accept: "application/json", ...getFlyAuthHeaders(env) },
+        headers: { Accept: "application/json" },
       });
-      if (pollRes.ok) {
+      if (pollRes?.ok) {
         rawResults = (await pollRes.json()) as CheckHostResults;
         // Check if all nodes reported
         const allDone = nodeEntries.every(([name]) => rawResults?.[name] != null);

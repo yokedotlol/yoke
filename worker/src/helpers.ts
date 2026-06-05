@@ -171,10 +171,12 @@ export async function probeHeadWithFallback(
   // Route through Fly proxy
   try {
     const flyUrl = getFlyProbeUrl(env);
-    const resp = await fetchWithTimeout(`${flyUrl}/probe-fetch?url=${encodeURIComponent(url)}`, {
+    const resp = await flyProbeFetch(`${flyUrl}/probe-fetch?url=${encodeURIComponent(url)}`, env, {
       timeout,
-      ...(getFlyAuthHeaders(env) ? { headers: getFlyAuthHeaders(env) } : {}),
     });
+    if (!resp) {
+      return { ok: false, status: 0, contentType: "" };
+    }
     const data = (await resp.json()) as { status?: number; headers?: Record<string, string[]>; error?: string };
     if (data.error || !data.status) {
       return { ok: false, status: data.status ?? 0, contentType: "" };
@@ -253,14 +255,6 @@ export async function hashIp(ip: string): Promise<string> {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("")
     .slice(0, 16);
-}
-
-/** Get auth headers for Fly probe requests from env, without module-level mutation. */
-export function getFlyAuthHeaders(env: Env): Record<string, string> {
-  if (env.FLY_AUTH_SECRET) {
-    return { Authorization: `Bearer ${env.FLY_AUTH_SECRET}` };
-  }
-  return {};
 }
 
 /** Derive the instance base URL from a request, with optional env override. */

@@ -1,5 +1,5 @@
 import { logApiError } from "../../api-errors";
-import { type Env, fetchWithTimeout, getFlyAuthHeaders, getFlyProbeUrl } from "../../helpers";
+import { type Env, fetchWithTimeout, flyProbeFetch, getFlyProbeUrl } from "../../helpers";
 import type { BlocklistResult, DnsRecord, DnssecResult, IpInfo, ShodanResult, SslResult } from "./types";
 
 // ─── IP Geolocation ──────────────────────────────────────────────────
@@ -11,11 +11,10 @@ export async function checkIpInfo(_domain: string, dnsRecords: DnsRecord[], env:
 
   // Try Fly probe first (MaxMind local DB + API fallbacks, no rate limits)
   try {
-    const probeRes = await fetchWithTimeout(`${getFlyProbeUrl(env)}/probe-geo?ip=${encodeURIComponent(ip)}`, {
+    const probeRes = await flyProbeFetch(`${getFlyProbeUrl(env)}/probe-geo?ip=${encodeURIComponent(ip)}`, env, {
       timeout: 8000,
-      headers: getFlyAuthHeaders(env),
     });
-    if (probeRes.ok) {
+    if (probeRes?.ok) {
       const data = (await probeRes.json()) as {
         ip: string;
         city?: string | null;
@@ -239,12 +238,16 @@ export async function checkSsl(domain: string, env: Env): Promise<SslResult | nu
 
 async function tryFlyProbe(domain: string, env: Env): Promise<SslResult | null> {
   try {
-    const probeRes = await fetchWithTimeout(`${getFlyProbeUrl(env)}/probe-ssl?domain=${encodeURIComponent(domain)}`, {
+    const probeRes = await flyProbeFetch(`${getFlyProbeUrl(env)}/probe-ssl?domain=${encodeURIComponent(domain)}`, env, {
       timeout: 20000,
-      headers: getFlyAuthHeaders(env),
     });
-    if (!probeRes.ok) {
-      logApiError(env.STATS_DB, { api: "fly-probe", status: probeRes.status, message: "SSL probe failed", domain });
+    if (!probeRes?.ok) {
+      logApiError(env.STATS_DB, {
+        api: "fly-probe",
+        status: probeRes?.status ?? 0,
+        message: "SSL probe failed",
+        domain,
+      });
       return null;
     }
 
@@ -385,11 +388,12 @@ export async function checkStatus(
 }> {
   // Try Fly.io proxy first (avoids CF Worker IP blocks for sites like meta.com)
   try {
-    const probeRes = await fetchWithTimeout(
+    const probeRes = await flyProbeFetch(
       `${getFlyProbeUrl(env)}/probe-status?domain=${encodeURIComponent(domain)}`,
-      { timeout: 15000, headers: getFlyAuthHeaders(env) },
+      env,
+      { timeout: 15000 },
     );
-    if (probeRes.ok) {
+    if (probeRes?.ok) {
       const data = (await probeRes.json()) as {
         is_up: boolean;
         status_code: number | null;
@@ -413,7 +417,12 @@ export async function checkStatus(
         alt_svc: data.alt_svc ?? null,
       };
     } else {
-      logApiError(env.STATS_DB, { api: "fly-probe", status: probeRes.status, message: "Status probe failed", domain });
+      logApiError(env.STATS_DB, {
+        api: "fly-probe",
+        status: probeRes?.status ?? 0,
+        message: "Status probe failed",
+        domain,
+      });
     }
   } catch (e) {
     logApiError(env.STATS_DB, {

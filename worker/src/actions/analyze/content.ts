@@ -3,7 +3,7 @@ import {
   boundedText,
   type Env,
   fetchWithTimeout,
-  getFlyAuthHeaders,
+  flyProbeFetch,
   getFlyProbeUrl,
   probeHeadWithFallback,
 } from "../../helpers";
@@ -468,13 +468,14 @@ export async function checkEmailAuth(domain: string, dnsRecords: DnsRecord[], en
     if (!policyRes?.ok && env) {
       try {
         const probeUrl = `${getFlyProbeUrl(env)}/probe-fetch?url=${encodeURIComponent(policyUrl)}`;
-        const raw = await fetchWithTimeout(probeUrl, {
+        const raw = await flyProbeFetch(probeUrl, env, {
           timeout: 8000,
-          headers: getFlyAuthHeaders(env),
         });
-        const probeData = (await raw.json()) as { status: number; body: string };
-        if (probeData.status >= 200 && probeData.status < 300) {
-          policyRes = new Response(probeData.body, { status: probeData.status });
+        if (raw?.ok) {
+          const probeData = (await raw.json()) as { status: number; body: string };
+          if (probeData.status >= 200 && probeData.status < 300) {
+            policyRes = new Response(probeData.body, { status: probeData.status });
+          }
         }
       } catch {
         // Fly probe also failed — give up
@@ -621,11 +622,14 @@ export async function probeHttpProtocols(
   env: Env,
 ): Promise<{ http2: boolean; http3: boolean; alt_svc: string | null }> {
   try {
-    const res = await fetch(`${getFlyProbeUrl(env)}/probe-protocols?domain=${encodeURIComponent(domain)}`, {
-      signal: AbortSignal.timeout(10000),
-      headers: getFlyAuthHeaders(env),
-    });
-    if (res.ok) {
+    const res = await flyProbeFetch(
+      `${getFlyProbeUrl(env)}/probe-protocols?domain=${encodeURIComponent(domain)}`,
+      env,
+      {
+        timeout: 10000,
+      },
+    );
+    if (res?.ok) {
       const data = (await res.json()) as { http2: boolean; http3: boolean; alt_svc: string | null; error?: string };
       if (!data.error) return { http2: data.http2, http3: data.http3, alt_svc: data.alt_svc };
     }

@@ -1,6 +1,6 @@
 import { fingerprints } from "../../fingerprints";
 import type { Env } from "../../helpers";
-import { boundedText, fetchWithTimeout, getFlyAuthHeaders, getFlyProbeUrl, isBlockedUrl } from "../../helpers";
+import { boundedText, fetchWithTimeout, flyProbeFetch, getFlyProbeUrl, isBlockedUrl } from "../../helpers";
 import { getHtmlSecurityHeaders } from "../../spa";
 import type { HttpAnalysis, MetaResult, RedirectHop, SecurityHeaderCheck, TechItem } from "./types";
 
@@ -460,11 +460,10 @@ export async function analyzeHttpWithFallback(
     const probeUrl = getFlyProbeUrl(env);
     if (!probeUrl) return directResult;
 
-    const probeRes = await fetchWithTimeout(`${probeUrl}/probe-http?domain=${encodeURIComponent(domain)}`, {
+    const probeRes = await flyProbeFetch(`${probeUrl}/probe-http?domain=${encodeURIComponent(domain)}`, env, {
       timeout: 20000,
-      headers: getFlyAuthHeaders(env),
     });
-    if (!probeRes.ok) return directResult;
+    if (!probeRes?.ok) return directResult;
 
     const data = (await probeRes.json()) as {
       status_code: number;
