@@ -45,6 +45,8 @@ export interface Env {
   HIDE_EXTENSION?: string;
   /** Set "true" to hide CLI links */
   HIDE_CLI?: string;
+  /** Set "true" to hide GitHub repo links in footer */
+  HIDE_GITHUB?: string;
   /** Execution context for ctx.waitUntil — set per-request from the Worker fetch handler */
   _ctx?: ExecutionContext;
 }

@@ -54,7 +54,9 @@ const EFFORT_LABELS: Record<string, { icon: string; label: string }> = {
   major: { icon: "🏗️", label: "Major" },
 };
 
-const GITHUB_ISSUES_URL = "https://github.com/yokedotlol/yoke/issues/new";
+import { getConfig } from "../config";
+
+const GITHUB_ISSUES_URL = getConfig().feedbackUrl;
 
 const TIER_DEFS = [
   { tier: "Critical", min: 0, max: 40, color: "var(--tier-critical)" },

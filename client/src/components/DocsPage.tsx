@@ -1,6 +1,7 @@
 import { ArrowLeft, ChevronDown, ChevronUp, ExternalLink, Layers, Mail, Search, Shield, Star, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AXIS_WEIGHTS, SIGNAL_REGISTRY } from "../../../worker/src/config/signal-registry";
+import { getConfig } from "../config";
 
 // ─── Reusable sub-components ────────────────────────────────────────
 
@@ -826,28 +827,37 @@ export default function DocsPage() {
         <a href="/api/docs" style={{ color: "var(--accent)", textDecoration: "none" }}>
           API Documentation
         </a>
-        <a
-          href="https://github.com/yokedotlol/yoke"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            color: "var(--accent)",
-            textDecoration: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-          }}
-        >
-          GitHub <ExternalLink size={10} />
-        </a>
-        <a
-          href="https://github.com/yokedotlol/yoke/issues"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: "var(--accent)", textDecoration: "none" }}
-        >
-          Report an issue
-        </a>
+        {(() => {
+          const dcfg = getConfig();
+          return (
+            <>
+              {!dcfg.hideGithub && (
+                <a
+                  href={dcfg.repoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "var(--accent)",
+                    textDecoration: "none",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  GitHub <ExternalLink size={10} />
+                </a>
+              )}
+              <a
+                href={dcfg.feedbackUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--accent)", textDecoration: "none" }}
+              >
+                Report an issue
+              </a>
+            </>
+          );
+        })()}
       </div>
     </div>
   );

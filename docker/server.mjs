@@ -31,6 +31,7 @@ const bindings = {
   EXTENSION_URL: process.env.EXTENSION_URL || "https://chromewebstore.google.com/detail/yoke/fghkhjlelidaepapcdfjifnlcjmkgpcj",
   HIDE_EXTENSION: process.env.HIDE_EXTENSION || "false",
   HIDE_CLI: process.env.HIDE_CLI || "false",
+  HIDE_GITHUB: process.env.HIDE_GITHUB || "false",
 };
 
 // Note: the worker code reads env.GOOGLE_PAGESPEED_API_KEY (not PAGESPEED_API_KEY)

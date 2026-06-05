@@ -1352,7 +1352,7 @@ export default {
         if (method === "GET" && path === "/api/docs") {
           const accept = request.headers.get("Accept") || "";
           if (accept.includes("text/html")) {
-            return new Response(getApiDocsHtml(host), {
+            return new Response(getApiDocsHtml(host, brand.name), {
               headers: {
                 "Content-Type": "text/html;charset=UTF-8",
                 "Cache-Control": "public, max-age=3600",

@@ -35,6 +35,7 @@ services:
       - EXTENSION_URL=${EXTENSION_URL:-https://chromewebstore.google.com/detail/yoke/fghkhjlelidaepapcdfjifnlcjmkgpcj}
       - HIDE_EXTENSION=${HIDE_EXTENSION:-false}
       - HIDE_CLI=${HIDE_CLI:-false}
+      - HIDE_GITHUB=${HIDE_GITHUB:-false}
       - SHARE_SECRET=${SHARE_SECRET}
       - ADMIN_KEY=${ADMIN_KEY}
       - PROBE_SECRET=${PROBE_SECRET}
