@@ -1362,4 +1362,729 @@ export const fingerprints: Fingerprint[] = [
       headers: { server: /traefik/i },
     },
   },
+
+  // ─── Email Marketing ──────────────────────────────────────────────────
+  {
+    name: "Klaviyo",
+    category: "Email Marketing",
+    patterns: {
+      scriptUrls: [/static\.klaviyo\.com/i, /klaviyo\.js/i],
+      htmlPatterns: [/_learnq/i, /klaviyo/i],
+    },
+  },
+  {
+    name: "Brevo",
+    category: "Email Marketing",
+    patterns: {
+      scriptUrls: [/sibautomation\.com/i, /sibforms\.com/i],
+      htmlPatterns: [/sendinblue/i, /brevo/i, /sib-form/i],
+    },
+  },
+  {
+    name: "ConvertKit",
+    category: "Email Marketing",
+    patterns: {
+      scriptUrls: [/f\.convertkit\.com/i, /convertkit/i],
+      htmlPatterns: [/formkit-form/i, /convertkit/i],
+    },
+  },
+  {
+    name: "ActiveCampaign",
+    category: "Email Marketing",
+    patterns: {
+      scriptUrls: [/trackcmp\.net/i, /activehosted\.com/i],
+      htmlPatterns: [/activecampaign/i, /_acfn/i],
+    },
+  },
+  {
+    name: "Drip",
+    category: "Email Marketing",
+    patterns: {
+      scriptUrls: [/dc\.ads\.drip\.com/i, /tag\.getdrip\.com/i],
+      htmlPatterns: [/_drip_client/i, /getdrip/i],
+    },
+  },
+  {
+    name: "Constant Contact",
+    category: "Email Marketing",
+    patterns: {
+      scriptUrls: [/cc\.constantcontact\.com/i, /r20\.rs6\.net/i],
+      htmlPatterns: [/constantcontact/i, /ctct-inline-form/i],
+    },
+  },
+  {
+    name: "SendGrid",
+    category: "Email Marketing",
+    patterns: {
+      scriptUrls: [/mc\.sendgrid\.com/i],
+      htmlPatterns: [/sendgrid/i],
+      headers: { "x-sg-id": /./ },
+    },
+  },
+
+  // ─── Customer Data Platform ───────────────────────────────────────────
+  {
+    name: "mParticle",
+    category: "Customer Data Platform",
+    patterns: {
+      scriptUrls: [/jssdkcdns\.mparticle\.com/i, /mparticle/i],
+      htmlPatterns: [/mParticle/i],
+    },
+  },
+  {
+    name: "Lytics",
+    category: "Customer Data Platform",
+    patterns: {
+      scriptUrls: [/c\.lytics\.io/i, /lytics/i],
+      htmlPatterns: [/jstag/i],
+    },
+  },
+  {
+    name: "Treasure Data",
+    category: "Customer Data Platform",
+    patterns: {
+      scriptUrls: [/in\.treasuredata\.com/i, /td-js-sdk/i],
+      htmlPatterns: [/treasuredata/i],
+    },
+  },
+
+  // ─── Form Builder ─────────────────────────────────────────────────────
+  {
+    name: "Typeform",
+    category: "Form Builder",
+    patterns: {
+      scriptUrls: [/embed\.typeform\.com/i],
+      htmlPatterns: [/typeform-embed/i, /typeform\.com/i],
+    },
+  },
+  {
+    name: "JotForm",
+    category: "Form Builder",
+    patterns: {
+      scriptUrls: [/cdn\.jotfor\.ms/i, /jotform/i],
+      htmlPatterns: [/jotform/i],
+    },
+  },
+  {
+    name: "Gravity Forms",
+    category: "Form Builder",
+    patterns: {
+      htmlPatterns: [/gform_wrapper/i, /gfield/i, /gravity-forms/i],
+      scriptUrls: [/gravityforms/i],
+    },
+  },
+  {
+    name: "Wufoo",
+    category: "Form Builder",
+    patterns: {
+      scriptUrls: [/wufoo\.com\/scripts/i],
+      htmlPatterns: [/wufoo-form/i, /wufoo\.com/i],
+    },
+  },
+  {
+    name: "Cognito Forms",
+    category: "Form Builder",
+    patterns: {
+      scriptUrls: [/cognitoforms\.com/i],
+      htmlPatterns: [/cognito-form/i, /cognitoforms/i],
+    },
+  },
+  {
+    name: "Formstack",
+    category: "Form Builder",
+    patterns: {
+      scriptUrls: [/formstack\.com\/forms\/js/i],
+      htmlPatterns: [/formstack/i, /fsForm/i],
+    },
+  },
+
+  // ─── Scheduling ───────────────────────────────────────────────────────
+  {
+    name: "Calendly",
+    category: "Scheduling",
+    patterns: {
+      scriptUrls: [/assets\.calendly\.com/i],
+      htmlPatterns: [/calendly-badge-widget/i, /calendly-inline-widget/i, /calendly\.com/i],
+    },
+  },
+  {
+    name: "Acuity Scheduling",
+    category: "Scheduling",
+    patterns: {
+      scriptUrls: [/app\.acuityscheduling\.com/i, /acuityscheduling/i],
+      htmlPatterns: [/acuity-embed/i, /acuityscheduling/i],
+    },
+  },
+  {
+    name: "Cal.com",
+    category: "Scheduling",
+    patterns: {
+      scriptUrls: [/app\.cal\.com\/embed/i, /cal\.com\/embed/i],
+      htmlPatterns: [/cal-embed/i],
+    },
+  },
+
+  // ─── Reviews / Social Proof ───────────────────────────────────────────
+  {
+    name: "Trustpilot",
+    category: "Reviews",
+    patterns: {
+      scriptUrls: [/widget\.trustpilot\.com/i],
+      htmlPatterns: [/trustpilot-widget/i, /trustpilot\.com/i],
+    },
+  },
+  {
+    name: "Yotpo",
+    category: "Reviews",
+    patterns: {
+      scriptUrls: [/staticw2\.yotpo\.com/i, /yotpo/i],
+      htmlPatterns: [/yotpo-widget/i, /yotpo/i],
+    },
+  },
+  {
+    name: "Bazaarvoice",
+    category: "Reviews",
+    patterns: {
+      scriptUrls: [/apps\.bazaarvoice\.com/i, /bazaarvoice/i],
+      htmlPatterns: [/bv-cv2-cleanslate/i, /bazaarvoice/i],
+    },
+  },
+  {
+    name: "Judge.me",
+    category: "Reviews",
+    patterns: {
+      scriptUrls: [/judge\.me\/assets/i, /judgeme/i],
+      htmlPatterns: [/jdgm-widget/i, /judge\.me/i],
+    },
+  },
+  {
+    name: "Stamped.io",
+    category: "Reviews",
+    patterns: {
+      scriptUrls: [/stamped\.io/i],
+      htmlPatterns: [/stamped-reviews/i, /stamped-container/i],
+    },
+  },
+  {
+    name: "Feefo",
+    category: "Reviews",
+    patterns: {
+      scriptUrls: [/api\.feefo\.com/i, /feefo/i],
+      htmlPatterns: [/feefo-review/i],
+    },
+  },
+
+  // ─── Accessibility ────────────────────────────────────────────────────
+  {
+    name: "AccessiBe",
+    category: "Accessibility",
+    patterns: {
+      scriptUrls: [/acsbapp\.com/i, /accessibe/i],
+      htmlPatterns: [/acsb-trigger/i, /accessibe/i],
+    },
+  },
+  {
+    name: "UserWay",
+    category: "Accessibility",
+    patterns: {
+      scriptUrls: [/cdn\.userway\.org/i, /userway/i],
+      htmlPatterns: [/userway/i],
+    },
+  },
+  {
+    name: "AudioEye",
+    category: "Accessibility",
+    patterns: {
+      scriptUrls: [/ws\.audioeye\.com/i, /audioeye/i],
+      htmlPatterns: [/audioeye/i],
+    },
+  },
+  {
+    name: "EqualWeb",
+    category: "Accessibility",
+    patterns: {
+      scriptUrls: [/equalweb\.com/i],
+      htmlPatterns: [/equalweb/i],
+    },
+  },
+
+  // ─── Personalization ──────────────────────────────────────────────────
+  {
+    name: "Dynamic Yield",
+    category: "Personalization",
+    patterns: {
+      scriptUrls: [/cdn\.dynamicyield\.com/i, /dynamicyield/i],
+      htmlPatterns: [/DY\.API/i, /dynamicyield/i],
+    },
+  },
+  {
+    name: "Bloomreach",
+    category: "Personalization",
+    patterns: {
+      scriptUrls: [/cdn\.exponea\.com/i, /bloomreach/i],
+      htmlPatterns: [/exponea/i, /bloomreach/i],
+    },
+  },
+  {
+    name: "Insider",
+    category: "Personalization",
+    patterns: {
+      scriptUrls: [/insr\.ins-global\.com/i, /useinsider\.com/i],
+      htmlPatterns: [/Insider\.init/i, /useinsider/i],
+    },
+  },
+
+  // ─── Mapping ──────────────────────────────────────────────────────────
+  {
+    name: "Mapbox GL JS",
+    category: "Mapping",
+    patterns: {
+      scriptUrls: [/api\.mapbox\.com\/mapbox-gl/i, /mapbox-gl\.js/i],
+      cssUrls: [/mapbox-gl\.css/i],
+      htmlPatterns: [/mapboxgl/i],
+    },
+  },
+  {
+    name: "Leaflet",
+    category: "Mapping",
+    patterns: {
+      scriptUrls: [/leaflet(?:\.min)?\.js/i, /unpkg\.com\/leaflet/i],
+      cssUrls: [/leaflet(?:\.min)?\.css/i],
+      htmlPatterns: [/leaflet-container/i],
+    },
+  },
+  {
+    name: "Google Maps",
+    category: "Mapping",
+    patterns: {
+      scriptUrls: [/maps\.googleapis\.com\/maps/i],
+      htmlPatterns: [/maps\.google\.com\/maps/i, /google\.com\/maps\/embed/i],
+    },
+  },
+  {
+    name: "OpenStreetMap",
+    category: "Mapping",
+    patterns: {
+      htmlPatterns: [/tile\.openstreetmap\.org/i, /openstreetmap\.org/i],
+    },
+  },
+
+  // ─── Database / BaaS ──────────────────────────────────────────────────
+  {
+    name: "Supabase",
+    category: "Database",
+    patterns: {
+      scriptUrls: [/supabase/i],
+      htmlPatterns: [/supabase\.co/i, /supabase/i],
+    },
+  },
+
+  // ─── Additional E-commerce ────────────────────────────────────────────
+  {
+    name: "Ecwid",
+    category: "E-commerce",
+    patterns: {
+      scriptUrls: [/app\.ecwid\.com/i],
+      htmlPatterns: [/ecwid/i, /ec\.store/i],
+    },
+  },
+  {
+    name: "Big Cartel",
+    category: "E-commerce",
+    patterns: {
+      meta: { generator: /big cartel/i },
+      htmlPatterns: [/bigcartel\.com/i],
+    },
+  },
+  {
+    name: "Volusion",
+    category: "E-commerce",
+    patterns: {
+      scriptUrls: [/a\.vsstatic\.com/i],
+      htmlPatterns: [/volusion/i],
+      headers: { "x-volusion-secure": /./ },
+    },
+  },
+  {
+    name: "Gumroad",
+    category: "E-commerce",
+    patterns: {
+      scriptUrls: [/gumroad\.com\/js\/gumroad/i, /gumroad\.com/i],
+      htmlPatterns: [/gumroad-overlay/i, /gumroad/i],
+    },
+  },
+  {
+    name: "Lemon Squeezy",
+    category: "E-commerce",
+    patterns: {
+      scriptUrls: [/assets\.lemonsqueezy\.com/i, /lemonsqueezy/i],
+      htmlPatterns: [/lemonsqueezy/i],
+    },
+  },
+  {
+    name: "ThriveCart",
+    category: "E-commerce",
+    patterns: {
+      scriptUrls: [/thrivecart\.com/i],
+      htmlPatterns: [/thrivecart/i],
+    },
+  },
+  {
+    name: "Snipcart",
+    category: "E-commerce",
+    patterns: {
+      scriptUrls: [/cdn\.snipcart\.com/i, /snipcart/i],
+      htmlPatterns: [/snipcart/i, /data-item-id/i],
+    },
+  },
+
+  // ─── Additional CMS ───────────────────────────────────────────────────
+  {
+    name: "Sanity",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [/cdn\.sanity\.io/i],
+      scriptUrls: [/sanity/i],
+    },
+  },
+  {
+    name: "Storyblok",
+    category: "CMS",
+    patterns: {
+      scriptUrls: [/app\.storyblok\.com/i, /storyblok/i],
+      htmlPatterns: [/storyblok/i],
+    },
+  },
+  {
+    name: "Prismic",
+    category: "CMS",
+    patterns: {
+      scriptUrls: [/prismic\.io/i],
+      htmlPatterns: [/prismic/i, /cdn\.prismic\.io/i],
+    },
+  },
+  {
+    name: "DatoCMS",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [/datocms-assets\.com/i, /datocms/i],
+    },
+  },
+  {
+    name: "Framer",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [/framer\.com/i, /framerusercontent\.com/i],
+      scriptUrls: [/events\.framer\.com/i, /framer/i],
+    },
+  },
+  {
+    name: "Bubble",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [/bubble\.io/i, /bubbleapps\.io/i],
+      scriptUrls: [/bubble\.io/i],
+    },
+  },
+  {
+    name: "Carrd",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [/carrd\.co/i],
+      meta: { generator: /carrd/i },
+    },
+  },
+  {
+    name: "Substack",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [/substack\.com/i, /substackcdn\.com/i],
+      scriptUrls: [/substackcdn\.com/i],
+    },
+  },
+  {
+    name: "Discourse",
+    category: "CMS",
+    patterns: {
+      meta: { generator: /discourse/i },
+      htmlPatterns: [/discourse-/i, /data-discourse/i],
+    },
+    versionExtract: { source: "meta", pattern: /Discourse\s+([\d.]+)/i },
+  },
+  {
+    name: "Beehiiv",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [/beehiiv\.com/i],
+      scriptUrls: [/beehiiv\.com/i],
+    },
+  },
+  {
+    name: "Kajabi",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [/kajabi/i],
+      scriptUrls: [/kajabi\.com/i, /kajabi-/i],
+    },
+  },
+  {
+    name: "Teachable",
+    category: "CMS",
+    patterns: {
+      scriptUrls: [/teachablecdn\.com/i, /teachable/i],
+      htmlPatterns: [/teachable/i],
+    },
+  },
+
+  // ─── Additional Search ────────────────────────────────────────────────
+  {
+    name: "Coveo",
+    category: "Search",
+    patterns: {
+      scriptUrls: [/platform\.cloud\.coveo\.com/i, /coveo/i],
+      htmlPatterns: [/CoveoSearchInterface/i, /coveo/i],
+    },
+  },
+  {
+    name: "Yext",
+    category: "Search",
+    patterns: {
+      scriptUrls: [/assets\.sitescdn\.net/i, /yext/i],
+      htmlPatterns: [/yext-search/i, /yext/i],
+    },
+  },
+  {
+    name: "Doofinder",
+    category: "Search",
+    patterns: {
+      scriptUrls: [/doofinder\.com/i],
+      htmlPatterns: [/doofinder/i, /dfclassic/i],
+    },
+  },
+  {
+    name: "Searchspring",
+    category: "Search",
+    patterns: {
+      scriptUrls: [/searchspring\.net/i, /searchspring/i],
+      htmlPatterns: [/searchspring/i],
+    },
+  },
+
+  // ─── Additional Security ──────────────────────────────────────────────
+  {
+    name: "PerimeterX",
+    category: "Security",
+    patterns: {
+      scriptUrls: [/px-cdn\.net/i, /px-cloud\.net/i],
+      cookies: ["_pxhd", "_px3", "_pxvid"],
+    },
+  },
+  {
+    name: "DataDome",
+    category: "Security",
+    patterns: {
+      scriptUrls: [/datadome\.co/i],
+      cookies: ["datadome"],
+      headers: { "x-datadome": /./ },
+    },
+  },
+  {
+    name: "Radware",
+    category: "Security",
+    patterns: {
+      headers: { "x-rdwr": /./, "x-cdn": /radware/i },
+    },
+  },
+
+  // ─── Additional Hosting ───────────────────────────────────────────────
+  {
+    name: "DigitalOcean App Platform",
+    category: "Hosting",
+    patterns: {
+      headers: { server: /digitalocean/i, "x-do-app-origin": /./ },
+    },
+  },
+  {
+    name: "Deno Deploy",
+    category: "Hosting",
+    patterns: {
+      headers: { server: /deno/i, "x-deno-ray": /./ },
+    },
+  },
+  {
+    name: "Surge",
+    category: "Hosting",
+    patterns: {
+      headers: { server: /surge/i },
+    },
+  },
+  {
+    name: "Replit",
+    category: "Hosting",
+    patterns: {
+      headers: { "x-replit-cluster": /./ },
+      htmlPatterns: [/repl\.co/i, /replit\.dev/i],
+    },
+  },
+  {
+    name: "Glitch",
+    category: "Hosting",
+    patterns: {
+      htmlPatterns: [/glitch\.me/i, /cdn\.glitch\.com/i],
+    },
+  },
+
+  // ─── Additional Analytics ─────────────────────────────────────────────
+  {
+    name: "Piwik PRO",
+    category: "Analytics",
+    patterns: {
+      scriptUrls: [/piwikpro\.com/i, /containers\.piwik\.pro/i],
+      htmlPatterns: [/ppms\.js/i, /piwikpro/i],
+    },
+  },
+  {
+    name: "Kissmetrics",
+    category: "Analytics",
+    patterns: {
+      scriptUrls: [/scripts\.kissmetrics\.com/i, /kissmetrics/i],
+      htmlPatterns: [/kissmetrics/i, /_kmq/i],
+    },
+  },
+  {
+    name: "Woopra",
+    category: "Analytics",
+    patterns: {
+      scriptUrls: [/static\.woopra\.com/i, /woopra/i],
+      htmlPatterns: [/woopra/i],
+    },
+  },
+  {
+    name: "Pirsch",
+    category: "Analytics",
+    patterns: {
+      scriptUrls: [/api\.pirsch\.io/i, /pirsch/i],
+    },
+  },
+  {
+    name: "Umami",
+    category: "Analytics",
+    patterns: {
+      scriptUrls: [/umami\.js/i, /umami\.is/i],
+      htmlPatterns: [/data-website-id/i],
+    },
+  },
+  {
+    name: "Simple Analytics",
+    category: "Analytics",
+    patterns: {
+      scriptUrls: [/scripts\.simpleanalyticscdn\.com/i, /simpleanalytics/i],
+      htmlPatterns: [/simpleanalytics/i],
+    },
+  },
+  {
+    name: "GoatCounter",
+    category: "Analytics",
+    patterns: {
+      scriptUrls: [/gc\.zgo\.at/i, /goatcounter/i],
+      htmlPatterns: [/goatcounter/i],
+    },
+  },
+
+  // ─── Additional Servers / Runtimes ────────────────────────────────────
+  {
+    name: "Bun",
+    category: "Server",
+    patterns: {
+      headers: { server: /bun/i },
+    },
+    versionExtract: { source: "header", pattern: /Bun\/([\d.]+)/i },
+  },
+  {
+    name: "Deno",
+    category: "Server",
+    patterns: {
+      headers: { server: /^deno\//i },
+    },
+    versionExtract: { source: "header", pattern: /deno\/([\d.]+)/i },
+  },
+
+  // ─── Additional JS Frameworks ─────────────────────────────────────────
+  {
+    name: "Unpoly",
+    category: "JS Framework",
+    patterns: {
+      scriptUrls: [/unpoly(?:\.min)?\.js/i],
+      htmlPatterns: [/up-follow/i, /up-instant/i, /\[up-/i],
+    },
+  },
+  {
+    name: "Turbolinks",
+    category: "JS Framework",
+    patterns: {
+      scriptUrls: [/turbolinks(?:\.min)?\.js/i],
+      htmlPatterns: [/data-turbolinks/i],
+    },
+  },
+
+  // ─── Additional Marketing / Chat ──────────────────────────────────────
+  {
+    name: "Tidio",
+    category: "Marketing",
+    patterns: {
+      scriptUrls: [/code\.tidio\.co/i],
+      htmlPatterns: [/tidio/i],
+    },
+  },
+  {
+    name: "Chatwoot",
+    category: "Marketing",
+    patterns: {
+      scriptUrls: [/chatwoot/i, /app\.chatwoot\.com/i],
+      htmlPatterns: [/chatwootSettings/i, /chatwoot/i],
+    },
+  },
+  {
+    name: "Help Scout",
+    category: "Marketing",
+    patterns: {
+      scriptUrls: [/beacon-v2\.helpscout\.net/i],
+      htmlPatterns: [/helpscout/i, /HS\.beacon/i],
+    },
+  },
+
+  // ─── Additional Payment ───────────────────────────────────────────────
+  {
+    name: "Paddle",
+    category: "Payment",
+    patterns: {
+      scriptUrls: [/cdn\.paddle\.com/i, /paddle\.js/i],
+      htmlPatterns: [/paddle/i, /Paddle\.Setup/i],
+    },
+  },
+  {
+    name: "Chargebee",
+    category: "Payment",
+    patterns: {
+      scriptUrls: [/js\.chargebee\.com/i, /chargebee/i],
+      htmlPatterns: [/chargebee/i],
+    },
+  },
+  {
+    name: "Recurly",
+    category: "Payment",
+    patterns: {
+      scriptUrls: [/js\.recurly\.com/i, /recurly\.js/i],
+      htmlPatterns: [/recurly/i],
+    },
+  },
+
+  // ─── Additional Embeds ────────────────────────────────────────────────
+  {
+    name: "Airtable Embed",
+    category: "Embed",
+    patterns: {
+      htmlPatterns: [/airtable\.com\/embed/i, /airtable\.com\/shrink/i],
+    },
+  },
 ];

@@ -41,7 +41,7 @@ Sites are auto-classified into 7 archetypes (commerce, content, application, cor
 | **Security Headers** | CSP, HSTS, X-Frame-Options, Permissions-Policy, Referrer-Policy, cookie audit |
 | **Email Auth** | SPF, DKIM, DMARC, BIMI, MTA-STS, TLS-RPT |
 | **Performance** | Lighthouse (mobile-first 60/40 blend), Core Web Vitals, CrUX, cache analysis |
-| **Tech Stack** | 170 fingerprints — CMS, frameworks, CDNs, analytics, 25+ cookie consent platforms |
+| **Tech Stack** | 256 fingerprints — CMS, frameworks, CDNs, analytics, 25+ cookie consent platforms |
 | **WordPress** | Version, theme, 100+ plugins, page builder, hosting |
 | **Breaches** | HIBP lookup with time-decay severity weighting |
 | **Subdomains** | 130 curated prefixes + CT log discovery via CertSpotter |
