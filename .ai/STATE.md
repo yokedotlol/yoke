@@ -33,7 +33,7 @@
 | Metric | Value |
 |--------|-------|
 | Total tests | 548 |
-| Test files | 14 |
+| Test files | 15 |
 | Calibration tests | 293 (in `scoring-calibration.test.ts`) |
 
 ## Infrastructure
