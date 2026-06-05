@@ -236,7 +236,7 @@ function useStreamingAnalysis() {
             setProgress((prev) => {
               const checks = new Map(prev.checks);
               // Populate pending checks when parallel analysis starts
-              if (d.phase === "checks" && d.checks) {
+              if ((d.phase === "checks" || d.phase === "phase2") && d.checks) {
                 for (const c of d.checks) {
                   if (!checks.has(c.key)) {
                     checks.set(c.key, { label: c.label, done: false });
