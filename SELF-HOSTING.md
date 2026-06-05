@@ -71,6 +71,7 @@ Edit `.env`:
 YOKE_DOMAIN=yoke.example.com
 SHARE_SECRET=$(openssl rand -hex 32)
 ADMIN_KEY=$(openssl rand -hex 32)
+IP_HASH_SALT=$(openssl rand -hex 32)
 PROBE_SECRET=$(openssl rand -hex 32)
 
 # Optional — enables the Speed axis with real Lighthouse/CrUX data
@@ -271,10 +272,12 @@ bash generate-assets-shim.sh
 ```bash
 SHARE_SECRET=$(openssl rand -hex 32)
 ADMIN_KEY=$(openssl rand -hex 32)
+IP_HASH_SALT=$(openssl rand -hex 32)
 PROBE_SECRET=$(openssl rand -hex 32)
 
 echo "SHARE_SECRET=$SHARE_SECRET"
 echo "ADMIN_KEY=$ADMIN_KEY"
+echo "IP_HASH_SALT=$IP_HASH_SALT"
 echo "PROBE_SECRET=$PROBE_SECRET"
 # Save these!
 ```
@@ -310,6 +313,7 @@ const yokeWorker :Workerd.Worker = (
     (name = "BASE_URL", text = "https://YOUR_DOMAIN"),
     (name = "SHARE_SECRET", text = "YOUR_SHARE_SECRET"),
     (name = "ADMIN_KEY", text = "YOUR_ADMIN_KEY"),
+    (name = "IP_HASH_SALT", text = "YOUR_IP_HASH_SALT"),
     (name = "SELF_DOMAINS", text = "YOUR_DOMAIN,www.YOUR_DOMAIN"),
     # Optional: (name = "PAGESPEED_API_KEY", text = "YOUR_GOOGLE_API_KEY"),
     (name = "FLY_PROBE_URL", text = "http://127.0.0.1:8788"),

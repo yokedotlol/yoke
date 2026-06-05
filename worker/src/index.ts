@@ -488,6 +488,7 @@ export default {
         request.headers.get("cf-connecting-ip") ||
           request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
           "unknown",
+        env,
       );
       const rl = await checkRateLimit(env.STATS_DB, reportIP, "/report", env);
       if (rl.blocked) {
@@ -547,6 +548,7 @@ export default {
         request.headers.get("cf-connecting-ip") ||
           request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
           "unknown",
+        env,
       );
       const _t0 = Date.now();
       const _track = (endpoint: string, status: number, domain?: string) => {

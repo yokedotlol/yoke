@@ -40,6 +40,7 @@ services:
       - HIDE_CLI=${HIDE_CLI:-false}
       - HIDE_GITHUB=${HIDE_GITHUB:-false}
       - SHARE_SECRET=${SHARE_SECRET}
+      - IP_HASH_SALT=${IP_HASH_SALT}
       - ADMIN_KEY=${ADMIN_KEY}
       - PROBE_SECRET=${PROBE_SECRET}
       - PAGESPEED_API_KEY=${PAGESPEED_API_KEY:-}

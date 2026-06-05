@@ -23,6 +23,8 @@ export interface Env {
   RATE_LIMIT_SUBDOMAIN?: string;
   RATE_LIMIT_AVAILABILITY?: string;
   RATE_LIMIT_RECURSIVE_DNS?: string;
+  /** Secret salt for IP hashing (GDPR pseudonymization) */
+  IP_HASH_SALT?: string;
   /** HMAC secret for signing share card URLs */
   SHARE_SECRET?: string;
   /** KV namespace for reference data (retire.js DB, third-party patterns, etc.) */
@@ -247,9 +249,10 @@ export async function flyProbeFetch(
 
 /** SHA-256 hash of IP + daily salt — privacy-safe rate-limit key.
  *  Truncated to 16 hex chars: enough for uniqueness, not reversible. */
-export async function hashIp(ip: string): Promise<string> {
+export async function hashIp(ip: string, env?: { IP_HASH_SALT?: string }): Promise<string> {
   const day = new Date().toISOString().slice(0, 10);
-  const data = new TextEncoder().encode(`${ip}:${day}`);
+  const salt = env?.IP_HASH_SALT || "yoke-default-salt";
+  const data = new TextEncoder().encode(`${ip}:${day}:${salt}`);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, "0"))

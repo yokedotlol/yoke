@@ -132,6 +132,9 @@ npx wrangler secret put SHARE_SECRET
 
 # Admin key — protects /usage, /api/cleanup, /api/cache (openssl rand -hex 32)
 npx wrangler secret put ADMIN_KEY
+
+# Secret salt for GDPR-safe IP hashing (openssl rand -hex 32)
+npx wrangler secret put IP_HASH_SALT
 ```
 
 **Recommended:**
@@ -252,6 +255,7 @@ const yokeWorker :Workerd.Worker = (
     (name = "BASE_URL", text = "https://yourdomain.com"),
     (name = "SHARE_SECRET", text = "your-hmac-secret"),
     (name = "ADMIN_KEY", text = "your-admin-key"),
+    (name = "IP_HASH_SALT", text = "your-ip-hash-salt"),
     (name = "SELF_DOMAINS", text = "yourdomain.com,www.yourdomain.com"),
     # Add API keys as needed:
     # (name = "OPENROUTER_API_KEY", text = "..."),
@@ -632,6 +636,7 @@ Set via `npx wrangler secret put` (Cloudflare), workerd config bindings (bare me
 |----------|----------|-------------|
 | `SHARE_SECRET` | **Yes** | HMAC key for share card URLs |
 | `ADMIN_KEY` | **Yes** | Protects admin endpoints |
+| `IP_HASH_SALT` | **Yes** | Secret salt for GDPR-safe IP hashing |
 | `BASE_URL` | Recommended | Instance URL for self-analysis + share cards |
 | `SELF_DOMAINS` | Recommended | Comma-separated list of your instance's own domains (default: yoke.lol) |
 | `OPENROUTER_API_KEY` | Recommended | AI Analysis (Cross-Signal Insights) |
