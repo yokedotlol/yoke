@@ -43,8 +43,16 @@ No Cloudflare account needed for running tests. You'll need one for local Worker
 
 ```
 yoke/
-├── worker/src/              # Cloudflare Worker (TypeScript, zero-framework)
-│   ├── index.ts             # HTTP router + entry point
+├── worker/src/              # Cloudflare Worker (TypeScript, minimal dependencies)
+│   ├── index.ts             # Entry point + route dispatcher
+│   ├── routes/              # Route handler modules (one per route group)
+│   │   ├── shared.ts        # JSON helpers, auth, rate limiting
+│   │   ├── static.ts        # Well-known files, robots, sitemap, manifest
+│   │   ├── api-core.ts      # Analyze, compare, subdomains, suggestions
+│   │   ├── api-enrichment.ts # Company, news, social, reverse-ip, availability
+│   │   ├── api-ai.ts        # AI analysis, AI prompt
+│   │   ├── api-admin.ts     # Health, stats, cache, cleanup, scoring, docs
+│   │   └── pages.ts         # Share cards, reports, SPA routing
 │   ├── checks/              # Analysis check registry (one file per check)
 │   │   ├── types.ts         # Check + CheckContext interfaces
 │   │   ├── registry.ts      # Ordered check array
@@ -64,7 +72,7 @@ yoke/
 ├── extension/               # Chrome extension (Manifest V3, side panel)
 ├── cli/                     # Go CLI (goreleaser, Homebrew tap)
 ├── prompts/                 # AI analysis prompt (.txt, imported by worker)
-└── tests/                   # Vitest test suite (566 tests)
+└── tests/                   # Vitest test suite (594 tests)
 ```
 
 ### Storage
@@ -90,9 +98,9 @@ const myCheck: Check = {
   async run(ctx: CheckContext) {
     // ctx.domain           — the domain being analyzed
     // ctx.env              — Cloudflare Worker env bindings
-    // ctx.dnsRecords       — DNS records from Phase 1
+    // ctx.dnsRecords       — DNS records from initial resolution
     // ctx.ip               — first A-record IP (if any)
-    // ctx.httpResponseTimeMs — HTTP probe time from Phase 1
+    // ctx.httpResponseTimeMs — HTTP probe response time
     // ctx.instanceHost     — for self-analysis bypass
 
     const resp = await fetchWithTimeout(`https://api.example.com/${ctx.domain}`, {}, 5000);
@@ -178,7 +186,7 @@ The Go CLI at `cli/` is distributed via goreleaser and Homebrew (`yokedotlol/hom
 Tests use [Vitest](https://vitest.dev/) and live in `tests/`:
 
 ```bash
-npx vitest run              # Run all tests (548 tests)
+npx vitest run              # Run all tests (594 tests)
 npx vitest run --watch      # Watch mode
 npx vitest run scoring      # Run specific test file
 ```
@@ -209,7 +217,7 @@ If you need to bypass the hook for a WIP commit: `git commit --no-verify`.
 
 ## Pull Request Checklist
 
-- [ ] `npx vitest run` passes (all 548 tests)
+- [ ] `npx vitest run` passes (all 594 tests)
 - [ ] `cd worker && bun run typecheck` passes with zero errors
 - [ ] `npx @biomejs/biome check .` passes with zero errors (warnings are OK)
 - [ ] New checks include a test for the expected output shape
