@@ -2,7 +2,7 @@
 
 All notable changes to Yoke are documented here.
 
-> **Scope:** This changelog tracks the **Service (Worker + Client)** version. The CLI and MCP Server version independently — see the [Versioning](README.md#versioning) section in README.md for tag formats and release mechanisms.
+> **Scope:** This changelog tracks the **Service (Worker + Client)** version. The CLI and MCP Server version independently via their own release tags (`cli/vX.Y.Z` and `mcp/vX.Y.Z`).
 
 ## [2.1.0] — 2026-06-04
 

@@ -17,7 +17,7 @@
 
 ## What is Yoke?
 
-Yoke pulls 156 scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
+Yoke pulls 157 scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
 
 ```bash
 curl -s https://yoke.lol/stripe.com | jq
@@ -41,12 +41,12 @@ Sites are auto-classified into 7 archetypes (commerce, content, application, cor
 | **Security Headers** | CSP, HSTS, X-Frame-Options, Permissions-Policy, Referrer-Policy, cookie audit |
 | **Email Auth** | SPF, DKIM, DMARC, BIMI, MTA-STS, TLS-RPT |
 | **Performance** | Lighthouse (mobile-first 60/40 blend), Core Web Vitals, CrUX, cache analysis |
-| **Tech Stack** | 100+ fingerprints — CMS, frameworks, CDNs, analytics, cookie consent (13+ CMPs) |
+| **Tech Stack** | 170 fingerprints — CMS, frameworks, CDNs, analytics, 25+ cookie consent platforms |
 | **WordPress** | Version, theme, 100+ plugins, page builder, hosting |
 | **Breaches** | HIBP lookup with time-decay severity weighting |
-| **Subdomains** | 157 common prefixes + CT log discovery via CertSpotter |
+| **Subdomains** | 130 curated prefixes + CT log discovery via CertSpotter |
 | **Accessibility** | 9 WCAG quick checks (labels, alt text, contrast, headings, landmarks) |
-| **Network** | Global availability, TCP timing, BGP routing, WAF detection (11+ providers) |
+| **Network** | Global availability, TCP timing, BGP routing, WAF detection (29 providers) |
 | **Company** | Wikidata + Brandfetch + Crunchbase enrichment, stock ticker |
 | **AI Analysis** | Score Waterfall (deterministic) + Cross-Signal Insights (LLM, DeepSeek V3) |
 
@@ -154,26 +154,34 @@ See [mcp/README.md](mcp/README.md) for configuration.
 
 ## Self-Hosting
 
-Yoke is designed to be self-hosted on Cloudflare Workers Paid ($5/mo). Total cost: **~$5–11/mo** depending on whether you run the optional Fly.io proxy.
+Yoke is designed to be self-hosted. Three deployment options:
+
+| Option | Best For | Cost |
+|--------|----------|------|
+| **Cloudflare Workers** | Managed hosting, global edge | ~$5–11/mo |
+| **Docker Compose** | VPS self-hosting, one command | ~$5–18/mo |
+| **Bare Metal** | Full control, no containers | ~$5–18/mo |
 
 **[Full self-hosting guide →](docs/SELF-HOSTING.md)**
 
-Quick version:
+Quick start (Cloudflare Workers):
 
 ```bash
 git clone https://github.com/yokedotlol/yoke.git && cd yoke
-
-# Install deps
 cd client && bun install && cd ..
 cd worker && bun install && cd ..
-
-# Create CF resources
 npx wrangler d1 create yoke-stats
 npx wrangler kv namespace create REFERENCE_DATA
-
-# Configure, build, deploy
 cp worker/wrangler.toml.example worker/wrangler.toml   # edit with your IDs
 bash deploy.sh --cf
+```
+
+Quick start (Docker Compose):
+
+```bash
+git clone https://github.com/yokedotlol/yoke.git && cd yoke
+cp .env.example .env   # edit with your domain + secrets
+docker compose up -d --build
 ```
 
 ## Contributing
