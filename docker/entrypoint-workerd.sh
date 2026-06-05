@@ -29,14 +29,17 @@ if [ "$SITE_NAME" != "Yoke" ]; then
     -exec sed -i "s|Yoke|${SITE_NAME}|g" {} +
 fi
 
-# ── Inject runtime config into HTML ──────────────────────────────
+# ── Inject runtime config ─────────────────────────────────────────
+# Write config as an external JS file so it's allowed by CSP (script-src 'self').
+# Inline <script> injection would be blocked by the SHA-256 allowlist.
 CONFIG_JSON=$(cat <<JSEOF
 {"repoUrl":"${REPO_URL}","feedbackUrl":"${FEEDBACK_URL}","extensionUrl":"${EXTENSION_URL}","hideGithub":${HIDE_GITHUB},"hideExtension":${HIDE_EXTENSION},"hideCli":${HIDE_CLI}}
 JSEOF
 )
 echo "Injecting runtime config"
+echo "window.__YOKE_CONFIG__=${CONFIG_JSON};" > /app/client-dist/assets/config.js
 find /app/client-dist -name '*.html' \
-  -exec sed -i "s|</head>|<script>window.__YOKE_CONFIG__=${CONFIG_JSON};</script></head>|" {} +
+  -exec sed -i 's|</head>|<script src="/assets/config.js"></script></head>|' {} +
 
 # ── Remove social rel="me" links when white-labeling ──────────────
 if [ "$SITE_NAME" != "Yoke" ]; then
