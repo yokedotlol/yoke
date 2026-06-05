@@ -1,3 +1,22 @@
+# ── MTA-STS policy endpoint ────────────────────────────────────────
+mta-sts.{$YOKE_DOMAIN} {
+    handle /.well-known/mta-sts.txt {
+        respond `version: STSv1
+mode: enforce
+mx: route1.mx.cloudflare.net
+mx: route2.mx.cloudflare.net
+mx: route3.mx.cloudflare.net
+max_age: 604800` 200 {
+            close
+        }
+        header Content-Type "text/plain; charset=utf-8"
+    }
+    handle {
+        respond "Not Found" 404
+    }
+}
+
+# ── Main site ──────────────────────────────────────────────────────
 {$YOKE_DOMAIN} {
     # Security headers applied to all responses
     header {
