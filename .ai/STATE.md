@@ -32,9 +32,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Total tests | 623 |
+| Total tests | 362 |
 | Test files | 18 |
-| Calibration tests | 293 (in `scoring-calibration.test.ts`) |
+| Calibration tests | 33 (in `scoring-calibration.test.ts`) |
+| Total expect() calls | 713 |
 
 ## Infrastructure
 
@@ -109,14 +110,14 @@ Worker-side: `flyProbeFetch()` helper in `helpers.ts` handles auth + 429 retry (
 
 | Hash | Description |
 |------|-------------|
-| `bb29fae` | Optional UPTIME_URL on /status page footer |
-| `25f5053` | Fly probe: global rate limiter + authed health endpoint |
-| `f833450` | Templatize MTA-STS MX hosts via env vars |
-| `32c5339` | Gitignore BFG report artifacts |
-| `006db89` | SELF-HOSTING.md: white-label, security, email sections |
+| `0d13237` | Remove old og-banner-v3 asset |
+| `5f943e2` | Badge fallback to analysis cache, embed UI in ShareBar, OG banner v4 |
+| `609f597` | Time-budgeted sweep, hourly cron, badge dogfooding |
+| `b04d9e7` | Extract shared finalizeResult(), add badge-cache module |
+| `d7c8e2d` | Embeddable badge routes, SVG renderer, scheduled handler |
+| `7ab6bff` | Extract route handlers from index.ts into route modules |
 | `0282c60` | Ungate legal/trust probes from main HTTP probe |
 | `9c01216` | Client-side domain pills replace `/_/showcase` |
-| `a8da63f` | seed-domains.sh for self-hosters |
 
 ## Panel Review Status
 
@@ -130,8 +131,12 @@ All 9 batched decisions resolved. All product panels unanimous: ready for Linked
 
 ## Open / Known Issues
 
-- **BYOK system prompt missing:** P2 bug — BYO key AI analysis may skip system prompt assembly. See BACKLOG.md.
 - **Call-site migration:** Existing Fly probe call sites still use `fetchWithTimeout` + `getFlyAuthHeaders` directly. New `flyProbeFetch` helper available but not wired into all call sites yet.
+
+## Closed Issues
+
+- **#3 Embeddable score badge:** Shipped in v2.3.0. Badge SVG/JSON endpoints, embed UI in ShareBar, hourly sweep cron, analysis cache fallback.
+- **BYOK system prompt:** Fixed — BYO key AI analysis now includes system prompt.
 
 ## Launch
 
