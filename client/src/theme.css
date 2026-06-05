@@ -1001,6 +1001,117 @@ main {
   }
 }
 
+/* ─── Embed badge section ─────────────────────────────────────────── */
+
+.share-bar {
+  flex-wrap: wrap;
+}
+
+.share-btn-active {
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+.embed-section {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.embed-preview {
+  margin-bottom: 10px;
+}
+
+.embed-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.embed-select {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  padding: 4px 8px;
+  background: var(--bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.embed-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.embed-tab {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border: none;
+  background: transparent;
+  color: var(--dim);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.embed-tab:hover {
+  color: var(--text-secondary);
+}
+
+.embed-tab-active {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.embed-snippet-wrapper {
+  position: relative;
+}
+
+.embed-snippet {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 60px 8px 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+  word-break: break-all;
+}
+
+.embed-copy-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.embed-copy-btn:hover {
+  background: var(--border);
+}
+
 /* Clickable domain pill */
 .domain-pill {
   display: inline-flex;

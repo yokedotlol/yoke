@@ -163,6 +163,9 @@ jobs:
           [[routes]]
           pattern = "mta-sts.yoke.lol/*"
           zone_name = "yoke.lol"
+
+          [triggers]
+          crons = ["0 */1 * * *"]
           EOF
           # Remove leading whitespace from heredoc
           sed -i 's/^          //' wrangler.toml
@@ -294,6 +297,9 @@ jobs:
           [[routes]]
           pattern = "mta-sts.yoke.lol/*"
           zone_name = "yoke.lol"
+
+          [triggers]
+          crons = ["0 */1 * * *"]
           EOF
           sed -i 's/^          //' wrangler.toml
 

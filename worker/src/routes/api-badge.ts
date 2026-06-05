@@ -5,7 +5,7 @@
 // Pure KV reads — never triggers synchronous analysis.
 // Background work for stale-while-revalidate and cold start.
 
-import { AXIS_FULL, type BadgeCacheEntry, readBadgeCache } from "../badge-cache";
+import { AXIS_FULL, type BadgeCacheEntry, readBadgeCache, writeBadgeCache } from "../badge-cache";
 import { neutralBadgeOptions, renderBadgeSvg, scoreBadgeOptions } from "../badge-svg";
 import { tierFromComposite } from "../config/signal-registry";
 import type { Env } from "../helpers";
@@ -82,7 +82,21 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     return svgResponse(scoreBadgeOptions(label, score, tier, style), cached.analyzedAt);
   }
 
-  // Cache miss — neutral badge + trigger analysis
+  // Badge cache miss — try analysis cache before returning "not yet scanned"
+  const fromAnalysis = await readAnalysisCacheScore(domain, env);
+  if (fromAnalysis) {
+    // Write badge cache in the background so next request is fast
+    backgroundWork(env, writeBadgeCache(domain, fromAnalysis, env));
+    trackBadgeDomain(domain, env);
+
+    const { score, tier } = resolveScoreFromRaw(fromAnalysis, axisParam);
+    if (dotJson) {
+      return shieldsJson(label, score, tier, fromAnalysis.analyzedAt);
+    }
+    return svgResponse(scoreBadgeOptions(label, score, tier, style), fromAnalysis.analyzedAt);
+  }
+
+  // True cold start — no badge cache, no analysis cache
   trackBadgeDomain(domain, env);
   triggerBackgroundAnalysis(domain, env);
 
@@ -233,4 +247,48 @@ function trackBadgeDomain(domain: string, env: Env): void {
 
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+/** Score data extracted from analysis cache */
+interface AnalysisCacheScore {
+  composite: number;
+  tier: string;
+  axes: Record<string, { score?: number }>;
+  analyzedAt: string;
+}
+
+/** Read score data from analysis cache when badge cache misses.
+ *  This handles the case where a domain was analyzed before badges existed. */
+async function readAnalysisCacheScore(domain: string, env: Env): Promise<AnalysisCacheScore | null> {
+  if (!env.REFERENCE_DATA) return null;
+  try {
+    const raw = await env.REFERENCE_DATA.get(`cache:analysis:${domain}`, "text");
+    if (!raw) return null;
+    const envelope = JSON.parse(raw) as { data: Record<string, unknown>; cached_at: number };
+    const ds = envelope.data?.domain_score as
+      | { composite?: number; tier?: string; axes?: Record<string, { score?: number }> }
+      | undefined;
+    if (!ds?.composite || !ds.tier || !ds.axes) return null;
+    const analyzedAt = (envelope.data?.analyzed_at as string) || new Date(envelope.cached_at).toISOString();
+    return {
+      composite: ds.composite,
+      tier: ds.tier,
+      axes: ds.axes,
+      analyzedAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve score from raw analysis cache data */
+function resolveScoreFromRaw(data: AnalysisCacheScore, axisParam: string | null): { score: number; tier: string } {
+  if (axisParam) {
+    const axisKey = axisParam.toLowerCase();
+    if (axisKey in data.axes) {
+      const score = data.axes[axisKey]?.score ?? 0;
+      return { score, tier: tierFromComposite(score) };
+    }
+  }
+  return { score: data.composite, tier: data.tier };
 }

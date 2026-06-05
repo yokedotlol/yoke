@@ -1,4 +1,4 @@
-import { FileDown, Link2, Share2 } from "lucide-react";
+import { Code, FileDown, Link2, Share2 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import type { Axis, AxisScoreData } from "../api";
 
@@ -63,6 +63,10 @@ interface ShareBarProps {
 
 export function ShareBar({ domain, composite, tier, axes, analyzedAt, pdfUrl }: ShareBarProps) {
   const [copied, setCopied] = useState(false);
+  const [embedOpen, setEmbedOpen] = useState(false);
+  const [embedFormat, setEmbedFormat] = useState<"markdown" | "html" | "shields">("markdown");
+  const [embedAxis, setEmbedAxis] = useState<string>("composite");
+  const [embedCopied, setEmbedCopied] = useState(false);
   const signedUrlRef = useRef<string | null>(null);
   const signingRef = useRef<Promise<string> | null>(null);
 
@@ -196,8 +200,93 @@ export function ShareBar({ domain, composite, tier, axes, analyzedAt, pdfUrl }: 
           <Share2 size={12} aria-hidden="true" />
         </button>
       )}
+
+      <button
+        type="button"
+        className={`share-btn${embedOpen ? " share-btn-active" : ""}`}
+        onClick={() => setEmbedOpen(!embedOpen)}
+        aria-label="Embed badge"
+        aria-expanded={embedOpen}
+      >
+        <Code size={12} aria-hidden="true" />
+        <span>Embed</span>
+      </button>
+
+      {embedOpen && (
+        <div className="embed-section">
+          <div className="embed-preview">
+            <img
+              src={`${window.location.origin}/badge/${domain}${embedAxis !== "composite" ? `.svg?axis=${embedAxis}` : ".svg"}`}
+              alt={`Yoke badge for ${domain}`}
+              height="20"
+            />
+          </div>
+          <div className="embed-controls">
+            <select
+              className="embed-select"
+              value={embedAxis}
+              onChange={(e) => setEmbedAxis(e.target.value)}
+              aria-label="Badge axis"
+            >
+              <option value="composite">Composite</option>
+              <option value="security">Security</option>
+              <option value="speed">Speed</option>
+              <option value="foundations">Foundations</option>
+              <option value="reputation">Reputation</option>
+              <option value="discoverability">Discoverability</option>
+              <option value="email">Email</option>
+            </select>
+            <div className="embed-tabs">
+              {(["markdown", "html", "shields"] as const).map((fmt) => (
+                <button
+                  key={fmt}
+                  type="button"
+                  className={`embed-tab${embedFormat === fmt ? " embed-tab-active" : ""}`}
+                  onClick={() => setEmbedFormat(fmt)}
+                >
+                  {fmt === "markdown" ? "Markdown" : fmt === "html" ? "HTML" : "Shields.io"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="embed-snippet-wrapper">
+            <code className="embed-snippet">{getEmbedSnippet(domain, embedFormat, embedAxis)}</code>
+            <button
+              type="button"
+              className="embed-copy-btn"
+              onClick={() => {
+                const text = getEmbedSnippet(domain, embedFormat, embedAxis);
+                navigator.clipboard.writeText(text).then(() => {
+                  setEmbedCopied(true);
+                  setTimeout(() => setEmbedCopied(false), 2000);
+                });
+              }}
+            >
+              {embedCopied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+/** Generate embed snippet for the selected format and axis */
+function getEmbedSnippet(domain: string, format: "markdown" | "html" | "shields", axis: string): string {
+  const origin = window.location.origin;
+  const axisParam = axis !== "composite" ? `?axis=${axis}` : "";
+  const svgUrl = `${origin}/badge/${domain}.svg${axisParam}`;
+  const jsonUrl = `${origin}/badge/${domain}.json${axisParam}`;
+  const linkUrl = `${origin}/${domain}`;
+
+  switch (format) {
+    case "markdown":
+      return `[![Yoke](${svgUrl})](${linkUrl})`;
+    case "html":
+      return `<a href="${linkUrl}"><img src="${svgUrl}" alt="Yoke score for ${domain}"></a>`;
+    case "shields":
+      return `![Yoke](https://img.shields.io/endpoint?url=${encodeURIComponent(jsonUrl)}&link=${encodeURIComponent(linkUrl)})`;
+  }
 }
 
 /* Tiny inline SVG icons for social platforms */
