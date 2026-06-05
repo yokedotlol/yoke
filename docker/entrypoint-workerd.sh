@@ -66,6 +66,12 @@ if [ "$HIDE_CLI" = "true" ]; then
     -exec sed -i 's|CLI, API client, or extension|API client|g; s|CLI at your instance|API at your instance|g; s|CLI at it:|API at it:|g' {} +
 fi
 
+# ── Remove social rel="me" links when white-labeling ──────────────
+if [ "$SITE_NAME" != "Yoke" ]; then
+  find /app/client-dist -name '*.html' \
+    -exec sed -i '/rel="me".*yokedotlol/d' {} +
+fi
+
 # ── Ensure data directories exist ─────────────────────────────────
 mkdir -p /data/kv /data/d1
 
