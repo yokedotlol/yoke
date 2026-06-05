@@ -70,3 +70,4 @@ docs/internal/
 
 # Go build artifacts
 fly-proxy/yoke-probe
+SELF-HOSTING-STATE.md
