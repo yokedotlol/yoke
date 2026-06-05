@@ -103,3 +103,14 @@
 
 - [ ] **Fly proxy has zero public endpoints.** Every route requires `FLY_AUTH_SECRET` auth.
   - _Verify:_ `curl -s https://yoke-probe.fly.dev/health` without auth header must return 401.
+
+## Badges
+
+- [ ] **Badge endpoint is a pure cache read.** `/badge/*` routes must never trigger synchronous analysis. Response time must be <500ms under all conditions. Analysis is triggered only via `backgroundWork()` (non-blocking).
+  - _Verify:_ `grep -n 'await runAnalysis' worker/src/routes/api-badge.ts` — must return zero results. All `runAnalysis` calls must be inside `backgroundWork()`.
+
+- [ ] **Badge cache is a separate derived key.** `badge:<domain>` in KV, not the analysis cache `cache:analysis:<domain>`. Never modify analysis cache logic for badge purposes.
+  - _Verify:_ `grep -n 'cache:analysis' worker/src/badge-cache.ts` — must return zero results.
+
+- [ ] **Post-analysis enrichment is never duplicated.** All post-analysis side effects (share_url, pdf_url, badge_url, percentiles, badge cache write) live in the shared `finalizeResult()` function. Neither `api-core.ts` nor `analyze-stream.ts` should contain inline share_url/pdf_url/percentile injection.
+  - _Verify:_ `grep -n 'buildShareUrl\|buildPdfUrl\|injectPercentiles' worker/src/routes/api-core.ts worker/src/actions/analyze-stream.ts` — must return zero results (all moved to `finalize.ts`).

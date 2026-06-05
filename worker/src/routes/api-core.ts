@@ -1,14 +1,12 @@
 // Core API routes: analyze, compare, subdomains, subdomain-scan, suggestions
 import { runAnalysis } from "../actions/analyze/core";
+import { finalizeResult } from "../actions/analyze/finalize";
 import { analyzeDomainStream } from "../actions/analyze-stream";
 import { compareDomains } from "../actions/compare";
 import { scanSubdomains } from "../actions/subdomain-scan";
 import { getSubdomains } from "../actions/subdomains";
 import { getDomainSuggestions } from "../actions/suggestions";
-import { CORS_HEADERS, cleanDomain, getBaseUrl } from "../helpers";
-import { buildPdfUrl } from "../pdf-route";
-import { injectPercentiles } from "../percentiles";
-import { buildShareUrl } from "../share";
+import { CORS_HEADERS, cleanDomain } from "../helpers";
 import { trackUsage } from "../usage-tracking";
 import { addHeaders, checkRateLimit, json, parseBody, type RouteContext, rateLimitNoop, timingSafeEq } from "./shared";
 
@@ -45,41 +43,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     // Only consume rate-limit credit for non-cached results
     if (coreResult.kind !== "cached") await rl.record();
 
-    // Inject share_url into _meta if scoring data is available
+    // Enrich result with share URLs, badge URLs, and percentiles
     const resultData = coreResult.data as Record<string, unknown>;
-    const ds = resultData.domain_score as
-      | { composite?: number; tier?: string; axes?: Record<string, { score?: number }> }
-      | undefined;
-    if (ds?.composite != null && ds.tier && ds.axes) {
-      const analyzedAt = (resultData.analyzed_at as string) || new Date().toISOString();
-      const shareUrl = await buildShareUrl(
-        domain,
-        ds.composite,
-        ds.tier,
-        ds.axes,
-        analyzedAt,
-        getBaseUrl(request, env),
-        env,
-      );
-      if (shareUrl) {
-        resultData._meta = {
-          ...((resultData._meta as Record<string, unknown>) || {}),
-          share_url: shareUrl,
-        };
-      }
-
-      // Inject pdf_url alongside share_url
-      const pdfUrl = await buildPdfUrl(domain, analyzedAt, getBaseUrl(request, env), env);
-      if (pdfUrl) {
-        resultData._meta = {
-          ...((resultData._meta as Record<string, unknown>) || {}),
-          pdf_url: pdfUrl,
-        };
-      }
-    }
-
-    // Inject percentiles (non-blocking lookup, swallow errors)
-    await injectPercentiles(resultData, env);
+    await finalizeResult(domain, resultData, request, env);
 
     const resp = new Response(JSON.stringify(resultData), {
       headers: { "Content-Type": "application/json", ...CORS_HEADERS },

@@ -164,3 +164,12 @@
 
 **Don't:** Run `go get` without checking the go.mod diff afterward.
 **Do:** After any `go get`, verify `go.mod` still declares the Go version matching your Dockerfile. If it auto-bumps, manually revert the `go` directive line. Pin to the version in your build toolchain.
+
+---
+
+### Post-analysis enrichment was duplicated across two code paths
+
+**What happened:** The JSON path (`api-core.ts`) and SSE path (`analyze-stream.ts`) both independently injected `share_url`, `pdf_url`, and percentiles after analysis. Adding a new side effect (badge cache write) to only one path would silently miss the other. This is the same class of bug as the percentile injection issue from June 1.
+
+**Don't:** Add post-analysis side effects directly to `api-core.ts` or `analyze-stream.ts`. Don't duplicate enrichment logic across code paths.
+**Do:** All post-analysis enrichment goes through the shared `finalizeResult()` function in `worker/src/actions/analyze/finalize.ts`. Both paths call it once. New side effects are added in one place and automatically apply to both JSON and SSE responses.

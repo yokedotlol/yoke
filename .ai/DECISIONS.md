@@ -328,3 +328,27 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **Why:** Free tier of UptimeRobot doesn't include custom subdomain. A footer link is lightweight and avoids maintaining two status pages.
 **Rejected:** Embedding UptimeRobot widget inline → adds external JS dependency, CORS/CSP concerns. Custom subdomain → paid feature, not worth it.
 **Directive:** `UPTIME_URL` is optional. When set, shows "Uptime History" link in `/status` footer. Self-hosters can point it at their own monitoring.
+
+---
+
+### 2026-06-05 — Embeddable badges: shields-style pip badges with 4-layer cache warming
+
+**What changed:** Added embeddable domain score badges at `/badge/<domain>.svg` (direct SVG) and `/badge/<domain>.json` (Shields.io endpoint protocol). Badge endpoint is a pure KV read — never triggers synchronous analysis, always responds in <500ms.
+
+**Badge cache strategy — 4 layers:**
+1. **Natural traffic** — every analysis writes a `badge:<domain>` KV entry (~200 bytes, 48h TTL) as a side effect. Most badge domains stay warm from normal Yoke usage.
+2. **Stale-while-revalidate** — badge request checks `analyzedAt`; if >20h old, serves current data immediately and kicks off background re-analysis via `waitUntil`.
+3. **Pre-warm cron (every 4h)** — CF Workers scheduled handler sweeps `badge_domains` D1 table, re-analyzes only domains with missing or expired cache entries.
+4. **Cold start** — first-ever badge request for an unscanned domain returns a neutral gray "not yet scanned" badge and triggers background analysis.
+
+**Infrastructure:**
+- Separate `badge:<domain>` KV key (NOT retrofitted into the analysis cache — different TTL, different payload)
+- `badge_domains` D1 table in existing `yoke-stats` database for tracking domains with badge requests
+- CF Workers `scheduled` event handler for the pre-warm cron
+- `POST /api/admin/badge-sweep` admin endpoint for self-hosters to trigger sweeps without CF cron
+
+**Prerequisite refactor:** Extracted duplicated post-analysis enrichment (share_url, pdf_url, percentiles injection) from both JSON path (`api-core.ts`) and SSE path (`analyze-stream.ts`) into a shared `finalizeResult()` function in `worker/src/actions/analyze/finalize.ts`. Badge cache write and badge_url injection added to this shared function, eliminating the dual-path divergence bug class entirely.
+
+**Rejected:** Fast-path scoring without PageSpeed (run 5 of 6 axes in ~8s for quicker cold start) — adds scoring complexity, and the neutral "not yet scanned" badge handles cold starts cleanly. Making cache warming solely the user's responsibility (provide a GitHub Action) — reduces adoption; offered as an optional extra instead. Retrofitting stale-while-revalidate into the analysis cache (inflate TTL, embed internal freshness timestamp) — requires changing cache read logic everywhere; a separate badge cache key is much simpler.
+
+**Directive:** Badge endpoints (`/badge/*`) must never trigger synchronous analysis — always a pure KV read + optional background work. Badge cache is always a separate derived key (`badge:<domain>`), never part of the analysis cache (`cache:analysis:<domain>`). All post-analysis enrichment (share_url, pdf_url, badge_url, percentiles, badge cache write) must go through the shared `finalizeResult()` function — never duplicated across code paths.

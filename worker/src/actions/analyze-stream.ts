@@ -35,11 +35,9 @@
 // External integrators should use the JSON API (POST /api/analyze without
 // the Accept: text/event-stream header).
 
-import { CORS_HEADERS, type Env, getBaseUrl, normalizeDomain } from "../helpers";
-import { buildPdfUrl } from "../pdf-route";
-import { injectPercentiles } from "../percentiles";
-import { buildShareUrl } from "../share";
+import { CORS_HEADERS, type Env, normalizeDomain } from "../helpers";
 import { type AnalysisCallbacks, runAnalysis } from "./analyze/core";
+import { finalizeResult } from "./analyze/finalize";
 
 // SSE helper: format an event
 function sseEvent(event: string, data: unknown): string {
@@ -95,34 +93,12 @@ export async function analyzeDomainStream(
 
       const result = await runAnalysis(domain, env, skipCache, callbacks);
 
-      // Inject _meta (share_url, pdf_url) into the final result
+      // Shared enrichment: share_url, pdf_url, badge_url, percentiles, badge cache
       const resultData = result.data as Record<string, unknown>;
-      const ds = resultData.domain_score as
-        | { composite?: number; tier?: string; axes?: Record<string, { score?: number }> }
-        | undefined;
-      if (ds?.composite != null && ds.tier && ds.axes) {
-        const analyzedAt = (resultData.analyzed_at as string) || new Date().toISOString();
-        const baseUrl = getBaseUrl(request, env);
-        const shareUrl = await buildShareUrl(domain, ds.composite, ds.tier, ds.axes, analyzedAt, baseUrl, env);
-        const pdfUrl = await buildPdfUrl(domain, analyzedAt, baseUrl, env);
-        if (shareUrl || pdfUrl) {
-          resultData._meta = {
-            ...((resultData._meta as Record<string, unknown>) || {}),
-            ...(shareUrl ? { share_url: shareUrl } : {}),
-            ...(pdfUrl ? { pdf_url: pdfUrl } : {}),
-          };
-        }
-      }
+      await finalizeResult(domain, resultData, request, env);
 
-      // For cached results, just send the done event
-      if (result.kind === "cached") {
-        await injectPercentiles(result.data, env);
-        await send("done", result.data);
-      } else {
-        // Send final assembled result
-        await injectPercentiles(result.data, env);
-        await send("done", result.data);
-      }
+      // Send final assembled result
+      await send("done", result.data);
     } catch (err) {
       try {
         await send("error", { message: err instanceof Error ? err.message : "Analysis failed" });
