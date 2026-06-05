@@ -54,9 +54,9 @@ export default function PrivacyPage() {
       <Section title="Rate Limiting & IP Handling">
         <p>
           To prevent abuse, Yoke enforces per-IP rate limits. Your IP address is{" "}
-          <strong>never stored in raw form</strong>. Instead, we immediately hash it using SHA-256 with a daily-rotating
-          salt. The resulting hash is used only to count requests within a rate-limit window — it cannot be reversed to
-          recover your IP address, and it changes every day.
+          <strong>never stored in raw form</strong>. Instead, we immediately hash it using SHA-256 with a secret salt
+          and a daily-rotating component. The resulting hash is used only to count requests within a rate-limit window —
+          it cannot be reversed to recover your IP address, and it changes every day.
         </p>
         <p>
           Rate-limit records are automatically cleaned up within hours. No raw IP addresses are written to any database
@@ -68,8 +68,8 @@ export default function PrivacyPage() {
         <p>Yoke collects anonymous, aggregated request metadata to operate the service:</p>
         <ul style={{ paddingLeft: "1.5rem", margin: "0.75rem 0" }}>
           <li>
-            <strong>Visitor hash</strong> — the same daily-salted SHA-256 hash used for rate limiting, for unique
-            visitor counting
+            <strong>Visitor hash</strong> — the same secret-salted, daily-rotating SHA-256 hash used for rate limiting,
+            for unique visitor counting
           </li>
           <li>
             <strong>Country code</strong> — derived from Cloudflare's{" "}
@@ -172,8 +172,9 @@ export default function PrivacyPage() {
 
       <Section title="GDPR">
         <p>
-          Yoke does not store personal data as defined under GDPR. IP addresses are hashed before storage and cannot be
-          reversed. No cookies, accounts, or tracking identifiers are used. If you have questions about data handling,{" "}
+          Yoke does not store personal data as defined under GDPR. IP addresses are pseudonymized via SHA-256 with a
+          server-side secret salt before storage and cannot be reversed. No cookies, accounts, or tracking identifiers
+          are used. If you have questions about data handling,{" "}
           <a href="https://github.com/yokedotlol/yoke/issues" style={{ color: "var(--accent)" }}>
             open an issue
           </a>
