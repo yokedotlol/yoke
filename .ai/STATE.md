@@ -44,7 +44,7 @@
 | GitHub | yokedotlol/yoke |
 | KV namespace | `REFERENCE_DATA` (all caching) |
 | D1 database | `yoke-stats` (analytics/rate limits only) |
-| Fly proxy | Auto-deploys via GitHub Actions |
+| Fly proxy | Auto-deploys via GitHub Actions (push to main) |
 | Chrome Extension ID | fghkhjlelidaepapcdfjifnlcjmkgpcj |
 | Themes | 12 |
 | API endpoints | 21 total (11 public documented at `/api/docs`) |
@@ -130,7 +130,6 @@ All 9 batched decisions resolved. All product panels unanimous: ready for Linked
 ## Open / Known Issues
 
 - **BYOK system prompt missing:** P2 bug — BYO key AI analysis may skip system prompt assembly. See BACKLOG.md.
-- **Fly proxy deploy:** Requires manual `cd fly-proxy && fly deploy` by Kurt (no `FLY_API_TOKEN` in CI). Rate limiter code pushed but not yet deployed to Fly.
 - **Call-site migration:** Existing Fly probe call sites still use `fetchWithTimeout` + `getFlyAuthHeaders` directly. New `flyProbeFetch` helper available but not wired into all call sites yet.
 
 ## Launch
