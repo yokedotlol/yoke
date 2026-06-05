@@ -545,6 +545,20 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     });
   }
 
+  // POST /api/admin/badge-sweep — trigger badge pre-warm sweep
+  if (method === "POST" && path === "/api/admin/badge-sweep") {
+    if (!env.ADMIN_KEY || !timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY)) {
+      return adminJson({ error: "Unauthorized" }, 401);
+    }
+    try {
+      const { badgeSweep } = await import("../scheduled");
+      const result = await badgeSweep(env);
+      return adminJson({ ok: true, ...result });
+    } catch (e) {
+      return adminJson({ ok: false, error: e instanceof Error ? e.message : String(e) }, 500);
+    }
+  }
+
   // GET /api/docs — serve HTML for browsers, JSON for API clients
   if (method === "GET" && path === "/api/docs") {
     const accept = request.headers.get("Accept") || "";

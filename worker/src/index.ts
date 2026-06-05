@@ -6,12 +6,14 @@ import { CORS_HEADERS, getBaseUrl, getBranding, hashIp } from "./helpers";
 import { trackRequest } from "./request-tracking";
 import * as apiAdmin from "./routes/api-admin";
 import * as apiAi from "./routes/api-ai";
+import * as apiBadge from "./routes/api-badge";
 import * as apiCore from "./routes/api-core";
 import * as apiEnrichment from "./routes/api-enrichment";
 import * as pages from "./routes/pages";
 import type { RouteContext } from "./routes/shared";
 import { jsonError } from "./routes/shared";
 import * as staticRoutes from "./routes/static";
+import { handleScheduled } from "./scheduled";
 import { serveAssetOrFallback, wantsJSON } from "./spa";
 
 export default {
@@ -77,6 +79,11 @@ export default {
     const pageResp = await pages.handle(rc);
     if (pageResp) return pageResp;
 
+    // ── Badge routes (/badge/<domain>.svg, /badge/<domain>.json) ──
+    // Before API routes — badges are non-API, public, no /api/ prefix
+    const badgeResp = await apiBadge.handle(rc);
+    if (badgeResp) return badgeResp;
+
     // ── API routes ──
     if (path.startsWith("/api/") || path === "/usage") {
       // Hash client IP once for all API rate limiting
@@ -127,5 +134,9 @@ export default {
     }
 
     return serveAssetOrFallback(request, env);
+  },
+
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    await handleScheduled(event, env, ctx);
   },
 };
