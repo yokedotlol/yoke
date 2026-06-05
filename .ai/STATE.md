@@ -12,7 +12,7 @@
 | Worker (service) | 2.1.0 | `YOKE_VERSION` in `worker/src/helpers.ts` |
 | CLI | 1.5.0 | `cli/` GoReleaser tag `cli/v1.5.0` |
 | MCP Server | 1.0.0 | `mcp/package.json` |
-| Chrome Extension | — | `extension/manifest.json` |
+| Chrome Extension | 1.5.0 | `extension/manifest.json` (submitted + live on CWS) |
 
 ## Scoring
 
@@ -24,6 +24,7 @@
 | Composite method | Weighted arithmetic mean + outlier floor cap |
 | Tier labels | Excellent, Strong, Moderate, Weak, Critical |
 | Absent penalty | 0.30 × (1 + goodPrevalence) per signal (IDF-influenced) |
+| Balance badge | σ<8 balanced, 8-15 uneven, >15 lopsided |
 | Site archetypes | 7 |
 | AI model | DeepSeek V3 (via OpenRouter) |
 
@@ -47,6 +48,42 @@
 | Chrome Extension ID | fghkhjlelidaepapcdfjifnlcjmkgpcj |
 | Themes | 12 |
 | API endpoints | 21 total (11 public documented at `/api/docs`) |
+| UptimeRobot | Monitoring `/api/health`, status page linked from `/status` footer |
+
+### Self-Hosted Instance (yoke-test.lol)
+
+| Resource | Details |
+|----------|---------|
+| Server | Linode VPS, 4GB RAM, 2 vCPU, Ubuntu 24.04, `172.236.249.233` |
+| Stack | Docker Compose: Caddy (TLS/reverse proxy) + workerd (miniflare engine) + probe (SSL/PageSpeed) |
+| Domain | yoke-test.lol (Cloudflare DNS, unproxied) |
+| White-label | "MyPerf" branding via `SITE_NAME`, `HIDE_*` env vars |
+| Score | 91 Excellent (self-scan) |
+| Email security | SPF hardfail, DMARC reject, DKIM, MTA-STS enforce, DNSSEC, CAA |
+
+## Self-Hosting Architecture
+
+Docker Compose is the maintained deployment path. Three containers:
+
+- **caddy** — TLS termination (Let's Encrypt), static asset serving, reverse proxy to workerd. MTA-STS policy endpoint via env-templated MX hosts.
+- **workerd** — miniflare-based analysis engine with persistent KV (SQLite) + D1 (SQLite). Runtime config injected as external `/assets/config.js` (not inline script — CSP blocks inline).
+- **probe** — SSL/TLS probe + PageSpeed proxy (same Go binary as Fly proxy, self-contained).
+
+White-label branding: `SITE_NAME`, `SITE_TAGLINE`, `REPO_URL`, `FEEDBACK_URL`, `HIDE_EXTENSION`, `HIDE_CLI`, `HIDE_GITHUB` env vars. All optional with sensible defaults.
+
+Bare-metal is documented as "advanced/community-maintained" in `docs/SELF-HOSTING.md`.
+
+## Fly Proxy
+
+| Aspect | Details |
+|--------|---------|
+| Rate limiting | Global token bucket at 1000 req/s (`golang.org/x/time/rate`) |
+| Over-limit response | 429 + `Retry-After: 1` header |
+| Health endpoint | `GET /health` (authed) → `{"status":"ok","service":"yoke-probe","health":"green\|yellow\|red"}` |
+| Health tiers | green <50% utilization, yellow 50-80%, red >80% (or >5% rejections) |
+| Auth | `FLY_AUTH_SECRET` required on ALL endpoints including `/health` |
+
+Worker-side: `flyProbeFetch()` helper in `helpers.ts` handles auth + 429 retry (2s backoff, 1 retry). Existing call sites degrade gracefully on probe failure.
 
 ## Privacy & Data Handling
 
@@ -71,20 +108,30 @@
 
 | Hash | Description |
 |------|-------------|
-| `a8da63f` | seed-domains.sh for self-hosters, 250+ curated domains |
+| `bb29fae` | Optional UPTIME_URL on /status page footer |
+| `25f5053` | Fly probe: global rate limiter + authed health endpoint |
+| `f833450` | Templatize MTA-STS MX hosts via env vars |
+| `32c5339` | Gitignore BFG report artifacts |
+| `006db89` | SELF-HOSTING.md: white-label, security, email sections |
+| `0282c60` | Ungate legal/trust probes from main HTTP probe |
 | `9c01216` | Client-side domain pills replace `/_/showcase` |
-| `1c03e4b` | WordPress VIP in HOSTING_PATTERNS + test fix |
-| `a1ab990` | Hash user IPs, Brandfetch UA, news cache TTL |
-| `ebf7bae` | Comprehensive a11y fixes (skip link, WCAG AA, keyboard nav, ARIA) |
-| `f430b0a` | SECURITY.md with vulnerability reporting + data handling |
+| `a8da63f` | seed-domains.sh for self-hosters |
+
+## Panel Review Status
+
+| Run | Launch Readiness | Critical | Improved | Steady | Regressed |
+|-----|-----------------|----------|----------|--------|-----------|
+| #1 (Jun 3) | ~6.5/10 | 2 | — | — | — |
+| #2 (Jun 4 AM) | 8/10 | 0 | 10 | 10 | 0 |
+| #3 (Jun 4 PM) | 9/10 | 0 | 11 | 9 | 0 |
+
+All 9 batched decisions resolved. All product panels unanimous: ready for LinkedIn launch June 23.
 
 ## Open / Known Issues
 
-- **Fly proxy deploy**: Requires manual `cd fly-proxy && fly deploy` by Kurt (no `FLY_API_TOKEN` in CI env).
-- **External uptime monitoring**: UptimeRobot planned — reminder set for Saturday June 6.
-- **Chrome extension**: v1.5.0 ready, not yet submitted to Chrome Web Store — reminder set for Saturday June 6.
-- **Fly proxy rate limiting**: Researched (50 global, 10/IP/s, 2/s PageSpeed) but not yet implemented (~30-45 min Go work).
-- **Self-hosting on Linode**: Planned for Saturday June 6 — workerd + Caddy + Let's Encrypt on yoke-test.lol.
+- **BYOK system prompt missing:** P2 bug — BYO key AI analysis may skip system prompt assembly. See BACKLOG.md.
+- **Fly proxy deploy:** Requires manual `cd fly-proxy && fly deploy` by Kurt (no `FLY_API_TOKEN` in CI). Rate limiter code pushed but not yet deployed to Fly.
+- **Call-site migration:** Existing Fly probe call sites still use `fetchWithTimeout` + `getFlyAuthHeaders` directly. New `flyProbeFetch` helper available but not wired into all call sites yet.
 
 ## Launch
 

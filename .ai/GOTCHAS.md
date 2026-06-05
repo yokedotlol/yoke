@@ -137,3 +137,30 @@
 
 **Don't:** Assume `detectHosting()` checks HTML content. Don't skip CI verification because tests pass locally.
 **Do:** `detectHosting()` = headers/IP/rDNS patterns in `HOSTING_PATTERNS` (security.ts). `detectManagedHosting()` = deep detection with HTML patterns (wordpress.ts). Both run during analysis, but they're separate functions with separate inputs. Test the right one.
+
+---
+
+### CSP silently blocks inline scripts — blank page, no error
+
+**What happened:** Self-hosted instance showed a blank white page. Config was injected as `<script>window.__CONFIG__={...}</script>` inline. CSP `script-src 'self'` silently blocked it — no console error, config was just `undefined`, and the React app rendered nothing because it couldn't read feature flags.
+
+**Don't:** Inject runtime config as inline `<script>` tags.
+**Do:** Serve config as an external script file (`/assets/config.js`) loaded via `<script src="/assets/config.js">`. CSP allows scripts from `'self'` — which means same-origin external files, not inline blocks. When debugging blank-page issues, check CSP headers first.
+
+---
+
+### Docker workerd needs volume-mounted config, not baked-in
+
+**What happened:** First Docker build baked the worker bundle + config into the image. White-label env vars had no effect because config was frozen at build time.
+
+**Don't:** Bake runtime config into Docker images. Self-hosters can't rebuild.
+**Do:** Mount config as a volume or generate it at container startup from env vars. The `entrypoint.sh` pattern (generate `config.js` from env, then exec workerd) keeps images generic and config dynamic.
+
+---
+
+### Fly proxy Go module version bumped by `go get`
+
+**What happened:** Running `go get golang.org/x/time@v0.5.0` in `fly-proxy/` also bumped `go.mod` from `go 1.22` to `go 1.25`. The Dockerfile uses `golang:1.22-alpine`, so the build failed with a version mismatch.
+
+**Don't:** Run `go get` without checking the go.mod diff afterward.
+**Do:** After any `go get`, verify `go.mod` still declares the Go version matching your Dockerfile. If it auto-bumps, manually revert the `go` directive line. Pin to the version in your build toolchain.

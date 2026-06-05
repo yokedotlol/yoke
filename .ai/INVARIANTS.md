@@ -89,3 +89,17 @@
 
 - [ ] **CI must pass before declaring victory.** Typecheck + lint + all tests green.
   - _Verify:_ `npx vitest run && cd worker && bun run typecheck && npx @biomejs/biome check .`
+
+## Self-Hosting
+
+- [ ] **Config injection is always external.** Runtime config delivered via `/assets/config.js` external script, never inline `<script>`. CSP `script-src 'self'` must not break.
+  - _Verify:_ `grep -r 'window.__YOKE_CONFIG__' worker/src/index.ts` — must generate as external route, not inline in HTML.
+
+- [ ] **All infrastructure references are env-configurable.** No hardcoded MX hosts, mail providers, or domain-specific values in Docker/Caddy config.
+  - _Verify:_ `grep -r 'aspmx\|google\|gmail' docker-compose.yml Caddyfile` — should return zero hardcoded Google MX references.
+
+- [ ] **White-label env vars are optional with sensible defaults.** Missing `SITE_NAME` defaults to "Yoke", missing `HIDE_*` defaults to showing everything.
+  - _Verify:_ Check `config.js` generation in `index.ts` — all white-label vars must have fallback values.
+
+- [ ] **Fly proxy has zero public endpoints.** Every route requires `FLY_AUTH_SECRET` auth.
+  - _Verify:_ `curl -s https://yoke-probe.fly.dev/health` without auth header must return 401.

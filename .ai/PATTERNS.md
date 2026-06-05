@@ -84,6 +84,26 @@ CORS headers are applied by the `json()` helper in `helpers.ts` for public endpo
 - **No `__HTML__` / `__ROBOTS_TXT__` build-time globals** — use `env.ASSETS.fetch()`
 - **No CORS on admin endpoints** — use `adminJson()` not `json()`
 - **No editing `client/index.html` for the HTML shell** — edit the template in `client/build.ts`
+- **No inline `<script>` for config injection** — CSP blocks inline; use external `/assets/config.js`
+- **No hardcoded mail provider MX hosts** — use `MTA_STS_MX_*` env vars
+
+## Fly Proxy Patterns (`fly-proxy/main.go`)
+
+- **Auth on everything:** All endpoints require `Authorization: Bearer <FLY_AUTH_SECRET>`. No public surface.
+- **Rate limiting:** Global token bucket (`golang.org/x/time/rate`) at 1000 req/s. 429 + `Retry-After: 1` on exhaustion.
+- **Health tiers:** Rolling 60s counters → green/yellow/red. No raw numbers exposed externally.
+- **Worker-side helper:** Use `flyProbeFetch()` from `helpers.ts` for all probe calls — handles auth header injection and 429 retry (2s backoff, 1 retry). Degrades gracefully when probe is unreachable.
+- **Go version:** Pinned to 1.22 in Dockerfile. Don't let `go get` bump `go.mod` past this.
+
+## Self-Hosting Patterns
+
+Docker Compose is the maintained path. Key patterns:
+
+- **Runtime config via env vars:** White-label settings (`SITE_NAME`, `HIDE_*`, etc.) are injected by `entrypoint.sh` into `/assets/config.js` at container start. Never bake config into the image.
+- **External config script:** Client reads `window.__YOKE_CONFIG__` from `/assets/config.js` (external `<script src>`). CSP `script-src 'self'` allows this. Never use inline scripts.
+- **MTA-STS templating:** MX hosts are env vars (`MTA_STS_MX_1/2/3`). Caddyfile uses `{env.*}` placeholders. Self-hosters set their own mail provider's MX records.
+- **Persistent storage:** KV and D1 are SQLite files in Docker volumes. Don't put them in the image layer.
+- **Probe container:** Same Go binary as Fly proxy, runs SSL/TLS checks + PageSpeed proxying. Worker points to it via `FLY_PROXY_URL=http://probe:8080`.
 
 ## Testing
 

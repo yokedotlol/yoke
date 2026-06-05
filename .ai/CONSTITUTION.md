@@ -23,6 +23,15 @@ Open-source domain intelligence tool at [yoke.lol](https://yoke.lol). Users ente
 - **D1 `yoke-stats`** — durable stats only. Rate limits, endpoint usage, domain scores, daily snapshots. Never wipe.
 - There is NO second D1 database. The old `yoke-cache` D1 was fully decommissioned.
 
+### Self-Hosting
+
+Docker Compose is the maintained deployment path. Three containers: Caddy (TLS + reverse proxy + MTA-STS), workerd (miniflare), probe (SSL/PageSpeed Go binary). Bare-metal is documented but community-maintained.
+
+- **White-labeling** — `SITE_NAME`, `SITE_TAGLINE`, `REPO_URL`, `FEEDBACK_URL`, `HIDE_EXTENSION`, `HIDE_CLI`, `HIDE_GITHUB` env vars allow zero-code rebranding.
+- **Config injection** — runtime config delivered as external `/assets/config.js`, never inline `<script>` (CSP blocks inline).
+- **MTA-STS** — MX hosts via `MTA_STS_MX_1/2/3` env vars, not hardcoded.
+- **Monitoring** — `UPTIME_URL` env var adds an uptime link to `/status` footer. Optional.
+
 ## Scoring Philosophy
 
 **Deductive model** — every axis starts at 100 and subtracts deductions based on findings. Never starts at a baseline and adds.

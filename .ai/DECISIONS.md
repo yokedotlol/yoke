@@ -269,3 +269,62 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **Directive:** Legal and trust probes are independent of the main HTTP probe. Don't re-gate them.
 
 ---
+
+### 2026-06-04 — Docker Compose is the official self-hosting path
+
+**What changed:** Published comprehensive Docker Compose setup with three containers (Caddy + workerd + probe) as the maintained self-hosting deployment. Bare-metal documented as "advanced/community-maintained." Tested on Linode VPS (4GB/2vCPU) at yoke-test.lol.
+**Why:** Docker Compose gives reproducible, single-command deploys with TLS out of the box (Caddy + Let's Encrypt). Bare workerd/Caddy is fine but harder to maintain for end users.
+**Rejected:** Kubernetes (overkill for a single-instance tool), plain workerd without a container (too many manual steps for users).
+**Directive:** Docker Compose is the primary self-hosting path. All new infrastructure features (env vars, probe config, TLS) must work in Docker Compose first. Bare-metal is community-maintained.
+
+---
+
+### 2026-06-04 — White-label branding via environment variables
+
+**What changed:** Added `SITE_NAME`, `SITE_TAGLINE`, `REPO_URL`, `FEEDBACK_URL`, `HIDE_EXTENSION`, `HIDE_CLI`, `HIDE_GITHUB` env vars to support rebrandable self-hosted instances. Config injected via external `/assets/config.js` (not inline `<script>`).
+**Why:** Self-hosters (MSPs, agencies, consultants) need to rebrand the tool for their clients. Env vars keep it zero-code.
+**Rejected:** Inline `<script>` for config injection → violates CSP. Build-time branding → requires self-hosters to rebuild the client.
+**Directive:** All white-label config must be injectable at runtime via env vars. No self-hoster should need to rebuild the client or worker to rebrand. Config script must be external (CSP-compliant), never inline.
+
+---
+
+### 2026-06-04 — CSP config injection via external script, not inline
+
+**What changed:** Client config (`SITE_NAME`, feature flags) is injected as `/assets/config.js` served by the worker/Caddy, referenced via `<script src="/assets/config.js">`. Not via inline `<script>window.__CONFIG__=...</script>`.
+**Why:** CSP `script-src 'self'` blocks inline scripts. Early self-hosting had a blank page because inline config was silently blocked — no console error, just undefined config. External script is CSP-clean.
+**Directive:** Never inject config as an inline script. Always use the external `/assets/config.js` pattern. If new config vars are needed, add them to the `config.js` generation in `index.ts` and the Docker env template.
+
+---
+
+### 2026-06-04 — MTA-STS MX hosts templatized
+
+**What changed:** MTA-STS policy endpoint (`/.well-known/mta-sts.txt`) now reads MX hosts from `MTA_STS_MX_1`, `MTA_STS_MX_2`, `MTA_STS_MX_3` env vars instead of hardcoding Google Workspace MX records. Caddyfile and docker-compose.yml both support the env vars.
+**Why:** Self-hosters use different mail providers. Hardcoded Google MX makes MTA-STS fail for non-Google mail.
+**Directive:** All mail infrastructure references (MX hosts, DKIM selectors) must be configurable via env vars for self-hosters. No hardcoded mail provider assumptions.
+
+---
+
+### 2026-06-04 — Fly proxy rate limiting: global token bucket
+
+**What changed:** Added global 1000 req/s token bucket to the Go Fly proxy using `golang.org/x/time/rate` v0.5.0. Returns 429 + `Retry-After: 1` when exhausted. Rolling 60s window counters feed health tiers (green/yellow/red).
+**Why:** Safety ceiling to prevent runaway or abusive request volume from degrading probe performance. 1000 req/s is intentionally high — protective, not restrictive.
+**Rejected:** Per-IP rate limiting at the proxy level → adds state management complexity, already handled at the Worker layer. WAF-style rate limiting → overkill, Fly already has DDoS protection at the edge.
+**Directive:** Rate limiting at the proxy is a blunt safety valve. Fine-grained per-IP limits remain the Worker's responsibility. The proxy just prevents the aggregate from going out of control.
+
+---
+
+### 2026-06-04 — Fly health endpoint requires auth
+
+**What changed:** `/health` on the Fly proxy now requires `Authorization: Bearer <FLY_AUTH_SECRET>`. Returns 401 without it. Exposes health tier (green/yellow/red) but no raw metrics.
+**Why:** Kurt's directive: "Nobody touches the proxy. It's an abstraction not an entry point." Health data (even coarse tiers) reveals operational state — no reason to expose it publicly.
+**Rejected:** Public health endpoint with sanitized output → still reveals operational state, no benefit for a non-user-facing service.
+**Directive:** All Fly proxy endpoints require `FLY_AUTH_SECRET` auth. No public endpoints on the proxy.
+
+---
+
+### 2026-06-04 — UptimeRobot integration: link on /status, no embedded widget
+
+**What changed:** UptimeRobot monitors set up for yoke.lol. Link to UptimeRobot status page added to `/status` footer via `UPTIME_URL` env var. No embedded iframe or widget.
+**Why:** Free tier of UptimeRobot doesn't include custom subdomain. A footer link is lightweight and avoids maintaining two status pages.
+**Rejected:** Embedding UptimeRobot widget inline → adds external JS dependency, CORS/CSP concerns. Custom subdomain → paid feature, not worth it.
+**Directive:** `UPTIME_URL` is optional. When set, shows "Uptime History" link in `/status` footer. Self-hosters can point it at their own monitoring.
