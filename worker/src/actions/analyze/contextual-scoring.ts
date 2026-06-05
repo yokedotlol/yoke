@@ -136,6 +136,8 @@ export interface DomainScoreResult {
   tier: string;
   /** Cross-axis consistency: balanced (σ<8), uneven (σ 8-15), lopsided (σ>15). */
   balance: "balanced" | "uneven" | "lopsided";
+  /** Raw standard deviation of axis scores (rounded to 1 decimal). */
+  balanceStdDev: number;
   /** Axis whose tier is ≥2 tiers below the composite tier (lowest if multiple). */
   atRiskAxis: AtRiskAxis | null;
   /** Human-readable composite summary, e.g. "Strong 88, Balanced" or "Strong 88 — Security at risk (55)". */
@@ -532,16 +534,22 @@ const TIER_RANK: Record<string, number> = {
   Critical: 0,
 };
 
+export interface BalanceResult {
+  balance: "balanced" | "uneven" | "lopsided";
+  stdDev: number;
+}
+
 /** Classify cross-axis consistency from standard deviation of assessed axis scores. */
-export function computeBalance(axisScores: Record<Axis, number | null>): "balanced" | "uneven" | "lopsided" {
+export function computeBalance(axisScores: Record<Axis, number | null>): BalanceResult {
   const scores = (Object.values(axisScores) as (number | null)[]).filter((s): s is number => s != null);
-  if (scores.length < 2) return "balanced"; // can't measure spread with <2 axes
+  if (scores.length < 2) return { balance: "balanced", stdDev: 0 }; // can't measure spread with <2 axes
   const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
   const variance = scores.reduce((sum, s) => sum + (s - mean) ** 2, 0) / scores.length;
   const stdDev = Math.sqrt(variance);
-  if (stdDev < 8) return "balanced";
-  if (stdDev <= 15) return "uneven";
-  return "lopsided";
+  const rounded = Math.round(stdDev * 10) / 10;
+  if (stdDev < 8) return { balance: "balanced", stdDev: rounded };
+  if (stdDev <= 15) return { balance: "uneven", stdDev: rounded };
+  return { balance: "lopsided", stdDev: rounded };
 }
 
 /** Find the axis whose tier is ≥2 tiers below the composite tier (lowest wins). */
@@ -4551,7 +4559,7 @@ export function calculateDomainScore(opts: {
   for (const axis of axes) {
     rawScoresMap[axis] = axisScores[axis].score;
   }
-  const balance = computeBalance(rawScoresMap);
+  const { balance, stdDev: balanceStdDev } = computeBalance(rawScoresMap);
   const atRiskAxis = detectAtRiskAxis(tier, rawScoresMap);
   const compositeLabel = buildCompositeLabel(composite, tier, balance, atRiskAxis);
 
@@ -4559,6 +4567,7 @@ export function calculateDomainScore(opts: {
     composite,
     tier,
     balance,
+    balanceStdDev,
     atRiskAxis,
     compositeLabel,
     axes: axisScores,

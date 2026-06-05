@@ -306,7 +306,13 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
     // Add _meta field
     const dataRecord = data as Record<string, unknown>;
     const domainScore = dataRecord.domain_score as
-      | { composite?: number; tier?: string; axes?: Record<string, { score?: number }> }
+      | {
+          composite?: number;
+          tier?: string;
+          axes?: Record<string, { score?: number }>;
+          balance?: string;
+          balanceStdDev?: number;
+        }
       | undefined;
     const analyzedAt = (dataRecord.analyzed_at as string) || new Date().toISOString();
 
@@ -373,6 +379,8 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
         score: {
           composite: domainScore?.composite ?? null,
           tier: domainScore?.tier ?? "Unknown",
+          balance: domainScore?.balance ?? null,
+          balanceStdDev: domainScore?.balanceStdDev ?? null,
         },
         axes,
         scanned_at: analyzedAt,

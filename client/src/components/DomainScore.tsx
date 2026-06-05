@@ -21,14 +21,31 @@ function CompositeModifier({
   balance?: "balanced" | "uneven" | "lopsided";
   atRiskAxis?: AtRiskAxisData | null;
 }) {
-  if (!balance || balance === "balanced") return null;
+  if (!balance) return null;
 
   const isAtRisk = !!atRiskAxis;
-  const label = isAtRisk
-    ? `${AXIS_DISPLAY[atRiskAxis.axis] ?? atRiskAxis.axis} at risk (${atRiskAxis.score})`
-    : balance.charAt(0).toUpperCase() + balance.slice(1);
 
-  const color = isAtRisk ? "var(--red, #e53e3e)" : "var(--yellow, #d69e2e)";
+  let label: string;
+  let color: string;
+  let icon: string;
+
+  if (isAtRisk) {
+    label = `${AXIS_DISPLAY[atRiskAxis.axis] ?? atRiskAxis.axis} at risk (${atRiskAxis.score})`;
+    color = "var(--danger, #e53e3e)";
+    icon = "⚠️";
+  } else if (balance === "lopsided") {
+    label = "Lopsided";
+    color = "var(--danger, #e53e3e)";
+    icon = "🔀";
+  } else if (balance === "uneven") {
+    label = "Uneven";
+    color = "var(--warning, #d69e2e)";
+    icon = "↕️";
+  } else {
+    label = "Balanced";
+    color = "var(--success, #38a169)";
+    icon = "⚖️";
+  }
 
   return (
     <div
@@ -46,7 +63,7 @@ function CompositeModifier({
         color,
       }}
     >
-      {isAtRisk ? "⚠️" : "↕️"} {label}
+      {icon} {label}
     </div>
   );
 }

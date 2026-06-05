@@ -806,6 +806,8 @@ export interface DomainScoreData {
   tier: string;
   /** Cross-axis consistency: balanced (σ<8), uneven (σ 8-15), lopsided (σ>15). */
   balance?: "balanced" | "uneven" | "lopsided";
+  /** Raw standard deviation of axis scores (rounded to 1 decimal). */
+  balanceStdDev?: number;
   /** Axis whose tier is ≥2 tiers below the composite tier (lowest if multiple). */
   atRiskAxis?: AtRiskAxisData | null;
   /** Human-readable composite summary, e.g. "Strong 88, Balanced" or "Strong 88 — Security at risk (55)". */
