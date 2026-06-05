@@ -131,7 +131,7 @@ All 9 batched decisions resolved. All product panels unanimous: ready for Linked
 
 ## Open / Known Issues
 
-- **Call-site migration:** Existing Fly probe call sites still use `fetchWithTimeout` + `getFlyAuthHeaders` directly. New `flyProbeFetch` helper available but not wired into all call sites yet.
+_No open issues._
 
 ## Closed Issues
 
