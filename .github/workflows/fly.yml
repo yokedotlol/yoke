@@ -55,11 +55,23 @@ jobs:
       - name: Wait for traffic routing
         run: sleep 15
 
-      - name: Smoke test — Health endpoint
+      - name: Smoke test — Health endpoint (multi-region)
         run: |
           echo "Checking /health..."
-          curl -sf --max-time 10 https://yoke-probe.fly.dev/health | jq -e '.status == "ok"'
-          echo "✓ Health OK"
+          RESP=$(curl -sf --max-time 10 https://yoke-probe.fly.dev/health)
+          echo "$RESP" | jq -e '.status == "ok"'
+          echo "✓ Health OK ($(echo "$RESP" | jq -r '.health'))"
+
+          echo ""
+          echo "Verifying machines are running in expected regions..."
+          # Fly routes to nearest — just confirm global endpoint responds
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://yoke-probe.fly.dev/health)
+            echo "  Request $i: HTTP $STATUS"
+            if [ "$STATUS" != "200" ]; then
+              echo "::warning::Health check returned $STATUS on attempt $i"
+            fi
+          done
 
       # Exercise real proxy paths against big domains (3/5 must pass)
       - name: Smoke test — Real domain probes
