@@ -3,13 +3,13 @@
 > Volatile snapshot of the project. Updated after significant sessions.
 > Run `.ai/staleness-check.sh` to detect drift.
 
-**Last updated:** 2026-06-04
+**Last updated:** 2026-06-05
 
 ## Versions
 
 | Component | Version | Source |
 |-----------|---------|--------|
-| Worker (service) | 2.2.0 | `YOKE_VERSION` in `worker/src/helpers.ts` |
+| Worker (service) | 2.3.0 | `YOKE_VERSION` in `worker/src/helpers.ts` |
 | CLI | 1.5.0 | `cli/` GoReleaser tag `cli/v1.5.0` |
 | MCP Server | 1.0.0 | `mcp/package.json` |
 | Chrome Extension | 1.5.0 | `extension/manifest.json` (submitted + live on CWS) |
@@ -32,8 +32,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total tests | 548 |
-| Test files | 15 |
+| Total tests | 623 |
+| Test files | 18 |
 | Calibration tests | 293 (in `scoring-calibration.test.ts`) |
 
 ## Infrastructure
@@ -47,7 +47,8 @@
 | Fly proxy | Auto-deploys via GitHub Actions (push to main) |
 | Chrome Extension ID | fghkhjlelidaepapcdfjifnlcjmkgpcj |
 | Themes | 12 |
-| API endpoints | 21 total (11 public documented at `/api/docs`) |
+| API endpoints | 24 total (13 public documented at `/api/docs`) |
+| Cron triggers | Badge pre-warm every 4h (`0 */4 * * *`) |
 | UptimeRobot | Monitoring `/api/health`, status page linked from `/status` footer |
 
 ### Self-Hosted Instance (yoke-test.lol)
