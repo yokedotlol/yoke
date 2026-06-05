@@ -157,8 +157,13 @@ export async function getRequestAnalytics(db: D1Database | undefined, days: numb
       error_rate_pct: 0,
       by_country: [],
       top_domains: [],
-      by_day: [],
-      top_referrers: [],
+      visitors_per_day: [],
+      domains_per_day: [],
+      requests_per_day: [],
+      by_client_type: {},
+      by_hour: [],
+      by_status: {},
+      repeat_analysis_rate: 0,
     };
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
 

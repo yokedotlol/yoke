@@ -1,6 +1,6 @@
 // Cloudflare Worker environment bindings
 export interface Env {
-  STATS_DB?: D1Database;
+  STATS_DB: D1Database;
   ASSETS: { fetch: (request: Request) => Promise<Response> };
   /** Self-hosted font data bindings (workerd data embeds) — used when KV is unavailable */
   FONT_INTER_REGULAR?: ArrayBuffer;
@@ -26,7 +26,7 @@ export interface Env {
   /** HMAC secret for signing share card URLs */
   SHARE_SECRET?: string;
   /** KV namespace for reference data (retire.js DB, third-party patterns, etc.) */
-  REFERENCE_DATA?: KVNamespace;
+  REFERENCE_DATA: KVNamespace;
   /** Analysis cache TTL override in hours (default: 1) */
   CACHE_TTL_HOURS?: string;
   /** Comma-separated list of self-hosted domain names (for self-fetch bypass). Defaults to yoke.lol. */
