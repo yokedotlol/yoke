@@ -992,8 +992,6 @@ async function runAnalysisCore(
   const assetCdnResult = httpProbeSucceeded ? detectAssetCdn(html, domain) : null;
 
   const caaAnalysis = analyzeCaaRecords(dnsRecords);
-  const caaRecordsForTrust =
-    (caaAnalysis as { records?: Array<{ tag: string; value: string }> } | null)?.records ?? null;
 
   // ── Trust signals — already running since checks launched ──────────
   // trustSignalsPromise was kicked off right after checks started,
