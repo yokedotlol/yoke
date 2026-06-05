@@ -15,9 +15,11 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/oschwald/geoip2-golang"
+	"golang.org/x/time/rate"
 )
 
 var domainRe = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$`)
@@ -52,6 +54,53 @@ func initGeoIP() {
 		asnDB = adb
 		log.Printf("[geo] Loaded MaxMind GeoLite2-ASN from %s", asnPath)
 	}
+}
+
+// ─── Global Rate Limiter ────────────────────────────────────────────
+// Token bucket at 1000 req/s with burst of 1000. Protects against
+// runaway loops, not per-user abuse (worker is the only caller).
+
+var globalLimiter = rate.NewLimiter(1000, 1000)
+
+// Rolling counters for health tier (reset every 60s by background goroutine)
+var (
+	windowTotal    atomic.Int64
+	windowRejected atomic.Int64
+)
+
+func initHealthTicker() {
+	go func() {
+		ticker := time.NewTicker(60 * time.Second)
+		for range ticker.C {
+			windowTotal.Store(0)
+			windowRejected.Store(0)
+		}
+	}()
+}
+
+// healthTier returns green/yellow/red based on rejection ratio
+// green: 0-50% of limit utilization, yellow: 51-80%, red: 81-100%
+func healthTier() string {
+	total := windowTotal.Load()
+	if total == 0 {
+		return "green"
+	}
+	rejected := windowRejected.Load()
+	rejectRatio := float64(rejected) / float64(total)
+	// Map rejection ratio to utilization tiers:
+	// Any rejections mean we're near the limit
+	if rejectRatio > 0.05 {
+		return "red"
+	}
+	// Estimate utilization from request volume vs capacity (60K/min at 1000/s)
+	utilization := float64(total) / 60000.0
+	if utilization > 0.80 {
+		return "red"
+	}
+	if utilization > 0.50 {
+		return "yellow"
+	}
+	return "green"
 }
 
 // ─── SSRF Protection ────────────────────────────────────────────────
@@ -174,6 +223,9 @@ func main() {
 	// Initialize MaxMind GeoIP database
 	initGeoIP()
 
+	// Start health metric ticker (resets counters every 60s)
+	initHealthTicker()
+
 	server := &http.Server{
 		Addr:         ":" + port,
 		Handler:      mux,
@@ -211,20 +263,35 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Health check (always allowed, no auth required)
+	// Health check — requires auth, returns traffic tier (green/yellow/red)
 	if r.URL.Path == "/" || r.URL.Path == "/health" {
+		if !checkAuth(r) {
+			http.Error(w, `{"error":"unauthorized"}`, 403)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		serviceName := os.Getenv("SERVICE_NAME")
 		if serviceName == "" {
 			serviceName = "yoke-probe"
 		}
-		fmt.Fprintf(w, `{"status":"ok","service":"%s"}`, serviceName)
+		tier := healthTier()
+		fmt.Fprintf(w, `{"status":"ok","service":"%s","health":"%s"}`, serviceName, tier)
 		return
 	}
 
 	// Auth check — reject unauthorized requests for all endpoints except health
 	if !checkAuth(r) {
 		http.Error(w, `{"error":"unauthorized"}`, 403)
+		return
+	}
+
+	// Global rate limiting — 1000 req/s token bucket
+	windowTotal.Add(1)
+	if !globalLimiter.Allow() {
+		windowRejected.Add(1)
+		w.Header().Set("Retry-After", "1")
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, `{"error":"rate_limited","retry_after":1}`, 429)
 		return
 	}
 

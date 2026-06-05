@@ -219,6 +219,29 @@ export function getFlyProbeUrl(env: Env): string {
   return env.FLY_PROBE_URL || DEFAULT_FLY_PROBE_URL;
 }
 
+/**
+ * Fetch from the Fly probe with auth + 429 retry.
+ * On rate limit (429), waits 2s and retries once. Returns null if both attempts fail.
+ */
+export async function flyProbeFetch(
+  url: string,
+  env: Env,
+  opts: RequestInit & { timeout?: number } = {},
+): Promise<Response | null> {
+  const authSecret = env.FLY_AUTH_SECRET;
+  const headers = new Headers(opts.headers || {});
+  if (authSecret) headers.set("Authorization", `Bearer ${authSecret}`);
+  const fetchOpts = { ...opts, headers };
+
+  let resp = await fetchWithTimeout(url, fetchOpts);
+  if (resp.status === 429) {
+    await new Promise((r) => setTimeout(r, 2000));
+    resp = await fetchWithTimeout(url, fetchOpts);
+    if (resp.status === 429) return null;
+  }
+  return resp;
+}
+
 /** SHA-256 hash of IP + daily salt — privacy-safe rate-limit key.
  *  Truncated to 16 hex chars: enough for uniqueness, not reversible. */
 export async function hashIp(ip: string): Promise<string> {
