@@ -116,6 +116,29 @@ npm install -g @yokedotlol/mcp-server
 
 See [mcp/README.md](mcp/README.md) for configuration.
 
+## Badges
+
+Embed a live domain score badge in your README, docs, or website. Badges are auto-refreshed — scores stay within 24 hours of the latest analysis.
+
+**Direct SVG** (standalone, no external dependencies):
+```markdown
+![Yoke Score](https://yoke.lol/badge/stripe.com.svg)
+```
+
+**Shields.io endpoint** (use shields.io's rendering):
+```markdown
+![Yoke](https://img.shields.io/endpoint?url=https://yoke.lol/badge/stripe.com.json)
+```
+
+**Options:**
+| Parameter | Example | Description |
+|-----------|---------|-------------|
+| `axis` | `?axis=security` | Show a specific axis score |
+| `label` | `?label=My+Site` | Override badge label |
+| `style` | `?style=flat-square` | Sharp corners |
+
+Self-hosters: badges work out of the box. See [Self-Hosting docs](docs/SELF-HOSTING.md) for pre-warm cron setup.
+
 ## Architecture
 
 ```

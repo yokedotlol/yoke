@@ -865,6 +865,24 @@ Share cards use HMAC-SHA256 signed URLs for social sharing with OG image preview
 
 ---
 
+## Badges
+
+Embeddable badges work out of the box — every analysis automatically writes badge cache data. No extra setup required.
+
+**Pre-warm cron (optional):** On Cloudflare Workers, the badge pre-warm cron runs automatically every 4 hours via `wrangler.toml` triggers. For self-hosted deployments without CF cron:
+
+- **Option A:** Set up a system cron to hit the admin endpoint:
+  ```bash
+  # Every 4 hours — refresh badge cache for tracked domains
+  0 */4 * * * curl -s -X POST -H "X-Admin-Key: YOUR_ADMIN_KEY" http://localhost:8787/api/admin/badge-sweep
+  ```
+
+- **Option B:** Skip it. Layers 1 (natural traffic) and 2 (stale-while-revalidate) handle most cases. The pre-warm cron is only needed if you have badge consumers on pages that don't otherwise generate Yoke traffic.
+
+**White-label:** Badge label text uses the `SITE_NAME` environment variable (defaults to "Yoke").
+
+---
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |

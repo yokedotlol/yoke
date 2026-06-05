@@ -38,3 +38,15 @@ cd worker && bun run typecheck
 ```
 
 See `.ai/PATTERNS.md` for full build/deploy docs, coding patterns, and file reference.
+
+## Badges
+
+Embeddable shields-style domain score badges:
+
+- **`/badge/<domain>.svg`** — Direct SVG badge (standalone, no external deps)
+- **`/badge/<domain>.json`** — Shields.io endpoint protocol
+- **`POST /api/admin/badge-sweep`** — Admin: trigger badge pre-warm sweep
+
+KV key: `badge:<domain>` (48h TTL, ~200 bytes). D1 table: `badge_domains` (tracks requested domains). Badge cache is written as a side effect of every analysis via `finalizeResult()` in `worker/src/actions/analyze/finalize.ts`.
+
+Post-analysis enrichment (share_url, pdf_url, badge_url, percentiles, badge cache write) is centralized in `finalizeResult()` — never duplicate across code paths. See `.ai/GOTCHAS.md`.

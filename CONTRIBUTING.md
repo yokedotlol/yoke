@@ -52,18 +52,22 @@ yoke/
 │   │   ├── api-enrichment.ts # Company, news, social, reverse-ip, availability
 │   │   ├── api-ai.ts        # AI analysis, AI prompt
 │   │   ├── api-admin.ts     # Health, stats, cache, cleanup, scoring, docs
+│   │   ├── api-badge.ts     # Badge endpoints (/badge/<domain>.svg, .json)
 │   │   └── pages.ts         # Share cards, reports, SPA routing
 │   ├── checks/              # Analysis check registry (one file per check)
 │   │   ├── types.ts         # Check + CheckContext interfaces
 │   │   ├── registry.ts      # Ordered check array
 │   │   └── *.ts             # Individual checks (ssl.ts, rdap.ts, etc.)
 │   ├── actions/             # API action handlers
-│   ├── actions/analyze/     # Analysis pipeline (core.ts orchestrator)
+│   ├── actions/analyze/     # Analysis pipeline (core.ts orchestrator, finalize.ts enrichment)
 │   ├── config/              # Signal registry, scoring thresholds, cache config
 │   │   ├── signal-registry.ts   # Single source of truth for all scoring signals
 │   │   ├── scoring-thresholds.ts # Archetype weights + axis definitions
 │   │   └── contextual-scoring-types.ts
 │   ├── helpers.ts           # Shared utilities, SSRF protection, CORS, KV cache
+│   ├── badge-cache.ts       # Badge cache read/write (KV: badge:<domain>)
+│   ├── badge-svg.ts         # SVG badge renderer (shields.io style)
+│   ├── scheduled.ts         # CF Workers scheduled handler (badge pre-warm cron)
 │   ├── logger.ts            # Structured JSON logger
 │   └── spa.ts               # SPA serving, OG tag injection, CSP
 ├── client/src/              # React SPA (Vite + TypeScript)
@@ -72,13 +76,13 @@ yoke/
 ├── extension/               # Chrome extension (Manifest V3, side panel)
 ├── cli/                     # Go CLI (goreleaser, Homebrew tap)
 ├── prompts/                 # AI analysis prompt (.txt, imported by worker)
-└── tests/                   # Vitest test suite (594 tests)
+└── tests/                   # Vitest test suite (623 tests)
 ```
 
 ### Storage
 
-- **KV** (`REFERENCE_DATA`) — all caching. Domain results, recent lookups, AI analysis, subdomain scans. TTL-based expiry.
-- **D1** (`yoke-stats`) — durable stats only. Rate limits, endpoint usage, domain scores, daily snapshots, tab analytics.
+- **KV** (`REFERENCE_DATA`) — all caching. Domain results, recent lookups, AI analysis, subdomain scans, badge cache (`badge:<domain>`). TTL-based expiry.
+- **D1** (`yoke-stats`) — durable stats only. Rate limits, endpoint usage, domain scores, daily snapshots, tab analytics, badge domain tracking (`badge_domains` table).
 
 ## Adding a New Analysis Check
 
@@ -186,7 +190,7 @@ The Go CLI at `cli/` is distributed via goreleaser and Homebrew (`yokedotlol/hom
 Tests use [Vitest](https://vitest.dev/) and live in `tests/`:
 
 ```bash
-npx vitest run              # Run all tests (594 tests)
+npx vitest run              # Run all tests (623 tests)
 npx vitest run --watch      # Watch mode
 npx vitest run scoring      # Run specific test file
 ```
@@ -217,7 +221,7 @@ If you need to bypass the hook for a WIP commit: `git commit --no-verify`.
 
 ## Pull Request Checklist
 
-- [ ] `npx vitest run` passes (all 594 tests)
+- [ ] `npx vitest run` passes (all 623 tests)
 - [ ] `cd worker && bun run typecheck` passes with zero errors
 - [ ] `npx @biomejs/biome check .` passes with zero errors (warnings are OK)
 - [ ] New checks include a test for the expected output shape
