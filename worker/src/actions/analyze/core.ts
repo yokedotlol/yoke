@@ -711,7 +711,7 @@ async function runAnalysisCore(
     const caaRecsForTrust =
       (caaAnalysisForTrust as { records?: Array<{ tag: string; value: string }> } | null)?.records ?? null;
 
-    return checkTrustSignals({
+    const ts = checkTrustSignals({
       headers: httpProbeOk ? trustRawHeaders : null,
       securityTxt: trustSecurityTxt,
       emailAuth: trustEmailAuth,
@@ -725,6 +725,12 @@ async function runAnalysisCore(
       domain,
       env,
     });
+    // Stream the trust result immediately — don't wait for the check barrier.
+    // This is the whole point of decoupling: the user sees trust signals complete
+    // in ~5s, not after PageSpeed finishes at ~30-60s.
+    completed++;
+    await onResult("_trust", null, completed, totalWithPostChecks, "Trust signals");
+    return ts;
   })();
 
   // Overall deadline: if checks collectively exceed this limit, proceed
@@ -993,13 +999,11 @@ async function runAnalysisCore(
 
   const caaAnalysis = analyzeCaaRecords(dnsRecords);
 
-  // ── Trust signals — already running since checks launched ──────────
+  // ── Trust signals — already streamed from inside the IIFE ──────────
   // trustSignalsPromise was kicked off right after checks started,
   // gated only on its actual dependencies (ssl, dnssec, email_auth, security_txt,
-  // well_known + HTTP probe). By now it's likely already resolved.
+  // well_known + HTTP probe). The result was streamed immediately when ready.
   const trustSignals = await trustSignalsPromise;
-  completed++;
-  await onResult("_trust", null, completed, totalWithPostChecks, "Trust signals");
 
   // Legal pages: now a registry check, pull from results
   const legal = (results.legal_pages ?? null) as LegalResult | null;
