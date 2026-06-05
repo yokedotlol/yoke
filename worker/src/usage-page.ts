@@ -27,7 +27,7 @@ function clientIcon(t: string): string {
   return { web: "🌐", extension: "🧩", cli: "⌨️", api: "🔌" }[t] || "❓";
 }
 
-export async function renderUsagePage(db: D1Database | undefined, days = 30): Promise<Response> {
+export async function renderUsagePage(db: D1Database | undefined, days = 30, siteName = "Yoke"): Promise<Response> {
   const [stats, rq] = await Promise.all([getUsageStats(db, days), getRequestAnalytics(db, days)]);
 
   // Endpoint traffic
@@ -60,7 +60,7 @@ export async function renderUsagePage(db: D1Database | undefined, days = 30): Pr
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Yoke Admin Dashboard</title>
+<title>${siteName} Admin Dashboard</title>
 <style>
   :root { --bg: #0a0a0a; --surface: #141414; --border: #262626; --text: #e5e5e5; --muted: #737373; --accent: #f59e0b; --cyan: #00d2eb; --green: #22c55e; --red: #ef4444; --purple: #a855f7; --blue: #3b82f6; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -107,7 +107,7 @@ export async function renderUsagePage(db: D1Database | undefined, days = 30): Pr
 </style>
 </head>
 <body>
-<h1>⚡ Yoke Admin Dashboard</h1>
+<h1>⚡ ${siteName} Admin Dashboard</h1>
 <p class="sub">Operational metrics · Last ${days} days · No user data · No IPs</p>
 
 <div class="nav">

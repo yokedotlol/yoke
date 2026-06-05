@@ -317,7 +317,7 @@ function checkAdminAuth(request: Request, adminKey: string | undefined): Respons
   if (!authHeader.startsWith("Basic ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"', ...CORS_HEADERS },
+      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Admin"', ...CORS_HEADERS },
     });
   }
   let pass: string;
@@ -327,13 +327,13 @@ function checkAdminAuth(request: Request, adminKey: string | undefined): Respons
   } catch {
     return new Response(JSON.stringify({ error: "Malformed credentials" }), {
       status: 401,
-      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"', ...CORS_HEADERS },
+      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Admin"', ...CORS_HEADERS },
     });
   }
   if (!pass || !timingSafeEq(pass, adminKey)) {
     return new Response(JSON.stringify({ error: "Invalid credentials" }), {
       status: 401,
-      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Yoke Admin"', ...CORS_HEADERS },
+      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Admin"', ...CORS_HEADERS },
     });
   }
   return null; // auth passed
@@ -454,7 +454,7 @@ export default {
       const days = parseInt(url.searchParams.get("days") ?? "30", 10);
       const stats = await getUsageStats(env.STATS_DB, days);
       if (path === "/api/usage") return adminJson(stats);
-      return renderUsagePage(env.STATS_DB, days);
+      return renderUsagePage(env.STATS_DB, days, brand.name);
     }
 
     // ── Share card routes ──
