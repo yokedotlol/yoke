@@ -19,8 +19,8 @@ async function ensureTable(db: D1Database): Promise<void> {
 }
 
 /** Track endpoint usage. Returns a promise — caller should pass to ctx.waitUntil() or await it. */
-export function trackUsage(db: D1Database | undefined, endpoint: string): Promise<void> {
-  if (!db) return Promise.resolve();
+export function trackUsage(db: D1Database | undefined, endpoint: string, disabled?: boolean): Promise<void> {
+  if (!db || disabled) return Promise.resolve();
   const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   return ensureTable(db)
     .then(() =>

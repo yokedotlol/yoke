@@ -299,7 +299,7 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
     const analyzeResp = await analyzeDomain(clean, env, false);
     // Track usage for the GET /{domain} shortcut — mirrors POST /api/analyze tracking
     if (env.STATS_DB) {
-      trackUsage(env.STATS_DB, "analyze").catch(() => {});
+      trackUsage(env.STATS_DB, "analyze", !!env.DISABLE_ANALYTICS).catch(() => {});
     }
     const data = await analyzeResp.json();
 

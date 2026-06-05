@@ -1429,6 +1429,16 @@ export function AIAnalysisPanel({
           <CrossSignalInsightsCard insights={insightsResult.cross_signal_insights} />
         )}
 
+        {/* Model attribution */}
+        {insightsResult && (
+          <span style={{ fontSize: "9px", color: "var(--dim)", fontStyle: "italic" }}>
+            Analysis by DeepSeek V3 via{" "}
+            <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" style={{ color: "var(--dim)" }}>
+              OpenRouter
+            </a>
+          </span>
+        )}
+
         {/* Error display */}
         {error && (
           <div

@@ -583,7 +583,7 @@ export default {
           const domain = cleanDomain(body.domain);
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const skipCache = body.force === true;
-          await trackUsage(env.STATS_DB, "analyze");
+          await trackUsage(env.STATS_DB, "analyze", !!env.DISABLE_ANALYTICS);
           // Support SSE streaming when client requests it
           const wantsStream = request.headers.get("Accept") === "text/event-stream";
           if (wantsStream) {
@@ -652,7 +652,7 @@ export default {
           const d1 = cleanDomain(body.domain1);
           const d2 = cleanDomain(body.domain2);
           if (!d1 || !d2) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
-          await trackUsage(env.STATS_DB, "compare");
+          await trackUsage(env.STATS_DB, "compare", !!env.DISABLE_ANALYTICS);
           await rl.record();
           const resp = await compareDomains({ domain1: d1, domain2: d2 }, env);
           _track("compare", resp.status, d1);
@@ -674,7 +674,7 @@ export default {
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
           if (!result.cached) await rl.record();
-          await trackUsage(env.STATS_DB, "subdomains");
+          await trackUsage(env.STATS_DB, "subdomains", !!env.DISABLE_ANALYTICS);
           _track("subdomains", 200, domain);
           return addHeaders(json(result), rl.headers);
         }
@@ -697,7 +697,7 @@ export default {
             );
           const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
           if (!result.cached) await rl.record();
-          await trackUsage(env.STATS_DB, "subdomains");
+          await trackUsage(env.STATS_DB, "subdomains", !!env.DISABLE_ANALYTICS);
           _track("subdomains", 200, domain);
           return addHeaders(json(result), rl.headers);
         }
@@ -715,7 +715,7 @@ export default {
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const result = await scanSubdomains(env.REFERENCE_DATA!, domain);
           if (!result.cached) await rl.record();
-          await trackUsage(env.STATS_DB, "subdomain-scan");
+          await trackUsage(env.STATS_DB, "subdomain-scan", !!env.DISABLE_ANALYTICS);
           _track("subdomain-scan", 200, domain);
           return addHeaders(json(result), rl.headers);
         }
@@ -733,7 +733,7 @@ export default {
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const result = await getCompanyInfo(env.REFERENCE_DATA!, domain, body.force, env.STATS_DB);
           if (!result.cached) await rl.record();
-          await trackUsage(env.STATS_DB, "company");
+          await trackUsage(env.STATS_DB, "company", !!env.DISABLE_ANALYTICS);
           _track("company", 200, domain);
           return addHeaders(json(result), rl.headers);
         }
@@ -751,7 +751,7 @@ export default {
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const result = await getNews(env.REFERENCE_DATA!, domain, env.STATS_DB);
           if (!result.cached) await rl.record();
-          await trackUsage(env.STATS_DB, "news");
+          await trackUsage(env.STATS_DB, "news", !!env.DISABLE_ANALYTICS);
           _track("news", 200, domain);
           return addHeaders(json(result), rl.headers);
         }
@@ -769,7 +769,7 @@ export default {
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           const result = await getSocialAccounts(env.REFERENCE_DATA!, domain, env);
           if (!result.cached) await rl.record();
-          await trackUsage(env.STATS_DB, "social");
+          await trackUsage(env.STATS_DB, "social", !!env.DISABLE_ANALYTICS);
           _track("social", 200, domain);
           return addHeaders(json(result), rl.headers);
         }
@@ -792,7 +792,7 @@ export default {
           }
           const result = await getReverseIP(env.REFERENCE_DATA!, ip);
           if (!result.cached) await rl.record();
-          await trackUsage(env.STATS_DB, "reverse-ip");
+          await trackUsage(env.STATS_DB, "reverse-ip", !!env.DISABLE_ANALYTICS);
           _track("reverse-ip", 200);
           return addHeaders(json(result), rl.headers);
         }
@@ -816,7 +816,7 @@ export default {
             env,
           );
           await rl.record();
-          await trackUsage(env.STATS_DB, "availability");
+          await trackUsage(env.STATS_DB, "availability", !!env.DISABLE_ANALYTICS);
           _track("availability", 200, domain);
           return addHeaders(json(result), rl.headers);
         }
@@ -829,7 +829,7 @@ export default {
           if (!body.domain) return json({ error: "domain is required", code: "MISSING_DOMAIN" }, 400);
           const result = await getDomainSuggestions(body.domain, env);
           await rl.record();
-          await trackUsage(env.STATS_DB, "suggestions");
+          await trackUsage(env.STATS_DB, "suggestions", !!env.DISABLE_ANALYTICS);
           _track("suggestions", 200, body.domain);
           return addHeaders(json(result), rl.headers);
         }
@@ -842,7 +842,7 @@ export default {
           const domain = cleanDomain(body.domain);
           if (!domain) return json({ error: "Invalid domain format", code: "INVALID_DOMAIN" }, 400);
           // Track usage only after validation succeeds
-          await trackUsage(env.STATS_DB, "ai-analysis");
+          await trackUsage(env.STATS_DB, "ai-analysis", !!env.DISABLE_ANALYTICS);
           // BYO API key passthrough — when present, use the client's OpenRouter key
           const byoKey = request.headers.get("X-OpenRouter-Key") || undefined;
           const byoModel = body.model || undefined;
@@ -976,7 +976,7 @@ export default {
 
         // POST /api/track-tab — anonymous tab view analytics
         if (method === "POST" && path === "/api/track-tab") {
-          if (!env.STATS_DB) return json({ ok: true });
+          if (!env.STATS_DB || env.DISABLE_ANALYTICS) return json({ ok: true });
           const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/track-tab", env);
           if (rl.blocked) return rl.blocked;
           const body = await parseBody<{ domain?: string; tab?: string }>(request);

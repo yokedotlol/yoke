@@ -1,6 +1,39 @@
 // ─── SSE Streaming Domain Analysis ───────────────────────────────────
 // Streams analysis results as Server-Sent Events as each check completes.
 // Delegates all analysis logic to the shared core pipeline.
+//
+// SSE Protocol Reference
+// ──────────────────────
+// Endpoint: POST /api/analyze with Accept: text/event-stream
+//
+// Events emitted (in order):
+//
+//   event: phase
+//   data:  { phase: string, status: "start"|"done", label: string,
+//            total?: number, checks?: string[] }
+//   — Marks the start/end of each analysis phase (dns, http, ssl, etc.).
+//     `total` is the check count for that phase; `checks` lists check names.
+//
+//   event: result
+//   data:  { key: string, value: unknown, completed?: number, total?: number,
+//            label?: string, error?: boolean }
+//   — Emitted as each individual check completes. `key` is the result field
+//     name (e.g. "dns", "ssl", "headers"). `error: true` means the check
+//     failed but analysis continues.
+//
+//   event: done
+//   data:  <full AnalysisResult JSON>
+//   — Final assembled result, identical in shape to the JSON API response.
+//     Includes domain_score, _meta (share_url, pdf_url), and percentiles.
+//     Sent for both fresh and cached results.
+//
+//   event: error
+//   data:  { message: string }
+//   — Terminal error — the stream closes after this event.
+//
+// The browser client (client/src/api.ts) is the primary consumer.
+// External integrators should use the JSON API (POST /api/analyze without
+// the Accept: text/event-stream header).
 
 import { CORS_HEADERS, type Env, getBaseUrl, normalizeDomain } from "../helpers";
 import { buildPdfUrl } from "../pdf-route";
