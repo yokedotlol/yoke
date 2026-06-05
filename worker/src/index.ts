@@ -444,7 +444,7 @@ export default {
 
     // Status page — server-rendered, public
     if (method === "GET" && path === "/status") {
-      return renderStatusPage(env.STATS_DB, baseUrl, brand.name, brand.repoUrl);
+      return renderStatusPage(env.STATS_DB, baseUrl, brand.name, brand.repoUrl, env.UPTIME_URL);
     }
 
     // Usage dashboard — admin-only, basic auth with ADMIN_KEY secret

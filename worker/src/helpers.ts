@@ -39,6 +39,7 @@ export interface Env {
   REPO_URL?: string;
   /** Custom feedback/issue URL (default: repo issues) */
   FEEDBACK_URL?: string;
+  UPTIME_URL?: string;
   /** Custom Chrome extension URL (default: Yoke extension) */
   EXTENSION_URL?: string;
   /** Set "true" to hide Chrome extension links */

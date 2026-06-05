@@ -73,6 +73,7 @@ export async function renderStatusPage(
   baseUrl = "https://yoke.lol",
   siteName = "Yoke",
   repoUrl = "https://github.com/yokedotlol/yoke",
+  uptimeUrl?: string,
 ): Promise<Response> {
   const data = await getStatusPageData(db);
 
@@ -153,7 +154,7 @@ export async function renderStatusPage(
     ${rows}
     <footer>
       <span>Updated ${escHtml(data.generated_at)} · Errors auto-prune after 7 days</span>
-      <span><a href="${baseUrl}">${escHtml(new URL(baseUrl).hostname)}</a>${repoUrl ? ` · <a href="${escHtml(repoUrl)}">Source</a>` : ""}</span>
+      <span>${uptimeUrl ? `<a href="${escHtml(uptimeUrl)}">Uptime History</a> · ` : ""}<a href="${baseUrl}">${escHtml(new URL(baseUrl).hostname)}</a>${repoUrl ? ` · <a href="${escHtml(repoUrl)}">Source</a>` : ""}</span>
     </footer>
   </div>
 </body>
