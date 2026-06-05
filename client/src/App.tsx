@@ -235,8 +235,8 @@ function useStreamingAnalysis() {
             };
             setProgress((prev) => {
               const checks = new Map(prev.checks);
-              // Populate pending checks when phase2 starts
-              if (d.phase === "phase2" && d.checks) {
+              // Populate pending checks when parallel analysis starts
+              if (d.phase === "checks" && d.checks) {
                 for (const c of d.checks) {
                   if (!checks.has(c.key)) {
                     checks.set(c.key, { label: c.label, done: false });
@@ -329,7 +329,7 @@ const sIcon = <div className="w-3.5 h-3.5 rounded" style={{ background: "var(--b
 
 // Check if partial data has enough to render tabs
 function hasEnoughForTabs(partial: Partial<AnalysisResult>): boolean {
-  // Show tabs as soon as we have DNS (phase 1 result)
+  // Show tabs as soon as we have DNS results
   return !!partial.dns;
 }
 

@@ -293,7 +293,7 @@ const HOSTING_ISPS = [
   { pattern: /discord/i, name: "Discord" },
 ] as const;
 
-// ─── Default fallback values for Phase 2 checks ─────────────────────
+// ─── Default fallback values for check timeouts/failures ─────────────────────
 
 const DEFAULT_PERFORMANCE: PerformanceResult = {
   score: null,
@@ -311,7 +311,7 @@ const DEFAULT_STATUS: StatusShape = {
   is_up: false,
   status_code: null,
   response_time_ms: null,
-  error: "Phase 2 promise rejected",
+  error: "Check promise rejected",
   status_label: "error",
   http_blocked: false,
 };
@@ -450,7 +450,7 @@ async function runAnalysisCore(
     }
   }
 
-  // ── Phase 0: Quick NXDOMAIN check ────────────────────────────────
+  // ── Quick NXDOMAIN check ──────────────────────────────────────────
   try {
     const quickData = await dohQuery(domain, "A");
     if (quickData && quickData.Status === 3) {
@@ -471,7 +471,7 @@ async function runAnalysisCore(
     /* DNS check failed, proceed with full analysis */
   }
 
-  // ── Phase 1: DNS + HTTP (HTTP runs concurrently with Phase 2) ────
+  // ── DNS resolution + HTTP probe (concurrent) ──────────────────────
   await onPhase("dns", "running", "Resolving DNS…");
 
   const dnsPromise = checkDns(domain);
@@ -481,7 +481,7 @@ async function runAnalysisCore(
   const dnsRecords: DnsRecord[] = await dnsPromise.catch(() => [] as DnsRecord[]);
   await onResult("dns", { records: dnsRecords });
 
-  // ── Phase 2: Launch checks immediately — don't wait for HTTP ─────
+  // ── Launch all checks in parallel — don't wait for HTTP ───────────
   const ip = dnsRecords.find((r) => r.type === "A")?.data;
   const domainIsSubdomain = isSubdomain(domain);
 
@@ -539,7 +539,7 @@ async function runAnalysisCore(
     await Promise.all(circuitChecks);
   }
 
-  // Launch all Phase 2 checks from the registry (one file per check — see worker/src/checks/)
+  // Launch all checks from the registry (one file per check — see worker/src/checks/)
   // Checks with tripped circuits are skipped — they resolve to defaults immediately.
   const checks = registry.map((check) => {
     const timeoutMs = check.timeout ?? PER_CHECK_TIMEOUT_MS;
@@ -578,7 +578,7 @@ async function runAnalysisCore(
   ];
   const totalWithPostChecks = checks.length + POST_CHECK_STEPS.length;
 
-  await onPhase("phase2", "running", `Running ${checks.length} checks…`, totalWithPostChecks, [
+  await onPhase("checks", "running", `Running ${checks.length} checks…`, totalWithPostChecks, [
     ...checks.map((c) => ({ key: c.key, label: c.label })),
     ...POST_CHECK_STEPS,
   ]);
@@ -587,10 +587,25 @@ async function runAnalysisCore(
   const results: Record<string, unknown> = {};
   let completed = 0;
 
+  // Per-key resolvers: allow downstream consumers to await specific check results
+  // without waiting for the full check barrier. Used by trust signals to start
+  // as soon as its dependencies (ssl, dnssec, emailAuth, etc.) are ready.
+  const keyResolvers = new Map<string, () => void>();
+  const keyPromises = new Map<string, Promise<void>>();
+  for (const check of checks) {
+    let resolve: () => void;
+    const p = new Promise<void>((r) => {
+      resolve = r;
+    });
+    keyResolvers.set(check.key, resolve!);
+    keyPromises.set(check.key, p);
+  }
+
   const wrappedPromises = checks.map(({ key, promise, label, default: defaultValue, skipped }) =>
     promise.then(
       (value) => {
         results[key] = value;
+        keyResolvers.get(key)?.();
         completed++;
 
         // Record success with circuit breaker (only when we actually called the upstream)
@@ -602,7 +617,7 @@ async function runAnalysisCore(
 
         // When _status arrives, compute and send early enhanced status.
         // NOTE: HTTP probe may still be in-flight at this point (runs concurrently
-        // with Phase 2), so early status uses DNS + the status check's own result only.
+        // concurrently with checks), so early status uses DNS + the status check's own result only.
         // The final assembly will incorporate HTTP probe data for the definitive status.
         if (key === "_status") {
           const sr = value as StatusShape | null;
@@ -638,6 +653,7 @@ async function runAnalysisCore(
       },
       (err) => {
         results[key] = defaultValue;
+        keyResolvers.get(key)?.();
         completed++;
         // Log API error for observability
         logApiError(env.STATS_DB, {
@@ -655,12 +671,68 @@ async function runAnalysisCore(
     ),
   );
 
-  // Overall Phase 2 deadline: if checks collectively exceed this limit, proceed
+  // ── Launch trust signals early — awaits only its actual dependencies ──
+  // Trust signals needs: ssl, dnssec, email_auth, security_txt, well_known + HTTP probe.
+  // These all complete in 1-5s. By awaiting per-key promises instead of the full
+  // full barrier, trust signals runs ~25-60s earlier (not blocked on PageSpeed).
+  const TRUST_DEPS = ["ssl", "dnssec", "email_auth", "security_txt", "well_known"] as const;
+  const trustSignalsPromise = (async () => {
+    // Wait for all trust dependency checks to complete
+    await Promise.all(TRUST_DEPS.map((k) => keyPromises.get(k) ?? Promise.resolve()));
+    // Also need the HTTP probe for headers/html/waf/hosting
+    const httpProbe = await httpProbePromise;
+    const httpProbeOk = httpProbe.httpProbeSucceeded;
+    const trustHtml = httpProbe.html;
+    const trustRawHeaders = httpProbeOk ? (httpProbe.headers ?? null) : null;
+
+    // Extract dependency results
+    const trustSsl = (results.ssl ?? null) as SslResult | null;
+    const trustDnssec = (results.dnssec ?? DEFAULT_DNSSEC) as DnssecResult;
+    const trustEmailAuth = (results.email_auth ?? DEFAULT_EMAIL_AUTH) as EmailAuthResult;
+    const trustSecurityTxt = (results.security_txt ?? DEFAULT_SECURITY_TXT) as SecurityTxtResult;
+    const trustWellKnown = (results.well_known ?? DEFAULT_WELL_KNOWN) as WellKnownResult;
+
+    // Derived values needed by trust signals
+    const trustIpInfo = (results.ip_info ?? null) as IpInfo | null;
+    const trustHosting = detectHosting(trustIpInfo, trustRawHeaders);
+    if (!trustHosting.provider && trustIpInfo?.isp) {
+      for (const { pattern, name } of HOSTING_ISPS) {
+        if (pattern.test(trustIpInfo.isp) || (trustIpInfo.org && pattern.test(trustIpInfo.org))) {
+          trustHosting.provider = name;
+          break;
+        }
+      }
+    }
+    const trustSetCookieRaw = trustRawHeaders?.["set-cookie"] ?? "";
+    const trustSetCookieHeaders = trustSetCookieRaw ? trustSetCookieRaw.split(/\n/) : [];
+    const trustWaf = httpProbeOk ? checkWaf(trustRawHeaders, trustHtml, trustSetCookieHeaders) : null;
+
+    const caaAnalysisForTrust = analyzeCaaRecords(dnsRecords);
+    const caaRecsForTrust =
+      (caaAnalysisForTrust as { records?: Array<{ tag: string; value: string }> } | null)?.records ?? null;
+
+    return checkTrustSignals({
+      headers: httpProbeOk ? trustRawHeaders : null,
+      securityTxt: trustSecurityTxt,
+      emailAuth: trustEmailAuth,
+      dnssec: trustDnssec,
+      ssl: trustSsl,
+      caaRecords: caaRecsForTrust,
+      wellKnown: trustWellKnown,
+      waf: trustWaf,
+      html: httpProbeOk ? trustHtml : "",
+      hosting: trustHosting,
+      domain,
+      env,
+    });
+  })();
+
+  // Overall deadline: if checks collectively exceed this limit, proceed
   // with whatever results have arrived. Leaves ~10s for scoring + response assembly.
-  const PHASE2_DEADLINE_MS = 70_000;
+  const DEADLINE_MS = 70_000;
   await Promise.race([
     Promise.allSettled(wrappedPromises),
-    new Promise<void>((resolve) => setTimeout(resolve, PHASE2_DEADLINE_MS)),
+    new Promise<void>((resolve) => setTimeout(resolve, DEADLINE_MS)),
   ]);
 
   // Fill in defaults for any checks that haven't completed yet
@@ -923,23 +995,11 @@ async function runAnalysisCore(
   const caaRecordsForTrust =
     (caaAnalysis as { records?: Array<{ tag: string; value: string }> } | null)?.records ?? null;
 
-  // ── Trust signals (post-assembly aggregation) ─────────────────────
-  // Trust signals aggregates results from multiple checks. It runs after
-  // check results are assembled, but no longer waits behind a Phase 3 barrier.
-  const trustSignals = await checkTrustSignals({
-    headers: httpProbeSucceeded ? effectiveHeaders : null,
-    securityTxt: securityTxt,
-    emailAuth,
-    dnssec: dnssecResult,
-    ssl: sslResult,
-    caaRecords: caaRecordsForTrust,
-    wellKnown: wellKnown,
-    waf: httpProbeSucceeded ? wafDetection : null,
-    html: httpProbeSucceeded ? html : "",
-    hosting,
-    domain,
-    env,
-  });
+  // ── Trust signals — already running since checks launched ──────────
+  // trustSignalsPromise was kicked off right after checks started,
+  // gated only on its actual dependencies (ssl, dnssec, email_auth, security_txt,
+  // well_known + HTTP probe). By now it's likely already resolved.
+  const trustSignals = await trustSignalsPromise;
   completed++;
   await onResult("_trust", null, completed, totalWithPostChecks, "Trust signals");
 
