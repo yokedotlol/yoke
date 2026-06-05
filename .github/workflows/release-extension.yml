@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'extension/**'
+      - '!extension/**/*.md'
       - '.github/workflows/release-extension.yml'
   workflow_dispatch:
     inputs:
