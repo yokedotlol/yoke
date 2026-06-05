@@ -2,10 +2,10 @@ import { registry } from "@worker/checks/registry";
 import { describe, expect, it } from "vitest";
 
 // ─── Registry Integrity Tests ─────────────────────────────────────────
-// These tests ensure the Phase 2 check registry maintains its contract:
+// These tests ensure the check registry maintains its contract:
 // correct order, unique keys, and required properties.
 
-describe("Phase 2 Check Registry", () => {
+describe("Check Registry", () => {
   /**
    * The canonical key order must match the original hardcoded order in core.ts.
    * If you add a new check, append it to the end of both this list and the registry.
@@ -40,6 +40,9 @@ describe("Phase 2 Check Registry", () => {
     "outage_links",
     "connection_timing",
     "social_accounts",
+    // Promoted from former "Phase 3" post-checks
+    "legal_pages",
+    "wordpress_security",
   ];
 
   it("should contain exactly the expected checks in the correct order", () => {
@@ -66,8 +69,8 @@ describe("Phase 2 Check Registry", () => {
     }
   });
 
-  it("should have 28 checks (Phase 2 total)", () => {
-    expect(registry.length).toBe(28);
+  it("should have 30 checks (28 original + 2 promoted)", () => {
+    expect(registry.length).toBe(30);
   });
 
   it("should have a default value defined for every check", () => {

@@ -1,6 +1,6 @@
-// ─── Phase 2 Check Registry ─────────────────────────────────────────
+// ─── Check Registry ─────────────────────────────────────────────────
 // Ordered array of all parallel analysis checks.
-// The orchestrator in core.ts iterates this registry to run Phase 2.
+// The orchestrator in core.ts iterates this registry to launch all checks.
 //
 // ## Adding a new check
 //
@@ -11,6 +11,10 @@
 // ORDER MATTERS: some downstream code references checks by index position
 // in the results array. Append new checks at the end unless you have a
 // specific reason to reorder.
+//
+// Checks that need HTML from the HTTP probe should await ctx.httpProbePromise
+// inside their run() function. This does NOT gate on PageSpeed or any other
+// slow check — it resolves as soon as the HTTP probe finishes (~1-5s).
 
 import { ansCheck } from "./ans";
 import { blocklistsCheck } from "./blocklists";
@@ -25,6 +29,7 @@ import { emailAuthCheck } from "./email-auth";
 import { greenHostingCheck } from "./green-hosting";
 import { greynoiseCheck } from "./greynoise";
 import { ipInfoCheck } from "./ip-info";
+import { legalPagesCheck } from "./legal-pages";
 import { llmsTxtCheck } from "./llms-txt";
 import { outageLinksCheck } from "./outage-links";
 import { performanceCheck, performanceDesktopCheck } from "./performance";
@@ -40,10 +45,13 @@ import { trancoCheck } from "./tranco";
 import type { Check } from "./types";
 import { waybackCheck } from "./wayback";
 import { wellKnownCheck } from "./well-known";
+import { wordPressSecurityCheck } from "./wp-security";
 
 /**
- * The canonical ordered list of Phase 2 parallel checks.
- * This order must match the original hardcoded order in core.ts.
+ * The canonical ordered list of parallel analysis checks.
+ * Checks run concurrently — no check blocks another.
+ * This order must match the original hardcoded order in core.ts
+ * (new entries appended at the end).
  */
 export const registry: readonly Check[] = [
   rdapCheck,
@@ -74,4 +82,9 @@ export const registry: readonly Check[] = [
   outageLinksCheck,
   connectionTimingCheck,
   socialAccountsCheck,
+  // ── Promoted from former "Phase 3" post-checks ───────────────────
+  // These were previously gated on Phase 2 completion. Now they run in
+  // parallel with all other checks, using ctx.httpProbePromise for HTML.
+  legalPagesCheck,
+  wordPressSecurityCheck,
 ] as const;

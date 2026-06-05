@@ -4,12 +4,11 @@
 
 import { logApiError, pruneApiErrors } from "../../api-errors";
 import { registry } from "../../checks/registry";
-import type { CheckContext } from "../../checks/types";
+import type { CheckContext, HttpProbeResult } from "../../checks/types";
 import { isCircuitOpen, recordFailure, recordSuccess } from "../../circuit-breaker";
 import { getAnalysisCacheTtlMs } from "../../config/cache";
-import { backgroundWork, type Env, fetchWithTimeout, normalizeDomain } from "../../helpers";
+import { backgroundWork, type Env, normalizeDomain } from "../../helpers";
 import { type BreachResult } from "../breaches";
-import { analyzeWordPress, probeWordPressSecurity } from "../wordpress";
 import { analyzeAccessibility } from "./accessibility";
 import { detectAssetCdn } from "./asset-cdn";
 import { checkCacheHeaders } from "./cache";
@@ -17,7 +16,6 @@ import {
   type AnsResult,
   calculateAiReadiness,
   detectHttpProtocols,
-  detectLegalPages,
   detectResourceHints,
   extractJsonLd,
   extractSocialMeta,
@@ -50,6 +48,7 @@ import type {
   HostingResult,
   HttpAnalysis,
   IpInfo,
+  LegalResult,
   LlmsTxtResult,
   MetaResult,
   PerformanceResult,
@@ -488,6 +487,28 @@ async function runAnalysisCore(
 
   // Build check context — httpResponseTimeMs is null until probe finishes;
   // only the performance check uses it and already handles null.
+  //
+  // httpProbePromise: resolves when the HTTP probe completes (~1-5s).
+  // Checks that need HTML/headers await this promise internally, without
+  // being gated on PageSpeed or any other slow check.
+  const httpProbePromise: Promise<HttpProbeResult> = httpPromise
+    .then((analysis: HttpAnalysis | null) => {
+      const code = analysis?.status_code ?? 0;
+      const succeeded = code >= 200 && code < 400;
+      return {
+        html: succeeded ? (analysis?.html ?? "") : "",
+        headers: succeeded ? (analysis?.headers?.raw ?? null) : null,
+        httpProbeSucceeded: succeeded,
+        httpAnalysis: analysis,
+      };
+    })
+    .catch(() => ({
+      html: "",
+      headers: null,
+      httpProbeSucceeded: false,
+      httpAnalysis: null,
+    }));
+
   const checkCtx: CheckContext = {
     domain,
     env,
@@ -496,6 +517,7 @@ async function runAnalysisCore(
     ip,
     httpResponseTimeMs: null,
     skipCache,
+    httpProbePromise,
   };
 
   // Per-check timeout: individual checks that exceed this limit fall back to defaults.
@@ -548,10 +570,9 @@ async function runAnalysisCore(
   });
 
   // Post-check async steps that run after all registry checks complete.
-  // Include them in the total so the progress bar doesn't stall at "Calculating score…".
+  // Trust signals aggregates results from multiple checks and runs after assembly.
+  // Scoring is always last. Include them in the total for the progress bar.
   const POST_CHECK_STEPS = [
-    { key: "_legal", label: "Legal pages" },
-    { key: "_wp_probes", label: "WordPress security" },
     { key: "_trust", label: "Trust signals" },
     { key: "_scoring", label: "Scoring" },
   ];
@@ -652,12 +673,12 @@ async function runAnalysisCore(
   // Probabilistic prune of old error rows (~5% of requests) — non-blocking
   if (Math.random() < 0.05) backgroundWork(env, pruneApiErrors(env.STATS_DB));
 
-  // ── Resolve HTTP probe (ran concurrently with Phase 2 checks) ────
-  const httpAnalysis: HttpAnalysis | null = await httpPromise.catch(() => null);
-  const httpStatusCode = httpAnalysis?.status_code ?? 0;
-  const httpProbeSucceeded = httpStatusCode >= 200 && httpStatusCode < 400;
-  const html = httpProbeSucceeded ? (httpAnalysis?.html ?? "") : "";
-  const rawHeadersOriginal = httpProbeSucceeded ? (httpAnalysis?.headers?.raw ?? null) : null;
+  // ── Resolve HTTP probe (via shared promise — already available to checks) ──
+  const httpProbe = await httpProbePromise;
+  const httpAnalysis = httpProbe.httpAnalysis;
+  const httpProbeSucceeded = httpProbe.httpProbeSucceeded;
+  const html = httpProbe.html;
+  const rawHeadersOriginal = httpProbe.headers;
 
   // Stream HTTP results
   if (httpAnalysis) {
@@ -853,7 +874,14 @@ async function runAnalysisCore(
   }
 
   const hosting = detectHosting(ipInfo, effectiveHeaders);
-  const wpDetails = httpProbeSucceeded ? analyzeWordPress(html, effectiveHeaders ?? {}, dnsRecords) : null;
+
+  // WordPress details: the wordpress_security registry check runs WP detection
+  // + security probes together. Use its result directly. Fall back to inline
+  // detection when the registry check returned null but HTTP probe succeeded
+  // (non-WP sites). analyzeWordPress is a pure sync function used only for the
+  // inline derived fields (version, theme, plugins, etc.) which the registry
+  // check already ran.
+  const wpDetails = (results.wordpress_security ?? null) as import("../wordpress").WordPressDetails | null;
 
   // ISP fallback for hosting provider
   if (!hosting.provider && ipInfo?.isp) {
@@ -895,15 +923,10 @@ async function runAnalysisCore(
   const caaRecordsForTrust =
     (caaAnalysis as { records?: Array<{ tag: string; value: string }> } | null)?.records ?? null;
 
-  // ── Parallel post-check I/O (legal pages, WP probes, trust signals) ──
-  // These three async operations are independent — run them concurrently
-  // and tick the progress bar as each resolves.
-
-  const legalPromise = detectLegalPages(httpProbeSucceeded ? html : "", domain, env);
-  const wpPromise = wpDetails
-    ? probeWordPressSecurity(domain, fetchWithTimeout).catch(() => null)
-    : Promise.resolve(null);
-  const trustPromise = checkTrustSignals({
+  // ── Trust signals (post-assembly aggregation) ─────────────────────
+  // Trust signals aggregates results from multiple checks. It runs after
+  // check results are assembled, but no longer waits behind a Phase 3 barrier.
+  const trustSignals = await checkTrustSignals({
     headers: httpProbeSucceeded ? effectiveHeaders : null,
     securityTxt: securityTxt,
     emailAuth,
@@ -917,34 +940,11 @@ async function runAnalysisCore(
     domain,
     env,
   });
+  completed++;
+  await onResult("_trust", null, completed, totalWithPostChecks, "Trust signals");
 
-  // Await all three in parallel, ticking progress as each settles
-  const [legalResult, wpProbesResult, trustResult] = await Promise.all([
-    legalPromise.then(async (v) => {
-      completed++;
-      await onResult("_legal", null, completed, totalWithPostChecks, "Legal pages");
-      return v;
-    }),
-    wpPromise.then(async (v) => {
-      completed++;
-      await onResult("_wp_probes", null, completed, totalWithPostChecks, "WordPress security");
-      return v;
-    }),
-    trustPromise.then(async (v) => {
-      completed++;
-      await onResult("_trust", null, completed, totalWithPostChecks, "Trust signals");
-      return v;
-    }),
-  ]);
-
-  const legal = legalResult;
-  if (wpDetails && wpProbesResult) {
-    wpDetails.xmlrpc_accessible = wpProbesResult.xmlrpc_accessible;
-    wpDetails.login_accessible = wpProbesResult.login_accessible;
-    wpDetails.user_enumeration = wpProbesResult.user_enumeration;
-    wpDetails.directory_listing = wpProbesResult.directory_listing;
-  }
-  const trustSignals = trustResult;
+  // Legal pages: now a registry check, pull from results
+  const legal = (results.legal_pages ?? null) as LegalResult | null;
 
   // Network health aggregation
   const networkHealth: NetworkHealth | null =
