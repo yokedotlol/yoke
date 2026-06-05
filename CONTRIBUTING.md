@@ -64,7 +64,7 @@ yoke/
 ├── extension/               # Chrome extension (Manifest V3, side panel)
 ├── cli/                     # Go CLI (goreleaser, Homebrew tap)
 ├── prompts/                 # AI analysis prompt (.txt, imported by worker)
-└── tests/                   # Vitest test suite (548 tests)
+└── tests/                   # Vitest test suite (566 tests)
 ```
 
 ### Storage
