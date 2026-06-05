@@ -32,11 +32,43 @@ const bindings = {
   HIDE_EXTENSION: process.env.HIDE_EXTENSION || "false",
   HIDE_CLI: process.env.HIDE_CLI || "false",
   HIDE_GITHUB: process.env.HIDE_GITHUB || "false",
+  IP_HASH_SALT: process.env.IP_HASH_SALT || "",
 };
 
 // Note: the worker code reads env.GOOGLE_PAGESPEED_API_KEY (not PAGESPEED_API_KEY)
 if (process.env.PAGESPEED_API_KEY) {
   bindings.GOOGLE_PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY;
+}
+
+// Optional API keys — only set binding if env var is present
+if (process.env.OPENROUTER_API_KEY) {
+  bindings.OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+}
+if (process.env.WHOISFREAKS_API_KEY) {
+  bindings.WHOISFREAKS_API_KEY = process.env.WHOISFREAKS_API_KEY;
+}
+
+// Analytics opt-out
+if (process.env.DISABLE_ANALYTICS) {
+  bindings.DISABLE_ANALYTICS = process.env.DISABLE_ANALYTICS;
+}
+
+// Cache TTL override (worker reads as string, parses to number)
+if (process.env.CACHE_TTL_HOURS) {
+  bindings.CACHE_TTL_HOURS = process.env.CACHE_TTL_HOURS;
+}
+
+// Rate limit overrides — worker reads these as strings
+for (const key of [
+  "RATE_LIMIT_ANALYZE",
+  "RATE_LIMIT_COMPARE",
+  "RATE_LIMIT_SUBDOMAIN",
+  "RATE_LIMIT_AVAILABILITY",
+  "RATE_LIMIT_RECURSIVE_DNS",
+]) {
+  if (process.env[key]) {
+    bindings[key] = process.env[key];
+  }
 }
 
 // ── Cache index.html for ASSETS service binding ──────────────────

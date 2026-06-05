@@ -25,9 +25,8 @@ All notable changes to Yoke are documented here.
 
 ### Documentation
 - **Self-hosting guide consolidated** — merged two overlapping guides into one comprehensive document at `docs/SELF-HOSTING.md` covering all three deployment paths (Cloudflare Workers, Docker Compose, bare metal). Root `SELF-HOSTING.md` is now a thin pointer.
-- **README refreshed** — updated counts: 256 fingerprints (was "100+"), 157 scoring signals, 29 WAF providers (was "11+"), 25+ CMP patterns (was "13+"), 130 subdomain prefixes (was "157").
+- **README refreshed** — updated counts: 256 fingerprints (was "100+"), 150+ scoring signals, 29 WAF providers (was "11+"), 25+ CMP patterns (was "13+"), 130 subdomain prefixes (was "157").
 - **CLI and extension READMEs** — added `cli/README.md` and `extension/README.md` with installation, usage, configuration, and development instructions.
-- **566 tests passing** — up from 548 (18 new tests for circuit breakers).
 - **GitHub issues #5 and #7 closed** — circuit breakers and self-hosting docs.
 
 ## [2.1.0] — 2026-06-04

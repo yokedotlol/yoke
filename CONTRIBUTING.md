@@ -76,7 +76,7 @@ yoke/
 ├── extension/               # Chrome extension (Manifest V3, side panel)
 ├── cli/                     # Go CLI (goreleaser, Homebrew tap)
 ├── prompts/                 # AI analysis prompt (.txt, imported by worker)
-└── tests/                   # Vitest test suite (623 tests)
+└── tests/                   # Vitest test suite
 ```
 
 ### Storage
@@ -190,7 +190,7 @@ The Go CLI at `cli/` is distributed via goreleaser and Homebrew (`yokedotlol/hom
 Tests use [Vitest](https://vitest.dev/) and live in `tests/`:
 
 ```bash
-npx vitest run              # Run all tests (623 tests)
+npx vitest run              # Run all tests
 npx vitest run --watch      # Watch mode
 npx vitest run scoring      # Run specific test file
 ```
@@ -221,7 +221,7 @@ If you need to bypass the hook for a WIP commit: `git commit --no-verify`.
 
 ## Pull Request Checklist
 
-- [ ] `npx vitest run` passes (all 623 tests)
+- [ ] `npx vitest run` passes
 - [ ] `cd worker && bun run typecheck` passes with zero errors
 - [ ] `npx @biomejs/biome check .` passes with zero errors (warnings are OK)
 - [ ] New checks include a test for the expected output shape
