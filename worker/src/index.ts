@@ -108,7 +108,20 @@ async function ensureRateLimitTable(db: D1Database): Promise<void> {
 // In-memory block cache: skip D1 queries for IPs already known to be rate-limited.
 // Key: "ip:endpoint", Value: unix timestamp when the block expires.
 // Lives only within a single Worker isolate — no cross-isolate leakage.
+// Capped at 1024 entries with LRU eviction to prevent unbounded growth.
+const BLOCK_CACHE_MAX = 1024;
 const blockCache = new Map<string, number>();
+
+function blockCacheSet(key: string, value: number): void {
+  // Delete first so re-insertion moves key to end (Map preserves insertion order)
+  blockCache.delete(key);
+  blockCache.set(key, value);
+  // Evict oldest entries if over capacity
+  if (blockCache.size > BLOCK_CACHE_MAX) {
+    const first = blockCache.keys().next().value;
+    if (first !== undefined) blockCache.delete(first);
+  }
+}
 
 interface RateLimitResult {
   blocked: Response | null;
@@ -191,7 +204,7 @@ async function checkRateLimit(
 
     if (count >= config.limit) {
       // Cache the block so subsequent requests skip D1 entirely
-      blockCache.set(cacheKey, resetAt);
+      blockCacheSet(cacheKey, resetAt);
       const rlHeaders = {
         "X-RateLimit-Limit": String(config.limit),
         "X-RateLimit-Remaining": "0",
@@ -268,6 +281,11 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
+/** Standardized error response: always { error, code, status } */
+function jsonError(error: string, code: string, status: number): Response {
+  return json({ error, code, status }, status);
+}
+
 /** Clone a response with additional headers (used for rate-limit metadata) */
 function addHeaders(resp: Response, extra: Record<string, string>): Response {
   if (!Object.keys(extra).length) return resp;
@@ -308,33 +326,26 @@ function timingSafeEq(a: string, b: string): boolean {
 
 /** Verify admin Basic auth. Returns null if valid, or a Response to return if invalid. */
 function checkAdminAuth(request: Request, adminKey: string | undefined): Response | null {
-  if (!adminKey)
-    return new Response(JSON.stringify({ error: "Admin key not configured" }), {
-      status: 503,
-      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-    });
+  if (!adminKey) return jsonError("Admin key not configured", "ADMIN_KEY_MISSING", 503);
   const authHeader = request.headers.get("Authorization") || "";
   if (!authHeader.startsWith("Basic ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Admin"', ...CORS_HEADERS },
-    });
+    const resp = jsonError("Unauthorized", "AUTH_REQUIRED", 401);
+    resp.headers.set("WWW-Authenticate", 'Basic realm="Admin"');
+    return resp;
   }
   let pass: string;
   try {
     const decoded = atob(authHeader.slice(6));
     [, pass] = decoded.split(":");
   } catch {
-    return new Response(JSON.stringify({ error: "Malformed credentials" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Admin"', ...CORS_HEADERS },
-    });
+    const resp = jsonError("Malformed credentials", "AUTH_MALFORMED", 401);
+    resp.headers.set("WWW-Authenticate", 'Basic realm="Admin"');
+    return resp;
   }
   if (!pass || !timingSafeEq(pass, adminKey)) {
-    return new Response(JSON.stringify({ error: "Invalid credentials" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Basic realm="Admin"', ...CORS_HEADERS },
-    });
+    const resp = jsonError("Invalid credentials", "AUTH_INVALID", 401);
+    resp.headers.set("WWW-Authenticate", 'Basic realm="Admin"');
+    return resp;
   }
   return null; // auth passed
 }
@@ -777,7 +788,7 @@ export default {
           const ipv4Re = /^(\d{1,3}\.){3}\d{1,3}$/;
           const ipv6Re = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
           if (!ipv4Re.test(ip) && !ipv6Re.test(ip)) {
-            return json({ error: "Invalid IP address format" }, 400);
+            return jsonError("Invalid IP address format", "INVALID_IP", 400);
           }
           const result = await getReverseIP(env.REFERENCE_DATA!, ip);
           if (!result.cached) await rl.record();
@@ -857,7 +868,7 @@ export default {
             60 * 60 * 1000,
           )) as Record<string, unknown> | null;
           if (!analysisCache) {
-            return json({ error: "Domain not yet analyzed. Run a standard analysis first." }, 400);
+            return jsonError("Domain not yet analyzed. Run a standard analysis first.", "NOT_ANALYZED", 400);
           }
           const prompt = buildAIPrompt(analysisCache);
           await rl.record();
@@ -954,7 +965,7 @@ export default {
               },
             });
           } catch {
-            return json({ error: "Stats temporarily unavailable" }, 503);
+            return jsonError("Stats temporarily unavailable", "STATS_UNAVAILABLE", 503);
           }
         }
 
@@ -969,7 +980,7 @@ export default {
           const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/track-tab", env);
           if (rl.blocked) return rl.blocked;
           const body = await parseBody<{ domain?: string; tab?: string }>(request);
-          if (!body.tab) return json({ error: "tab required" }, 400);
+          if (!body.tab) return jsonError("tab required", "MISSING_TAB", 400);
           try {
             await env.STATS_DB.prepare("INSERT INTO tab_views (tab, domain, ts) VALUES (?, ?, ?)")
               .bind(body.tab, body.domain || "", Date.now())
@@ -1478,7 +1489,8 @@ export default {
         const msg = err instanceof Error ? err.message : "Internal server error";
         // Return 400 for JSON parse errors (malformed request body)
         const status = err instanceof SyntaxError ? 400 : 500;
-        return json({ error: msg }, status);
+        const code = err instanceof SyntaxError ? "BAD_REQUEST" : "INTERNAL_ERROR";
+        return jsonError(msg, code, status);
       }
     }
 
@@ -1490,10 +1502,7 @@ export default {
     // return a JSON error instead of SPA HTML (helps curl users who mistype domains)
     const isStaticAsset = /\.(js|css|map|ico|png|svg|woff2?|json|webp|jpg|jpeg|gif|wasm|txt|xml)$/i.test(path);
     if (wantsJSON(request) && !isStaticAsset) {
-      return json(
-        { error: "Invalid domain format", hint: "Use a fully-qualified domain name (e.g., example.com)" },
-        400,
-      );
+      return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     }
 
     return serveAssetOrFallback(request, env);

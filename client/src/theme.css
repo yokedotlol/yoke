@@ -382,7 +382,7 @@
   --surface-hover: #d8e2d0;
   --text: #1a2e18;
   --text-secondary: #3e5838;
-  --dim: #5e7a56;
+  --dim: #597351;
   --border: #c0d4b8;
   --border-muted: #d2e0cc;
   --accent: #1a8a6e;
@@ -468,7 +468,7 @@
   --surface-hover: #e5ddd5;
   --text: #2d2024;
   --text-secondary: #6b555e;
-  --dim: #856872;
+  --dim: #7e6069;
   --border: #ddd2d6;
   --border-muted: #e8dfe3;
   --accent: #d14d72;
@@ -1360,4 +1360,16 @@ input.outline-none:focus-visible {
   z-index: 10000;
   text-decoration: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Reduced Motion ──────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

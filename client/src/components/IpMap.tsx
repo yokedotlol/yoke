@@ -172,6 +172,12 @@ export function IpMap({ data }: { data: AnalysisResult }) {
               {data.ip_info.city}, {data.ip_info.country}
             </span>
           ) : null}
+          <span style={{ fontFamily: "var(--font-ui)", fontSize: "9px", color: "var(--dim)", marginTop: "2px" }}>
+            IP geolocation by{" "}
+            <a href="https://www.maxmind.com" target="_blank" rel="noopener noreferrer" style={{ color: "var(--dim)" }}>
+              MaxMind GeoLite2
+            </a>
+          </span>
         </div>
       </div>
     </Panel>
