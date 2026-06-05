@@ -11,9 +11,9 @@ A fully independent Yoke server that:
 - Optionally integrates PageSpeed Insights with your own Google API key
 
 What's different from the hosted version:
-- **No KV cache** — each analysis runs fresh (results aren't stored between requests)
-- **No D1 database** — rate limiting, analytics, and admin stats are disabled
 - **No Tranco percentile data** — percentile badges won't appear
+- **Local KV + D1** — miniflare provides persistent KV and D1 backed by SQLite on disk (`/data`), so caching, rate limiting, and admin stats all work. Data lives in Docker volumes and survives restarts.
+- **No pre-seeded reference data** — the 5K domain corpus and Tranco rankings from yoke.lol aren't included. Your instance builds its own cache organically as domains are scanned.
 
 ---
 
@@ -101,7 +101,36 @@ curl -s https://YOUR_DOMAIN/api/analyze \
 curl -s https://YOUR_DOMAIN/example.com | jq '.domain_score'
 ```
 
-### 4. Configure the CLI
+### 4. White-Labeling
+
+Yoke supports full white-labeling through environment variables. Add these to your `.env`:
+
+```bash
+# ── Branding ──────────────────────────────────────────────────────
+SITE_NAME=MyPerf                             # Replaces "Yoke" throughout the UI
+SITE_TAGLINE=internal domain intelligence    # Shown on the homepage
+
+# ── Hide Yoke-specific links ─────────────────────────────────────
+HIDE_GITHUB=true       # Remove GitHub star link from footer
+HIDE_EXTENSION=true    # Remove Chrome Extension link from footer
+HIDE_CLI=true          # Remove CLI link from footer
+
+# ── Custom URLs ───────────────────────────────────────────────────
+FEEDBACK_URL=https://yoursite.com/feedback   # Replaces the default GitHub issues link
+# REPO_URL=                                  # Override the repo link (hidden if HIDE_GITHUB=true)
+# EXTENSION_URL=                             # Override the Chrome Web Store link
+```
+
+After changing branding variables, rebuild the workerd container:
+
+```bash
+docker compose up -d --build workerd
+docker compose restart caddy
+```
+
+The entrypoint patches the client assets at container startup — domain references, site name, and the runtime config are all applied automatically.
+
+### 5. Configure the CLI
 
 Point the Yoke CLI at your instance:
 
@@ -135,9 +164,59 @@ docker compose logs -f probe     # SSL/TLS probe
 
 ---
 
-## Option B: Bare Metal
+## Security Considerations
 
-If you prefer to run without Docker.
+Yoke ships a secure default without requiring additional infrastructure:
+
+- **TLS** — Caddy auto-provisions and renews certificates via Let's Encrypt
+- **Security headers** — CSP, X-Frame-Options, and other headers are set by the worker on every response
+- **Rate limiting** — per-IP, per-endpoint rate limiting is built into the application layer
+- **SSRF protection** — internal network requests are blocked; domain input is validated
+- **CORS policy** — configured for same-origin by default
+- **No stored user data** — Yoke doesn't handle authentication, passwords, or PII. The only user input is a domain name string.
+
+**Do I need a WAF?** Probably not. A WAF blocks exploit patterns (SQL injection, XSS payloads, path traversal) targeting attack surfaces that Yoke doesn't have. The application's attack surface is a single text input (a domain name), and all analysis is read-only.
+
+For production deployments expecting high traffic or targeted attacks, consider placing Yoke behind [Cloudflare in proxied mode](https://developers.cloudflare.com/fundamentals/concepts/how-cloudflare-works/) (free tier includes WAF rules, DDoS protection, and caching) or your existing reverse proxy.
+
+## Protecting Your Domain's Email Reputation
+
+Even if your Yoke instance doesn't send email, **your domain can be spoofed by anyone unless you explicitly prevent it**. An unprotected domain is a gift to phishers — they can send email that appears to come from your domain, and receiving mail servers have no way to know it's fake. If that happens, your domain ends up on blocklists, and your legitimate email (if you ever send any) stops being delivered.
+
+This isn't theoretical. Since February 2024, Google, Yahoo, and Microsoft all require SPF, DKIM, and DMARC for bulk senders. As of 2025, Microsoft rejects non-compliant email outright. Even for domains that don't send bulk email, missing authentication records signal to mail servers that you haven't secured your domain.
+
+### The minimum
+
+Set these DNS records to tell the world "nobody is authorized to send email from this domain":
+
+| Record | Type | Name | Value |
+|--------|------|------|-------|
+| **SPF** | TXT | `@` | `v=spf1 -all` |
+| **DMARC** | TXT | `_dmarc` | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s;` |
+
+This takes two minutes and protects your domain from being used in phishing attacks. The SPF record says "no servers are authorized to send mail for this domain" and the DMARC policy tells receivers to reject anything that tries.
+
+### If your domain handles email
+
+If you route email through your domain (even just for receiving), add:
+
+- **DKIM** — cryptographic signatures proving messages weren't tampered with. Your email provider generates these keys.
+- **MTA-STS** — forces TLS encryption for inbound mail delivery. Requires serving a policy file at `https://mta-sts.yourdomain/.well-known/mta-sts.txt`. The Docker Caddyfile includes an MTA-STS block you can enable.
+- **TLSRPT** — delivery failure reports for TLS issues: `v=TLSRPTv1; rua=mailto:tls-reports@yourdomain`
+- **CAA** — restricts which certificate authorities can issue certs for your domain.
+
+### Resources
+
+- [MXToolbox SuperTool](https://mxtoolbox.com/SuperTool.aspx) — check your SPF, DKIM, DMARC, and MX records
+- [Google Postmaster Tools](https://postmaster.google.com/) — monitor your domain's reputation with Gmail
+- [Cloudflare Email Security](https://developers.cloudflare.com/dns/manage-dns-records/how-to/email-security-records/) — guide to adding email security DNS records
+- [learndmarc.com](https://learndmarc.com/) — interactive DMARC learning tool
+
+---
+
+## Option B: Bare Metal (Advanced)
+
+> **Note:** Docker Compose (Option A) is the tested and maintained deployment path. Bare metal is documented for operators who prefer to manage services directly. The general approach is sound, but you may need to adapt paths and configurations to your environment.
 
 ### 1. Install Dependencies
 
