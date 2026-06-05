@@ -158,7 +158,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~10 min — server configuration",
     fixDescription: "Enable OCSP stapling",
     weightRange: [1, 2],
-    goodPrevalence: 0.347,
+    goodPrevalence: 0.344,
     promptGuidance:
       "OCSP stapling improves TLS handshake speed and privacy by including certificate revocation status in the handshake. Most modern servers support it.",
   },
@@ -171,7 +171,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~15 min — cipher suite configuration",
     fixDescription: "Enable forward secrecy (ECDHE key exchange)",
     weightRange: [2, 2],
-    goodPrevalence: 0.977,
+    goodPrevalence: 0.966,
     promptGuidance:
       "Forward secrecy (via ECDHE) ensures that compromising a server's private key doesn't decrypt past sessions. TLS 1.3 provides this by default.",
   },
@@ -197,7 +197,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [4, 4],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.522,
     promptGuidance:
       "HSTS prevents protocol downgrade attacks. Presence is a positive signal — weight 4, the highest security weight.",
     requiresHttpAccess: true,
@@ -229,7 +229,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~5 min — update header value",
     fixDescription: "Increase HSTS max-age to at least 1 year",
     weightRange: [1, 2],
-    goodPrevalence: 0.747,
+    goodPrevalence: 0.391,
     promptGuidance:
       "Recommended max-age ≥31536000 (1 year). Short max-age (<86400) undermines protection. Let's Encrypt 90-day rotation means long max-age requires reliable auto-renewal.",
     requiresHttpAccess: true,
@@ -244,7 +244,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.145,
     promptGuidance:
       "HSTS preload means domain is in browsers' built-in HSTS list. Requires max-age ≥1 year + includeSubDomains. Bonus-only signal.",
     requiresHttpAccess: true,
@@ -258,7 +258,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [3, 3],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.297,
     promptGuidance:
       "CSP presence is a positive security signal. Quality matters more than presence — check csp_quality for details.",
     requiresHttpAccess: true,
@@ -291,7 +291,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~1 hour — tighten CSP directives",
     fixDescription: "Improve Content-Security-Policy directives",
     weightRange: [2, 3],
-    goodPrevalence: 0.063,
+    goodPrevalence: 0.02,
     promptGuidance:
       "Grade practical protection, not just presence. 'unsafe-inline' in script-src undermines XSS protection; 'unsafe-eval' enables code injection; wildcard (*) negates the policy. 'unsafe-inline' in style-src is common and acceptable.",
     archetypeNotes: {
@@ -341,7 +341,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~5 min — add one response header",
     fixDescription: "Add X-Frame-Options header",
     weightRange: [2, 2],
-    goodPrevalence: 0.533,
+    goodPrevalence: 0.455,
     promptGuidance:
       "X-Frame-Options or CSP frame-ancestors prevents clickjacking. CSP frame-ancestors supersedes XFO — don't recommend both.",
     archetypeNotes: {
@@ -359,7 +359,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~5 min — one-line header",
     fixDescription: "Add X-Content-Type-Options: nosniff",
     weightRange: [1, 1],
-    goodPrevalence: 0.501,
+    goodPrevalence: 0.427,
     promptGuidance: "X-Content-Type-Options: nosniff prevents MIME type sniffing. Low weight (1), easy one-line fix.",
     requiresHttpAccess: true,
   },
@@ -373,7 +373,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — registrar setting",
     fixDescription: "Enable DNSSEC at your registrar",
     weightRange: [1, 1],
-    goodPrevalence: 0.133,
+    goodPrevalence: 0.134,
     promptGuidance:
       "~30% global adoption. Absence isn't alarming for most sites. Asymmetric: presence rewarded (weight 2), absence barely penalized (weight 1).",
     archetypeNotes: {
@@ -400,7 +400,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [3, 3],
-    goodPrevalence: 0.467,
+    goodPrevalence: 0.263,
     promptGuidance:
       "SPF+DKIM+DMARC with p=reject = gold standard. p=none = monitoring only. DKIM detection probes common selectors — absence doesn't necessarily mean unconfigured.",
   },
@@ -439,7 +439,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 2],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.319,
     promptGuidance: "WAF presence is defense-in-depth. High-confidence detection is more meaningful.",
     requiresHttpAccess: true,
   },
@@ -452,7 +452,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.191,
     promptGuidance: "CAA restricts which CAs can issue certs. Presence is positive.",
   },
   caa_wildcard_unrestricted: {
@@ -475,7 +475,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.068,
     promptGuidance: "CAA iodef enables violation reporting — proactive certificate management.",
   },
   cert_wildcard: {
@@ -524,7 +524,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — update cookie settings",
     fixDescription: "Set Secure/HttpOnly/SameSite on cookies",
     weightRange: [3, 3],
-    goodPrevalence: 0.464,
+    goodPrevalence: 0.217,
     requiresContext: "cookies",
     promptGuidance:
       "Secure flag required for HTTPS. HttpOnly prevents XSS cookie theft. SameSite prevents CSRF. All three on session cookies.",
@@ -551,7 +551,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: true,
     canBeGood: true,
     weightRange: [1, 2],
-    goodPrevalence: 0.968,
+    goodPrevalence: 0.147,
     promptGuidance:
       "Best: strict-origin-when-cross-origin or no-referrer. Missing = browsers default to strict-origin-when-cross-origin (safe).",
     requiresHttpAccess: true,
@@ -593,7 +593,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 2],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.085,
     promptGuidance:
       "Restrictive policies (camera=(), microphone=()) show defense-in-depth. Overly permissive (feature=*) is medium concern.",
     requiresHttpAccess: true,
@@ -667,7 +667,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [2, 2],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.269,
     promptGuidance: "SRI ensures CDN-hosted scripts haven't been tampered with. Positive signal.",
     requiresHttpAccess: true,
   },
@@ -720,7 +720,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — DNS + well-known file",
     fixDescription: "Configure MTA-STS policy",
     weightRange: [2, 2],
-    goodPrevalence: 0.556,
+    goodPrevalence: 0.018,
     promptGuidance:
       "MTA-STS enforces TLS for email transport. mode=enforce is strong. mode=testing is a good step. Bonus-only.",
   },
@@ -791,7 +791,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — add COOP/COEP headers",
     fixDescription: "Enable cross-origin isolation (COOP/COEP)",
     weightRange: [1, 1],
-    goodPrevalence: 0.114,
+    goodPrevalence: 0.005,
     promptGuidance:
       "COOP+COEP+CORP is bonus-only. NEVER recommend COEP require-corp for sites with third-party resources — it breaks all cross-origin resources that don't opt in. Absence is NOT a security gap. Weight 1 (lowest).",
     archetypeNotes: {
@@ -811,7 +811,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — server config",
     fixDescription: "Upgrade minimum TLS version",
     weightRange: [1, 3],
-    goodPrevalence: 0.856,
+    goodPrevalence: 0.827,
     promptGuidance: "TLS 1.3 ideal. 1.2 standard. 1.0/1.1 legacy, vulnerable to downgrade — high severity.",
   },
   cert_expiry_proximity: {
@@ -824,7 +824,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~15 min — renew certificate",
     fixDescription: "Renew SSL/TLS certificate",
     weightRange: [1, 4],
-    goodPrevalence: 0.96,
+    goodPrevalence: 0.929,
     promptGuidance:
       "Severity: expired=critical, <7d=high, <14d=medium, <30d=low, 30d+=good. Let's Encrypt auto-renews — short remaining time may mean failed auto-renewal.",
   },
@@ -870,7 +870,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — update dependencies",
     fixDescription: "Update vulnerable JavaScript libraries",
     weightRange: [1, 3],
-    goodPrevalence: 0.921,
+    goodPrevalence: 0.774,
     promptGuidance:
       "CVE detection is version-based, doesn't confirm exploitability. Site may not use vulnerable function. Note this caveat. EOL libraries are additional concern.",
     requiresHttpAccess: true,
@@ -972,7 +972,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [0, 0],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.026,
     requiresContext: "wordpress",
     promptGuidance: "Display-only positive signal. Site has a recognized security plugin installed.",
   },
@@ -985,7 +985,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [0, 0],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.051,
     requiresContext: "wordpress",
     promptGuidance: "Display-only positive signal. Site has a recognized caching/performance plugin installed.",
   },
@@ -1001,7 +1001,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "Varies — run Lighthouse for details",
     fixDescription: "Optimize page performance (see PageSpeed report)",
     weightRange: [5, 5],
-    goodPrevalence: 0.485,
+    goodPrevalence: 0.48,
     promptGuidance:
       "PageSpeed 0-100. Median mobile ~50-60. ≥90=good, 50-89=needs improvement, <50=poor. CrUX field data is more authoritative than lab scores.",
     archetypeNotes: {
@@ -1019,7 +1019,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~1-2 hours — optimize images and loading",
     fixDescription: "Reduce Largest Contentful Paint time",
     weightRange: [4, 4],
-    goodPrevalence: 0.586,
+    goodPrevalence: 0.577,
     promptGuidance:
       "Largest Contentful Paint: ≤2.5s good, ≤4.0s needs-improvement, >4.0s poor. Core Web Vital for Google ranking.",
   },
@@ -1032,7 +1032,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~1 hour — fix layout shifts",
     fixDescription: "Fix Cumulative Layout Shift issues",
     weightRange: [3, 3],
-    goodPrevalence: 0.787,
+    goodPrevalence: 0.778,
     promptGuidance:
       "Cumulative Layout Shift: ≤0.1 good, ≤0.25 needs-improvement, >0.25 poor. Caused by images without dimensions, dynamic content, web fonts.",
   },
@@ -1045,7 +1045,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — server/CDN optimization",
     fixDescription: "Reduce Time to First Byte",
     weightRange: [3, 3],
-    goodPrevalence: 0.63,
+    goodPrevalence: 0.614,
     promptGuidance:
       "Time to First Byte: ≤800ms good. Affected by server processing, CDN effectiveness, geographic distance.",
   },
@@ -1058,7 +1058,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~1 hour — optimize render path",
     fixDescription: "Reduce First Contentful Paint time",
     weightRange: [2, 2],
-    goodPrevalence: 0.577,
+    goodPrevalence: 0.57,
     promptGuidance: "First Contentful Paint: ≤1.8s good, ≤3.0s needs-improvement, >3.0s poor.",
   },
   inp: {
@@ -1080,7 +1080,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~1-2 hours — reduce JS blocking",
     fixDescription: "Reduce Total Blocking Time",
     weightRange: [2, 2],
-    goodPrevalence: 0.543,
+    goodPrevalence: 0.114,
     promptGuidance:
       "Total Blocking Time: ≤200ms good, ≤600ms needs-improvement, >600ms poor. Lab-only (INP is field equivalent).",
   },
@@ -1104,7 +1104,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: true,
     requiresHttpAccess: true,
     weightRange: [3, 3],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.496,
     promptGuidance:
       "CDN detected is positive — reduces latency, improves caching. CDN-fronted sites handle compression/caching at edge.",
   },
@@ -1118,7 +1118,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: true,
     requiresHttpAccess: true,
     weightRange: [2, 2],
-    goodPrevalence: 0.4,
+    goodPrevalence: 0.001,
     promptGuidance:
       "Third-party CDN hostnames detected in page source for static assets (images, scripts, stylesheets). Indicates the site uses a CDN for asset delivery even if the main site isn't CDN-fronted. Only fires when full-site CDN is not already detected.",
   },
@@ -1131,7 +1131,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: true,
     requiresHttpAccess: true,
     weightRange: [2, 2],
-    goodPrevalence: 0.95,
+    goodPrevalence: 0.01,
     promptGuidance:
       "HTTP/2 is standard since 2015. Expected, not exceptional. Absence penalizes the ~5% still on HTTP/1.1.",
   },
@@ -1145,7 +1145,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: true,
     requiresHttpAccess: true,
     weightRange: [1, 1],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.334,
     promptGuidance:
       "HTTP/3 (QUIC) is forward-looking — reduces connection latency. Bonus signal. Still emerging — low weight.",
   },
@@ -1171,7 +1171,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — configure cache headers",
     fixDescription: "Configure proper cache headers",
     weightRange: [3, 3],
-    goodPrevalence: 0.137,
+    goodPrevalence: 0.117,
     promptGuidance:
       "no-store for dynamic HTML is correct. Aggressive max-age on versioned static assets is best practice. CDN-fronted sites handle caching at edge.",
     archetypeNotes: {
@@ -1212,7 +1212,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: true,
     canBeGood: true,
     weightRange: [3, 3],
-    goodPrevalence: 0.57,
+    goodPrevalence: 0.486,
     promptGuidance:
       "Render-blocking scripts delay rendering. 1-2=low, 3-5=medium, 6+=high. async/defer may cause timing issues.",
     requiresHttpAccess: true,
@@ -1250,7 +1250,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.58,
     promptGuidance:
       "preload/preconnect/dns-prefetch indicate performance-aware engineering. Absence is NOT negative — bonus-only.",
     archetypeNotes: { infrastructure: "Static sites/APIs don't need resource hints." },
@@ -1322,7 +1322,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: true,
     requiresHttpAccess: true,
     weightRange: [1, 1],
-    goodPrevalence: 0.35,
+    goodPrevalence: 0.579,
     promptGuidance:
       "Multiple A records provide IP-level redundancy. Not necessarily intentional load balancing — may reflect hosting provider infrastructure, CDN anycast, or round-robin DNS.",
   },
@@ -1335,7 +1335,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~10 min — DNS records",
     fixDescription: "Add CAA DNS records",
     weightRange: [1, 1],
-    goodPrevalence: 0.19,
+    goodPrevalence: 0.191,
     promptGuidance: "CAA restricts certificate issuance. Absence is informational.",
   },
   low_ttl: {
@@ -1358,7 +1358,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — server/CDN optimization",
     fixDescription: "Optimize TCP connection time",
     weightRange: [2, 2],
-    goodPrevalence: 0.997,
+    goodPrevalence: 0.958,
     promptGuidance: "Single probe location. <300ms=good, 300-500ms=ok, 500-1000ms=slow, >1000ms=very slow.",
   },
   dns_resolution_time: {
@@ -1371,7 +1371,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: true,
     requiresHttpAccess: true,
     weightRange: [2, 2],
-    goodPrevalence: 0.992,
+    goodPrevalence: 0.953,
     promptGuidance: "Single probe location. <100ms=good, 100-200ms=ok, 200-500ms=slow, >500ms=very slow.",
   },
   ns_provider_diversity: {
@@ -1393,7 +1393,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [2, 2],
-    goodPrevalence: 0.599,
+    goodPrevalence: 0.565,
     promptGuidance: "Multiple MX = email redundancy. No MX fine for non-email domains.",
     archetypeNotes: {
       infrastructure: "API/CDN domains don't need MX — don't recommend adding.",
@@ -1448,7 +1448,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.999,
     promptGuidance: "Consistent DNS is positive. CDN variation also reported as consistent (expected).",
   },
   bgp_unstable: {
@@ -1481,7 +1481,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: true,
     canBeGood: true,
     weightRange: [4, 4],
-    goodPrevalence: 0.936,
+    goodPrevalence: 0.828,
     promptGuidance:
       "<30d=newly registered (NRD, high risk); 30-90d=recent; 90d-1yr=young; 1-3yr=growing; 3-5yr=mature; 5yr+=established. Young domain + EV cert suggests legitimate new business.",
   },
@@ -1494,7 +1494,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~5 min — renew at registrar",
     fixDescription: "Extend domain registration period",
     weightRange: [2, 2],
-    goodPrevalence: 0.401,
+    goodPrevalence: 0.349,
     promptGuidance:
       "1 year is normal. Multi-year is trust signal. Near-expiry (<30d) is concern. Weak signal — many legitimate sites renew annually.",
   },
@@ -1517,7 +1517,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: true,
     canBeGood: true,
     weightRange: [1, 3],
-    goodPrevalence: 0.761,
+    goodPrevalence: 0.489,
     promptGuidance:
       "Top 1K=global; 1K-10K=major; 10K-100K=significant; 100K-1M=moderate. Unranked is neutral, not negative.",
   },
@@ -1564,7 +1564,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~10 min — create /.well-known/security.txt",
     fixDescription: "Create security.txt file",
     weightRange: [1, 2],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.149,
     promptGuidance:
       "Presence is positive (responsible disclosure). With bug bounty = stronger. Absence is neutral — reward-only signal.",
     archetypeNotes: {
@@ -1582,7 +1582,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [2, 2],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.142,
     promptGuidance:
       "Requires DMARC enforcement. Indicates advanced email maturity. VMC (Verified Mark Certificate) is even stronger. Absence is neutral — reward-only.",
   },
@@ -1595,7 +1595,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~5 min — update SPF record to use -all",
     fixDescription: "Use -all (hard fail) in SPF record",
     weightRange: [2, 2],
-    goodPrevalence: 0.477,
+    goodPrevalence: 0.411,
     promptGuidance:
       "SPF -all rejects unauthorized senders. ~all soft-fails (marks but delivers). ?all/+all provide no protection. +all is actively dangerous.",
   },
@@ -1620,7 +1620,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — flatten SPF record or reduce includes",
     fixDescription: "Reduce SPF DNS lookups to stay under RFC limit of 10",
     weightRange: [2, 2],
-    goodPrevalence: 0.967,
+    goodPrevalence: 0.794,
     promptGuidance:
       "RFC 7208 limits SPF to 10 DNS lookups (include, a, mx, ptr, exists, redirect). Exceeding causes PermError — SPF fails silently. Common with many SaaS senders.",
   },
@@ -1633,7 +1633,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~5 min — add rua= to DMARC record",
     fixDescription: "Add aggregate reporting (rua) to DMARC record",
     weightRange: [2, 2],
-    goodPrevalence: 0.862,
+    goodPrevalence: 0.664,
     promptGuidance:
       "DMARC rua= enables aggregate reports on authentication failures. Without it, domain owners have zero visibility into spoofing attempts. Essential operational signal.",
   },
@@ -1646,7 +1646,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
-    goodPrevalence: 0.658,
+    goodPrevalence: 0.076,
     promptGuidance:
       "DMARC sp= sets explicit subdomain policy. sp=reject closes subdomain spoofing gap. Absence inherits parent policy — usually fine. Bonus-only.",
   },
@@ -1659,7 +1659,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~15 min — configure DKIM via email provider",
     fixDescription: "Configure DKIM signing for your domain",
     weightRange: [2, 2],
-    goodPrevalence: 0.678,
+    goodPrevalence: 0.618,
     promptGuidance:
       "Probes common DKIM selectors (google, selector1, selector2, k1, s1, etc.). Found = domain signs email. Not found may be false negative — custom selectors aren't probed.",
   },
@@ -1672,7 +1672,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.04,
     promptGuidance:
       "TLS Reporting (RFC 8460) enables reports on TLS delivery failures. Companion to MTA-STS. Adoption <1%. Bonus-only — advanced signal.",
   },
@@ -1697,7 +1697,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: true,
     requiresHttpAccess: true,
     weightRange: [1, 3],
-    goodPrevalence: 0.221,
+    goodPrevalence: 0.213,
     promptGuidance:
       "95%+ of certs are DV (Let's Encrypt) — standard and expected. Only flag DV for financial/government. EV/OV are positive but DV is not weakness.",
     archetypeNotes: {
@@ -1725,7 +1725,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~15 min — add organization page",
     fixDescription: "Add about/team/organization page",
     weightRange: [3, 3],
-    goodPrevalence: 0.428,
+    goodPrevalence: 0.366,
     promptGuidance:
       "Privacy policy, terms, about page = organizational transparency. Missing is low concern for small/personal sites.",
   },
@@ -1738,7 +1738,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: true,
     requiresHttpAccess: true,
     weightRange: [2, 2],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.279,
     promptGuidance: "Status pages, monitoring tools = mature operations. Bonus-only.",
   },
   cookie_consent_missing: {
@@ -1769,7 +1769,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~30 min — configure CMP properly",
     fixDescription: "Improve cookie consent management platform",
     weightRange: [3, 3],
-    goodPrevalence: 0.705,
+    goodPrevalence: 0.19,
     promptGuidance: "CMP detected is positive trust signal. Higher confidence = stronger.",
     requiresContext: "cookies",
     requiresHttpAccess: true,
@@ -1794,7 +1794,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~15 min — DNS change (after sender audit)",
     fixDescription: "Upgrade DMARC policy to quarantine/reject",
     weightRange: [2, 2],
-    goodPrevalence: 0.336,
+    goodPrevalence: 0.287,
     promptGuidance:
       "Recommend gradual rollout: none → quarantine → reject. NEVER jump straight to p=reject. p=reject prevents spoofing. p=none = monitoring only.",
   },
@@ -1834,7 +1834,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [2, 2],
-    goodPrevalence: 1.0,
+    goodPrevalence: 0.437,
     promptGuidance:
       "JSON-LD enhances search (rich snippets). Relevant schemas: Product for commerce, Article for content, Organization for corporate. CMS may auto-generate.",
     archetypeNotes: {
@@ -1869,7 +1869,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~10 min — add meta tags",
     fixDescription: "Add Open Graph and Twitter Card meta tags",
     weightRange: [3, 3],
-    goodPrevalence: 0.516,
+    goodPrevalence: 0.441,
     promptGuidance:
       "OG + Twitter Card tags control social sharing appearance. Overlaps with og_completeness — don't cite both for same issue.",
     archetypeNotes: {
@@ -1923,7 +1923,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~2-4 hours — create legal pages",
     fixDescription: "Add privacy policy and terms pages",
     weightRange: [1, 1],
-    goodPrevalence: 0.691,
+    goodPrevalence: 0.589,
     promptGuidance: "Low weight (1) but important for trust/compliance.",
   },
   social_accounts: {
@@ -1935,7 +1935,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 3],
-    goodPrevalence: 0.493,
+    goodPrevalence: 0.486,
     promptGuidance: "rel=me verified > homepage links. Relevance varies by site type.",
     requiresHttpAccess: true,
   },
@@ -1985,7 +1985,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: false,
     canBeGood: true,
     weightRange: [1, 1],
-    goodPrevalence: 0.889,
+    goodPrevalence: 0.549,
     promptGuidance: "Self-referencing is standard. Cross-domain may be intentional.",
     requiresHttpAccess: true,
   },
@@ -2086,7 +2086,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~1 hour — add viewport meta",
     fixDescription: "Add responsive viewport configuration",
     weightRange: [2, 2],
-    goodPrevalence: 0.893,
+    goodPrevalence: 0.752,
     promptGuidance: "Viewport meta is fundamental for mobile-first indexing. width=device-width is correct.",
     archetypeNotes: { infrastructure: "APIs may not need mobile-friendly design." },
     requiresHttpAccess: true,
@@ -2100,7 +2100,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~10 min — add OG meta tags",
     fixDescription: "Complete Open Graph meta tags",
     weightRange: [2, 2],
-    goodPrevalence: 0.4,
+    goodPrevalence: 0.343,
     promptGuidance:
       "5 OG properties: title, description, image, url, type. Overlaps with social_meta — don't cite both.",
     archetypeNotes: {
@@ -2119,7 +2119,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~2-4 hours — fix WCAG issues",
     fixDescription: "Improve WCAG accessibility",
     weightRange: [1, 1],
-    goodPrevalence: 0.361,
+    goodPrevalence: 0.308,
     promptGuidance:
       "Weight 1 but legal importance can be high. ≥80=good, 50-79=needs work, <50=poor. ADA (US), EAA (EU).",
     archetypeNotes: {
