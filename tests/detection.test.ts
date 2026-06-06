@@ -224,3 +224,66 @@ describe("Tailwind CSS Detection", () => {
     expect(result.find((r) => r.name === "Tailwind CSS")).toBeUndefined();
   });
 });
+
+// ─── Google Analytics Detection (False Positive Prevention) ───────────
+
+describe("Google Analytics Detection", () => {
+  it("should detect GA4 from quoted measurement ID", () => {
+    const html =
+      '<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script><script>gtag("config", "G-XXXXXXXXXX")</script>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Google Analytics")).toBeDefined();
+  });
+
+  it("should detect GA from Universal Analytics ID", () => {
+    const html = '<script>ga("create", "UA-12345-6", "auto")</script>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Google Analytics")).toBeDefined();
+  });
+
+  it("should detect GA from gtag script URL", () => {
+    const html = '<script async src="https://www.googletagmanager.com/gtag/js?id=G-ABC1234567"></script>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Google Analytics")).toBeDefined();
+  });
+
+  it("should NOT detect GA from CSS classes like g-banner", () => {
+    const html = '<div class="g-banner g-alt g-header"><span class="g-text">Hello</span></div>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Google Analytics")).toBeUndefined();
+  });
+
+  it("should NOT detect GA from short G- prefixed attributes", () => {
+    const html = '<div id="G-Nav"><a class="G-Link">Menu</a></div>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Google Analytics")).toBeUndefined();
+  });
+});
+
+// ─── Tailwind CSS Content Mention (False Positive Prevention) ─────────
+
+describe("Tailwind CSS Content Mention", () => {
+  it("should NOT detect Tailwind from content text mentioning tailwindcss", () => {
+    const html = "<div><p>We recommend using tailwindcss for your next project.</p></div>";
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Tailwind CSS")).toBeUndefined();
+  });
+
+  it("should detect Tailwind from script tag referencing tailwindcss", () => {
+    const html = '<script src="https://cdn.tailwindcss.com"></script>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Tailwind CSS")).toBeDefined();
+  });
+
+  it("should detect Tailwind from link tag with tailwindcss", () => {
+    const html = '<link rel="stylesheet" href="/css/tailwindcss.min.css">';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Tailwind CSS")).toBeDefined();
+  });
+
+  it("should still detect Tailwind from tailwind.config reference", () => {
+    const html = "<script>window.__tailwind_config = tailwind.config;</script>";
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Tailwind CSS")).toBeDefined();
+  });
+});

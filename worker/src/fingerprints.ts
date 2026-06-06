@@ -616,7 +616,7 @@ export const fingerprints: Fingerprint[] = [
     category: "JS Library",
     patterns: {
       cssUrls: [/tailwind(?:css)?(?:\.min)?\.css/i],
-      htmlPatterns: [/tailwindcss/i, /tailwind\.config/i],
+      htmlPatterns: [/<(?:link|script|style)[^>]*tailwindcss/i, /tailwind\.config/i],
     },
   },
   {
@@ -756,7 +756,7 @@ export const fingerprints: Fingerprint[] = [
     category: "Analytics",
     patterns: {
       scriptUrls: [/google-analytics\.com\/analytics\.js/i, /googletagmanager\.com\/gtag/i, /ga\.js/i],
-      htmlPatterns: [/gtag\(/i, /UA-\d+-\d/i, /G-[A-Z0-9]+/i],
+      htmlPatterns: [/gtag\(/i, /UA-\d+-\d/i, /['"]G-[A-Z0-9]{10,}['"]/],
     },
   },
   {

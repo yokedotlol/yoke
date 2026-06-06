@@ -4,6 +4,31 @@ All notable changes to Yoke are documented here.
 
 > **Scope:** This changelog tracks the **Service (Worker + Client)** version. The CLI and MCP Server version independently via their own release tags (`cli/vX.Y.Z` and `mcp/vX.Y.Z`).
 
+## [2.3.0] — 2026-06-05
+
+### Scoring
+- **Signal dependency deduplication** — new `dependsOn` field on signal definitions prevents double-counting correlated absent signals. When a parent signal is absent, its dependent children skip their absent penalty. Five dependencies annotated: `hsts_preload→hsts`, `caa_iodef→caa_records`, `bimi_record→dmarc_reject`, `dmarc_rua→dmarc_reject`, `dmarc_subdomain_policy→dmarc_reject`. The DMARC cluster was the worst offender — a missing DMARC record was producing 4 separate absent penalties; now just 1.
+- **goodPrevalence calibration** — 20 signals had placeholder `goodPrevalence: 1.0`. Real values computed from the D1 `domain_scores` table across 3,343 production domains. Only `ns_redundancy` legitimately remained at 1.0. Biggest corrections: `permissions_policy` 1.0→0.085, `caa_iodef` 1.0→0.068, `tls_rpt` 1.0→0.040. Security axis absent penalties reduced 20–49%.
+
+### Bug Fixes
+- **NXDOMAIN returns 422** — non-existent domains now return HTTP 422 with `DOMAIN_NOT_FOUND` code instead of HTTP 200 with partial results.
+- **Badge axis validation** — invalid `?axis=` parameter returns 400 with the list of valid axes instead of silently defaulting.
+- **Error response standardization** — all public API errors now use `jsonError()` helper returning `{ error, code, status }`.
+- **Google Analytics false positive** — GA4 measurement ID regex tightened from `/G-[A-Z0-9]+/i` to `/['"]G-[A-Z0-9]{10,}['"]/`, requiring quoted context and minimum length to prevent matching CSS classes like `g-banner`.
+- **Tailwind CSS false positive** — `tailwindcss` HTML pattern now requires `<link>`, `<script>`, or `<style>` tag context to prevent matching content text that mentions Tailwind.
+- **Django false positive** — removed overly broad `x-frame-options:sameorigin` header match and generic `/django/i` HTML pattern (commit `8aee086`).
+
+### Self-Hosting
+- **Docker env var bindings** — all 9 environment variables (`FLY_PROBE_URL`, `OPENROUTER_API_KEY`, `SHARE_SECRET`, `MAXMIND_ACCOUNT_ID`, `MAXMIND_LICENSE_KEY`, `BRANDFETCH_API_KEY`, `GOOGLE_API_KEY`, `ADMIN_KEY`, `DISABLE_ANALYTICS`) now wired through in `docker-compose.yml`.
+
+### Documentation
+- **Signal and test counts removed** — documentation no longer cites specific counts (150+ signals, 632+ tests) to avoid stale numbers.
+
+### Testing
+- **12 new scoring tests** — dependency deduplication coverage for parent-absent suppression, parent-present legitimate penalty, bulk DMARC child suppression, deductions breakdown, and registry consistency.
+- **9 new detection tests** — Django and Tailwind true positive and false positive prevention.
+- **632+ tests passing.**
+
 ## [2.2.0] — 2026-06-05
 
 ### Features
