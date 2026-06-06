@@ -84,6 +84,14 @@ export interface SignalDef {
    */
   suppressesAbsent?: string | string[];
   /**
+   * Signal ID of a parent signal this one depends on. When the parent
+   * is also absent (didn't fire at all), this child is excluded from the
+   * absent-signal pool — prevents double-counting correlated signals.
+   * E.g. hsts_preload dependsOn hsts: can't have preload without HSTS,
+   * so missing both is one gap, not two.
+   */
+  dependsOn?: string;
+  /**
    * When true, this signal requires HTTP/HTML access to detect.
    * If the scan's HTTP probe was blocked (http_blocked), these signals
    * are excluded from the absent-signal pool instead of penalizing the
@@ -243,6 +251,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     effort: "~5 min — submit at hstspreload.org (requires max-age ≥1yr + includeSubDomains)",
     canBeNonGood: false,
     canBeGood: true,
+    dependsOn: "hsts",
     weightRange: [1, 1],
     goodPrevalence: 0.145,
     promptGuidance:
@@ -474,6 +483,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
+    dependsOn: "caa_records",
     weightRange: [1, 1],
     goodPrevalence: 0.068,
     promptGuidance: "CAA iodef enables violation reporting — proactive certificate management.",
@@ -1581,6 +1591,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
+    dependsOn: "dmarc_reject",
     weightRange: [2, 2],
     goodPrevalence: 0.142,
     promptGuidance:
@@ -1630,6 +1641,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     actionable: true,
     canBeNonGood: true,
     canBeGood: true,
+    dependsOn: "dmarc_reject",
     effort: "~5 min — add rua= to DMARC record",
     fixDescription: "Add aggregate reporting (rua) to DMARC record",
     weightRange: [2, 2],
@@ -1645,6 +1657,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     actionable: false,
     canBeNonGood: false,
     canBeGood: true,
+    dependsOn: "dmarc_reject",
     weightRange: [1, 1],
     goodPrevalence: 0.076,
     promptGuidance:

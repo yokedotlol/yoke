@@ -5,6 +5,7 @@ import {
   applyHardCaps,
   buildSignalDetails,
   computeAxisScore,
+  computeAxisScoreWithDeductions,
   computeComposite,
   contextualSeverity,
   type Finding,
@@ -15,6 +16,7 @@ import {
 // ─── Import production code (single source of truth) ─────────────────
 import type { Severity } from "@worker/config/contextual-scoring-types";
 import { SEVERITY_SCORES } from "@worker/config/scoring-thresholds";
+import { SIGNAL_REGISTRY } from "@worker/config/signal-registry";
 import { describe, expect, it } from "vitest";
 
 type SeverityMap = Partial<Record<ArchetypeName, Severity>>;
@@ -684,5 +686,223 @@ describe("buildSignalDetails", () => {
     const speedFindings = blob.axes.speed.findings;
     expect(speedFindings.some((f) => f.signal === "http_blocked_performance")).toBe(false);
     expect(speedFindings.some((f) => f.signal === "perf_score")).toBe(true);
+  });
+});
+
+// ─── Signal Dependency Deduplication (dependsOn) ─────────────────────
+
+describe("Signal Dependency Deduplication", () => {
+  // Helper: build findings that fire specific signals as good on a given axis
+  function makeGoodFindings(axis: "security" | "email", signals: string[]): Finding[] {
+    return signals.map((s) => ({
+      signal: s,
+      axis,
+      severity: "good" as const,
+      label: SIGNAL_REGISTRY[s]?.label ?? s,
+      tradeoff: null,
+      weight: SIGNAL_REGISTRY[s]?.weightRange[1] ?? 1,
+    }));
+  }
+
+  // ── hsts_preload dependsOn hsts ──
+
+  it("should NOT penalize hsts_preload absence when hsts is also absent", () => {
+    // Fire all security canBeGood signals EXCEPT hsts and hsts_preload
+    const securitySignals = Object.entries(SIGNAL_REGISTRY)
+      .filter(([, def]) => def.axis === "security" && def.canBeGood)
+      .map(([id]) => id);
+
+    const withBothAbsent = makeGoodFindings(
+      "security",
+      securitySignals.filter((s) => s !== "hsts" && s !== "hsts_preload"),
+    );
+    const withOnlyHstsAbsent = makeGoodFindings(
+      "security",
+      securitySignals.filter((s) => s !== "hsts"),
+    );
+
+    // Both absent: hsts_preload should be suppressed, only hsts penalized
+    // Only hsts absent (preload fired): same penalty for hsts, no preload penalty either way
+    const scoreBothAbsent = computeAxisScore(withBothAbsent, "security");
+    const scoreOnlyHstsAbsent = computeAxisScore(withOnlyHstsAbsent, "security");
+
+    // If dependsOn works, removing hsts_preload from findings shouldn't change the score
+    // because it's suppressed when hsts is absent
+    expect(scoreBothAbsent).toBe(scoreOnlyHstsAbsent);
+  });
+
+  it("should penalize hsts_preload absence when hsts IS present", () => {
+    // Fire all security canBeGood signals EXCEPT hsts_preload (but include hsts)
+    const securitySignals = Object.entries(SIGNAL_REGISTRY)
+      .filter(([, def]) => def.axis === "security" && def.canBeGood)
+      .map(([id]) => id);
+
+    const allPresent = makeGoodFindings("security", securitySignals);
+    const preloadAbsent = makeGoodFindings(
+      "security",
+      securitySignals.filter((s) => s !== "hsts_preload"),
+    );
+
+    // hsts is present, so hsts_preload absence should be penalized
+    expect(computeAxisScore(allPresent, "security")).toBeGreaterThan(computeAxisScore(preloadAbsent, "security"));
+  });
+
+  // ── caa_iodef dependsOn caa_records ──
+
+  it("should NOT penalize caa_iodef absence when caa_records is also absent", () => {
+    const securitySignals = Object.entries(SIGNAL_REGISTRY)
+      .filter(([, def]) => def.axis === "security" && def.canBeGood)
+      .map(([id]) => id);
+
+    const withBothAbsent = makeGoodFindings(
+      "security",
+      securitySignals.filter((s) => s !== "caa_records" && s !== "caa_iodef"),
+    );
+    const withOnlyCaaAbsent = makeGoodFindings(
+      "security",
+      securitySignals.filter((s) => s !== "caa_records"),
+    );
+
+    expect(computeAxisScore(withBothAbsent, "security")).toBe(computeAxisScore(withOnlyCaaAbsent, "security"));
+  });
+
+  it("should penalize caa_iodef absence when caa_records IS present", () => {
+    const securitySignals = Object.entries(SIGNAL_REGISTRY)
+      .filter(([, def]) => def.axis === "security" && def.canBeGood)
+      .map(([id]) => id);
+
+    const allPresent = makeGoodFindings("security", securitySignals);
+    const iodefAbsent = makeGoodFindings(
+      "security",
+      securitySignals.filter((s) => s !== "caa_iodef"),
+    );
+
+    expect(computeAxisScore(allPresent, "security")).toBeGreaterThan(computeAxisScore(iodefAbsent, "security"));
+  });
+
+  // ── DMARC cluster: bimi_record, dmarc_rua, dmarc_subdomain_policy dependsOn dmarc_reject ──
+
+  it("should NOT penalize bimi_record absence when dmarc_reject is also absent", () => {
+    const emailSignals = Object.entries(SIGNAL_REGISTRY)
+      .filter(([, def]) => def.axis === "email" && def.canBeGood)
+      .map(([id]) => id);
+
+    const withBothAbsent = makeGoodFindings(
+      "email",
+      emailSignals.filter((s) => s !== "dmarc_reject" && s !== "bimi_record"),
+    );
+    const withOnlyDmarcAbsent = makeGoodFindings(
+      "email",
+      emailSignals.filter((s) => s !== "dmarc_reject"),
+    );
+
+    expect(computeAxisScore(withBothAbsent, "email")).toBe(computeAxisScore(withOnlyDmarcAbsent, "email"));
+  });
+
+  it("should NOT penalize dmarc_rua absence when dmarc_reject is also absent", () => {
+    const emailSignals = Object.entries(SIGNAL_REGISTRY)
+      .filter(([, def]) => def.axis === "email" && def.canBeGood)
+      .map(([id]) => id);
+
+    const withBothAbsent = makeGoodFindings(
+      "email",
+      emailSignals.filter((s) => s !== "dmarc_reject" && s !== "dmarc_rua"),
+    );
+    const withOnlyDmarcAbsent = makeGoodFindings(
+      "email",
+      emailSignals.filter((s) => s !== "dmarc_reject"),
+    );
+
+    expect(computeAxisScore(withBothAbsent, "email")).toBe(computeAxisScore(withOnlyDmarcAbsent, "email"));
+  });
+
+  it("should NOT penalize dmarc_subdomain_policy absence when dmarc_reject is also absent", () => {
+    const emailSignals = Object.entries(SIGNAL_REGISTRY)
+      .filter(([, def]) => def.axis === "email" && def.canBeGood)
+      .map(([id]) => id);
+
+    const withBothAbsent = makeGoodFindings(
+      "email",
+      emailSignals.filter((s) => s !== "dmarc_reject" && s !== "dmarc_subdomain_policy"),
+    );
+    const withOnlyDmarcAbsent = makeGoodFindings(
+      "email",
+      emailSignals.filter((s) => s !== "dmarc_reject"),
+    );
+
+    expect(computeAxisScore(withBothAbsent, "email")).toBe(computeAxisScore(withOnlyDmarcAbsent, "email"));
+  });
+
+  it("should suppress ALL dmarc children when dmarc_reject is absent", () => {
+    const emailSignals = Object.entries(SIGNAL_REGISTRY)
+      .filter(([, def]) => def.axis === "email" && def.canBeGood)
+      .map(([id]) => id);
+
+    // Remove dmarc_reject and all its children
+    const allDmarcAbsent = makeGoodFindings(
+      "email",
+      emailSignals.filter((s) => !["dmarc_reject", "bimi_record", "dmarc_rua", "dmarc_subdomain_policy"].includes(s)),
+    );
+    // Remove only dmarc_reject (children should all be suppressed)
+    const onlyDmarcAbsent = makeGoodFindings(
+      "email",
+      emailSignals.filter((s) => s !== "dmarc_reject"),
+    );
+
+    // Same score: children are suppressed, only dmarc_reject's own absence matters
+    expect(computeAxisScore(allDmarcAbsent, "email")).toBe(computeAxisScore(onlyDmarcAbsent, "email"));
+  });
+
+  it("should penalize bimi_record absence when dmarc_reject IS present", () => {
+    const emailSignals = Object.entries(SIGNAL_REGISTRY)
+      .filter(([, def]) => def.axis === "email" && def.canBeGood)
+      .map(([id]) => id);
+
+    const allPresent = makeGoodFindings("email", emailSignals);
+    const bimiAbsent = makeGoodFindings(
+      "email",
+      emailSignals.filter((s) => s !== "bimi_record"),
+    );
+
+    expect(computeAxisScore(allPresent, "email")).toBeGreaterThan(computeAxisScore(bimiAbsent, "email"));
+  });
+
+  // ── Deductions breakdown also respects dependsOn ──
+
+  it("should exclude dependent children from absent signals in deductions breakdown", () => {
+    // Only fire one email signal so dmarc_reject is absent
+    const findings = makeGoodFindings("email", ["spf_strictness"]);
+    const { deductions } = computeAxisScoreWithDeductions(findings, "email");
+
+    // Find the _absent deduction
+    const absentDeduction = deductions.find((d) => d.signal === "_absent");
+    if (absentDeduction && "absentSignals" in absentDeduction) {
+      const absentSignalIds = (absentDeduction as { absentSignals: { signal: string }[] }).absentSignals.map(
+        (s: { signal: string }) => s.signal,
+      );
+      // dmarc_reject should be absent (it didn't fire)
+      expect(absentSignalIds).toContain("dmarc_reject");
+      // bimi_record, dmarc_rua, dmarc_subdomain_policy should NOT be absent
+      // because their parent (dmarc_reject) is also absent
+      expect(absentSignalIds).not.toContain("bimi_record");
+      expect(absentSignalIds).not.toContain("dmarc_rua");
+      expect(absentSignalIds).not.toContain("dmarc_subdomain_policy");
+    }
+  });
+
+  // ── Registry consistency ──
+
+  it("every dependsOn should reference a valid signal in the same axis", () => {
+    for (const [id, def] of Object.entries(SIGNAL_REGISTRY)) {
+      if (def.dependsOn) {
+        const parent = SIGNAL_REGISTRY[def.dependsOn];
+        expect(parent, `${id} dependsOn "${def.dependsOn}" which does not exist`).toBeDefined();
+        expect(
+          parent.axis,
+          `${id} (${def.axis}) dependsOn "${def.dependsOn}" (${parent.axis}) — cross-axis dependency`,
+        ).toBe(def.axis);
+        expect(parent.canBeGood, `${id} dependsOn "${def.dependsOn}" which is not canBeGood`).toBe(true);
+      }
+    }
   });
 });

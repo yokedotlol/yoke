@@ -259,6 +259,8 @@ export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: 
     if (suppressedFromAbsent.has(id)) continue;
     if (def.requiresContext && scoringCtx && !scoringCtx[def.requiresContext as keyof typeof scoringCtx]) continue;
     if (def.requiresHttpAccess && scoringCtx?.httpBlocked) continue;
+    // Skip child if parent is also absent — prevents double-counting correlated signals
+    if (def.dependsOn && !firedSignalIds.has(def.dependsOn)) continue;
     const w = def.weightRange[1];
     const share = (w / totalGoodWeight) * 100;
     const prevalenceFactor = 1 + (def.goodPrevalence ?? 0);
@@ -331,6 +333,8 @@ export function computeAxisScoreWithDeductions(
       if (suppressedFromAbsent.has(id)) continue;
       if (def.requiresContext && scoringCtx && !scoringCtx[def.requiresContext as keyof typeof scoringCtx]) continue;
       if (def.requiresHttpAccess && scoringCtx?.httpBlocked) continue;
+      // Skip child if parent is also absent — prevents double-counting correlated signals
+      if (def.dependsOn && !firedSignals.has(def.dependsOn)) continue;
       const w = def.weightRange[1];
       const share = (w / totalGoodWeight) * 100;
       const prevalenceFactor = 1 + (def.goodPrevalence ?? 0);
