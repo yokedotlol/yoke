@@ -125,7 +125,7 @@ export const RDAP_ENDPOINTS: Record<string, string> = {
   net: "https://rdap.verisign.com/net/v1",
   org: "https://rdap.publicinterestregistry.org/rdap",
   info: "https://rdap.identitydigital.services/rdap",
-  biz: "https://rdap.identitydigital.services/rdap",
+  biz: "https://rdap.nic.biz/",
   xyz: "https://rdap.centralnic.com/xyz",
   lol: "https://rdap.centralnic.com/lol",
 
@@ -163,7 +163,7 @@ export const RDAP_ENDPOINTS: Record<string, string> = {
   uk: "https://rdap.nominet.uk/uk",
   fr: "https://rdap.nic.fr",
   nl: "https://rdap.sidn.nl",
-  au: "https://rdap.auda.org.au",
+  au: "https://rdap.cctld.au/rdap/",
   ca: "https://rdap.ca.fury.ca/rdap",
   eu: "https://rdap.eurid.eu",
   be: "https://rdap.dns.be",
@@ -178,7 +178,7 @@ export const RDAP_ENDPOINTS: Record<string, string> = {
   ly: "https://rdap.nic.ly",
   in: "https://rdap.nixiregistry.in/rdap",
   pl: "https://rdap.dns.pl",
-  id: "https://rdap.id",
+  id: "https://rdap.pandi.id/rdap/",
   is: "https://rdap.isnic.is/rdap",
   no: "https://rdap.norid.no",
   br: "https://rdap.registro.br",
@@ -189,9 +189,25 @@ export const RDAP_ENDPOINTS: Record<string, string> = {
   ua: "https://rdap.hostmaster.ua",
   th: "https://rdap.thains.co.th",
   tw: "https://ccrdap.twnic.tw/tw",
-  sg: "https://rdap.nic.sg",
-  ec: "https://rdap.nic.ec",
+  sg: "https://rdap.sgnic.sg/rdap/",
+  ec: "https://rdap.registry.ec/",
   ke: "https://rdap.kenic.or.ke",
+
+  // === Popular gTLDs (IANA bootstrap) ===
+  blog: "https://rdap.blog.fury.ca/rdap/",
+  cloud: "https://rdap.registry.cloud/rdap/",
+  design: "https://rdap.nic.design/",
+  icu: "https://rdap.centralnic.com/icu/",
+  online: "https://rdap.radix.host/rdap/",
+  pro: "https://rdap.identitydigital.services/rdap/",
+  shop: "https://rdap.gmoregistry.net/rdap/",
+  site: "https://rdap.radix.host/rdap/",
+  store: "https://rdap.radix.host/rdap/",
+  tech: "https://rdap.radix.host/rdap/",
+
+  // === Additional ccTLDs (IANA bootstrap) ===
+  uz: "https://rdap.cctld.uz/",
+  ng: "https://rdap.nic.net.ng/",
 };
 
 // ─── IANA Bootstrap (Dynamic TLD→RDAP map, cached in-memory) ─────────

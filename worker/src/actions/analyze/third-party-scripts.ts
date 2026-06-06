@@ -49,6 +49,10 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
       /chartbeat\.com/i,
       /clicky\.com/i,
       /statcounter\.com/i,
+      /cdn\.getkoala\.com/i,
+      /analytics\.june\.so/i,
+      /snowplow\.(io|com)/i,
+      /cdn\.rudderlabs\.com/i,
     ],
   },
   {
@@ -87,6 +91,10 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
       /advertising\.com/i,
       /bidswitch\.net/i,
       /casalemedia\.com/i,
+      /thetradedesk\.com/i,
+      /adsrvr\.org/i,
+      /liveramp\.com/i,
+      /lotame\.com/i,
     ],
   },
   {
@@ -124,6 +132,8 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
       /livechatinc\.com/i,
       /tidio\.co/i,
       /olark\.com/i,
+      /widget\.kommunicate\.io/i,
+      /app\.chatwoot\.com/i,
     ],
   },
   {
@@ -163,6 +173,8 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
       /cdn\.tailwindcss\.com/i,
       /polyfill\.io/i,
       /fonts\.googleapis\.com/i,
+      /esm\.sh/i,
+      /cdn\.skypack\.dev/i,
     ],
   },
   {
@@ -209,6 +221,20 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
       /ketchcdn\.com/i,
       /sirdata\.io/i,
       /consentmanager\.net/i,
+    ],
+  },
+  {
+    category: "A/B Testing",
+    patterns: [
+      /cdn\.optimizely\.com/i,
+      /optimizely\.com/i,
+      /cdn\.vwo\.com/i,
+      /dev\.visualwebsiteoptimizer\.com/i,
+      /cdn\.split\.io/i,
+      /cdn\.launchdarkly\.com/i,
+      /app\.launchdarkly\.com/i,
+      /statsig\.com/i,
+      /cdn\.ab-tasty\.com/i,
     ],
   },
   {

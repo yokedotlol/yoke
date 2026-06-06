@@ -77,6 +77,14 @@ export const NS_PROVIDERS: NsProvider[] = [
   { name: "Tencent Cloud", patterns: [/\.tencentcloudns\.com$/i, /\.dnspod\.net$/i] },
   { name: "Baidu Cloud", patterns: [/\.bdydns\.cn$/i] },
   { name: "Yandex Cloud", patterns: [/\.yandex\./i] },
+
+  // ── Additional Platforms (2026) ──────────────────────────────────
+  { name: "Fastly", patterns: [/\.fastly\.net$/i, /\.fastlylb\.net$/i] },
+  { name: "Deno Deploy", patterns: [/\.deno\.dev$/i] },
+  { name: "Supabase", patterns: [/\.supabase\.co$/i, /\.supabase\.com$/i] },
+  { name: "Kinsta", patterns: [/\.kinsta\.cloud$/i, /\.kinsta\.com$/i] },
+  { name: "Strato", patterns: [/\.strato\./i] },
+  { name: "Scaleway", patterns: [/\.scaleway\./i, /\.online\.net$/i] },
 ];
 
 /**

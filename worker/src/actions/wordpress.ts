@@ -170,6 +170,28 @@ const KNOWN_PLUGINS: Record<string, { name: string; category: string }> = {
   "wps-hide-login": { name: "WPS Hide Login", category: "Security" },
   "safe-svg": { name: "Safe SVG", category: "Media" },
   "converter-for-media": { name: "Converter for Media (WebP)", category: "Media" },
+
+  // 2026 additions — trending plugins by active installs
+  "spectra-one": { name: "Spectra One", category: "Page Builder" },
+  jetstyle: { name: "JetStyleManager", category: "Page Builder" },
+  "jet-engine": { name: "JetEngine", category: "Page Builder" },
+  "jet-elements": { name: "JetElements", category: "Page Builder" },
+  greenshift: { name: "Greenshift Animation", category: "Page Builder" },
+  blocksy: { name: "Blocksy Companion", category: "Theme" },
+  "neve-pro-addon": { name: "Neve Pro", category: "Theme" },
+  "otter-blocks": { name: "Otter Blocks", category: "Page Builder" },
+  suremember: { name: "SureMember", category: "Membership" },
+  "woolentor-addons": { name: "ShopLentor (WooLentor)", category: "E-commerce" },
+  cartflows: { name: "CartFlows", category: "E-commerce" },
+  "essential-addons-for-elementor-lite": { name: "Essential Addons for Elementor", category: "Page Builder" },
+  "jetsticky-for-elementor": { name: "JetSticky for Elementor", category: "Page Builder" },
+  metform: { name: "MetForm", category: "Forms" },
+  "happy-elementor-addons": { name: "Happy Addons for Elementor", category: "Page Builder" },
+  "royal-elementor-addons": { name: "Royal Elementor Addons", category: "Page Builder" },
+  "premium-addons-for-elementor": { name: "Premium Addons for Elementor", category: "Page Builder" },
+  "header-footer-elementor": { name: "Elementor Header & Footer Builder", category: "Page Builder" },
+  "astra-addon": { name: "Astra Pro", category: "Theme" },
+  "solid-security": { name: "Solid Security (iThemes)", category: "Security" },
 };
 
 // ─── Known theme database ───────────────────────────────────────────

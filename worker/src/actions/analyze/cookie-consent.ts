@@ -135,6 +135,21 @@ const CMP_PATTERNS: CmpPattern[] = [
     scriptPatterns: [/piwik\.pro.*consent/i, /piwikpro.*consent/i],
     htmlPatterns: [/ppms_cm/i, /piwik-pro-consent/i],
   },
+  {
+    name: "Termly",
+    scriptPatterns: [/app\.termly\.io/i, /termly\.io/i],
+    htmlPatterns: [/termly-consent/i, /t-consentPrompt/i],
+  },
+  {
+    name: "Pandectes",
+    scriptPatterns: [/pandectes\.io/i, /cdn\.pandectes\.io/i],
+    htmlPatterns: [/pandectes-banner/i, /pandectes-consent/i],
+  },
+  {
+    name: "Securiti",
+    scriptPatterns: [/cdn\.securiti\.ai/i, /securiti\.ai/i],
+    htmlPatterns: [/securiti-consent/i, /s-consent/i],
+  },
 ];
 
 // ─── Cookie Parsing ─────────────────────────────────────────────────
