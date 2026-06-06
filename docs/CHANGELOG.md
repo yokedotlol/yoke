@@ -4,6 +4,11 @@ All notable changes to Yoke are documented here.
 
 > **Scope:** This changelog tracks the **Service (Worker + Client)** version. The CLI and MCP Server version independently via their own release tags (`cli/vX.Y.Z` and `mcp/vX.Y.Z`).
 
+## [2.3.1] — 2026-06-05
+
+### Bug Fixes
+- **`/usage` admin route broken** — SPA route handler was intercepting `/usage` and serving an empty HTML shell before the request reached the admin dashboard handler. Removed `/usage` from the SPA page list.
+
 ## [2.3.0] — 2026-06-05
 
 ### Scoring
