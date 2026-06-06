@@ -4,11 +4,6 @@ All notable changes to Yoke are documented here.
 
 > **Scope:** This changelog tracks the **Service (Worker + Client)** version. The CLI and MCP Server version independently via their own release tags (`cli/vX.Y.Z` and `mcp/vX.Y.Z`).
 
-## [2.3.1] — 2026-06-05
-
-### Bug Fixes
-- **`/usage` admin route broken** — SPA route handler was intercepting `/usage` and serving an empty HTML shell before the request reached the admin dashboard handler. Removed `/usage` from the SPA page list.
-
 ## [2.3.0] — 2026-06-05
 
 ### Scoring
@@ -22,6 +17,7 @@ All notable changes to Yoke are documented here.
 - **Google Analytics false positive** — GA4 measurement ID regex tightened from `/G-[A-Z0-9]+/i` to `/['"]G-[A-Z0-9]{10,}['"]/`, requiring quoted context and minimum length to prevent matching CSS classes like `g-banner`.
 - **Tailwind CSS false positive** — `tailwindcss` HTML pattern now requires `<link>`, `<script>`, or `<style>` tag context to prevent matching content text that mentions Tailwind.
 - **Django false positive** — removed overly broad `x-frame-options:sameorigin` header match and generic `/django/i` HTML pattern (commit `8aee086`).
+- **`/usage` admin route** — SPA route handler was intercepting `/usage` and serving an empty HTML shell before the request reached the admin dashboard. Removed `/usage` from the SPA page list.
 
 ### Self-Hosting
 - **Docker env var bindings** — all 9 environment variables (`FLY_PROBE_URL`, `OPENROUTER_API_KEY`, `SHARE_SECRET`, `MAXMIND_ACCOUNT_ID`, `MAXMIND_LICENSE_KEY`, `BRANDFETCH_API_KEY`, `GOOGLE_API_KEY`, `ADMIN_KEY`, `DISABLE_ANALYTICS`) now wired through in `docker-compose.yml`.

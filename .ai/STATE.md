@@ -9,7 +9,7 @@
 
 | Component | Version | Source |
 |-----------|---------|--------|
-| Worker (service) | 2.3.1 | `YOKE_VERSION` in `worker/src/helpers.ts` |
+| Worker (service) | 2.3.0 | `YOKE_VERSION` in `worker/src/helpers.ts` |
 | CLI | 1.5.0 | `cli/` GoReleaser tag `cli/v1.5.0` |
 | MCP Server | 1.0.0 | `mcp/package.json` |
 | Chrome Extension | 1.5.0 | `extension/manifest.json` (submitted + live on CWS) |
