@@ -206,7 +206,7 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
       path === "/privacy" ||
       path === "/terms" ||
       path === "/status" ||
-      path === "/usage")
+      false) // /usage handled by admin route, not SPA
   ) {
     const indexHtml = await getIndexHtml(env, request.url);
     const pageUrl = `${baseUrl}${path === "/" ? "" : path}`;
