@@ -7,8 +7,8 @@ import { getBaseUrl, getBranding } from "./helpers";
 import { svgToPng } from "./og/png-render";
 import { getHtmlSecurityHeaders } from "./spa";
 
-// ─── Ox Mark Logo (base64 PNG) ───────────────────────────────────────
-const OX_LOGO_DATA_URI =
+// ─── Shield Logo (base64 PNG) ───────────────────────────────────────
+const SHIELD_LOGO_DATA_URI =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGYktHRAAAAAAAAPlDu38AAAAHdElNRQfqBgcBIANk00ByAAAEaUlEQVRo3uWaW4hVVRjHf0cdL1gjZpZWUo6jWJKXJIsiSupBIiLopZ566K0Iid4KInqvDCKi5yCCrvQkDZl2MUtH0QwvaQpaSmk5mTS38+thrcPZHveZc87ae2aM/rA5e6+91rf+/3X71rf2gf84KmUaU2s2p8Vranw1CozEy0qlvGqTLGWIzgYWAIuBHuBG4Drg6vhueiwyCJwHzgC/AseBn4BjwGng71RhbZWIhAFmRpJrgbuAVZH8PGBGBw1iFPU78DOwB9gO7IriBgHaEdQ0R4Z0F9AL3A9sANYA11IfHmVhFDgF9AObgc8JvTQ8lphLUjPE5wPrgUeBeyLpKSWTbtp+Ucw24H1gC2H4jd0rau1ap36tDjn5GFK3qqtr/FoJmKV+Otmsc/CeOr1RQN6QmAMsm6Ch0gmWA1c2JuYJqFCyfygJuZwmalKOG1IEjBJWibJhtD3uAg4TnE/ZOJJiN0WAwIvAd0C1BOKjwDfASyT0bIqA3vj7EPAssJuEro9ldgEbgYcJW5GeQk0R/cBC9VCLNblfXRrzL1A3qgfaXM+r6n71GfWaaOMWdW+LcnvVebbhyNoRoPqFusK6916iblLPjlHmjPqKujhTbqXB67dC6QJUd6irMmSmqQ9EcY2t3qeuj3lq+dfG3mwH4yJAdad6a4YUao+6L5Pne/WGhjy3qbs7qCdXQBmObC3wNhdvP44CH2eePwJOZJ5XAG8Bq4tWnidglM5XlTuB14GFmbTPCFHYn0BfJn0R8AZwe4d1VMlZZvMEDAEXEhpjA/AC9TDyR4JjOgwcjGkzCev9fQn2/yJGaq0EDAIDCRUAPBGFAJyNIvYB52LaI8DjibbPE6OzVgKGCwi4AniasO2tAj8A++O7ucBTwKxE2+cIpxotBYwQw7dE3E2YEwAHqA+fe4F1Bez+Rs7WpdkqdLJARbOpD6MjhKMTgAcJ24VUnMhLnJZ9qFQqtZjzaIGKIBy5dMeGqBLOie4oYK9aa4jGoL5ZDxwizPpU9AI3ESbyH9QPvVJxjnDEcgmaCThKky5rE3MJjm2E4FNuJvRIKo5RH4ptCThN2KOnYiqwJPO8lGJx9jaaLCzNBFQJ7j/FodWwKHN/fQE7A1y8LRlbQGaSbCWciKVifrTfFe9TsRn4toFbcwEZnAdeI90ndBNWuS5yznPaxClgE/BPswy5AjJKtxA2Ximx72zCXOiK951iJJLf3sCptYBMgSphl/lBAoGrCJN3WbzvFO8Cb1Lkg0gm+FisftlB8KE6op5Uf4n3naAvGwAVQkbEqg4jqFTsUJeXQj5HxDpbnx4UwU7bOUYvQcSecWr58SGfI2K1+lWJ5Psse9i0IaJH/VAdLUB8WH3HsiZsgoh56qvqhQTyA+rLaveEEW8iZIb6pHq8A/KH1ceMh1yTCi+e3Jsde80fVj8xc5p3WaBhSD1vcGCNOK4+p84pk/x4/FdiCrCS8H15DSGg6SdsR/ZzOfxXok0hEDZy0OJr+/8a/wLbgeqeGFQuqQAAAABJRU5ErkJggg==";
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -419,7 +419,7 @@ function generateReportPage(data: SharePayload, baseUrl: string, token: string, 
 <body>
   <div class="card">
     <div class="brand">
-      <img src="${OX_LOGO_DATA_URI}" alt="${brandName}" width="22" height="22" style="opacity:0.7"/>
+      <img src="${SHIELD_LOGO_DATA_URI}" alt="${brandName}" width="22" height="22" style="opacity:0.7"/>
       <span class="brand-name">${brandNameUpper}</span>
       <span class="brand-sub">DOMAIN INTELLIGENCE</span>
     </div>
@@ -673,7 +673,7 @@ function generateCompareOgSvg(data: CompareSharePayload, brand?: Branding): stri
   <rect x="0.5" y="0.5" width="1199" height="629" rx="0" fill="none" stroke="#30363d" stroke-width="1"/>
 
   <!-- Yoke branding — same position as single-domain -->
-  <image x="56" y="50" width="28" height="28" href="${OX_LOGO_DATA_URI}" opacity="0.7"/>
+  <image x="56" y="50" width="28" height="28" href="${SHIELD_LOGO_DATA_URI}" opacity="0.7"/>
   <text x="92" y="72" fill="#8b949e" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="18" font-weight="600" letter-spacing="2">${brandName}</text>
   <text x="170" y="72" fill="#484f58" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="14">DOMAIN COMPARISON</text>
 
@@ -821,7 +821,7 @@ function generateCompareReportPage(
 <body>
   <div class="card">
     <div class="brand">
-      <img src="${OX_LOGO_DATA_URI}" alt="${brandName}" width="22" height="22" style="opacity:0.7"/>
+      <img src="${SHIELD_LOGO_DATA_URI}" alt="${brandName}" width="22" height="22" style="opacity:0.7"/>
       <span class="brand-name">${brandNameUpper}</span>
       <span class="brand-sub">DOMAIN COMPARISON</span>
     </div>
