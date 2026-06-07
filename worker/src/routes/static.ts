@@ -7,8 +7,8 @@ import type { RouteContext } from "./shared";
 export function handle(rc: RouteContext): Response | Promise<Response> | null {
   const { url, path, method, env, baseUrl, host, brand } = rc;
 
-  // ── MTA-STS policy file (served from mta-sts.yoke.lol) ──────────
-  if (url.hostname === "mta-sts.yoke.lol" && path === "/.well-known/mta-sts.txt") {
+  // ── MTA-STS policy file (served from mta-sts.*.lol / mta-sts.*.com) ──────────
+  if (url.hostname.startsWith("mta-sts.") && path === "/.well-known/mta-sts.txt") {
     return new Response(
       [
         "version: STSv1",
