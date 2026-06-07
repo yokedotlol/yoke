@@ -3,9 +3,13 @@
 // Ported from yoke-pdf-demo/generate.js
 
 import fontkit from "@pdf-lib/fontkit";
-import { type Color, PDFDocument, type PDFFont, type PDFPage, rgb } from "pdf-lib";
+import { type Color, PDFDocument, type PDFFont, type PDFImage, type PDFPage, rgb } from "pdf-lib";
 import { AXIS_WEIGHTS as CANONICAL_AXIS_WEIGHTS, TIER_THRESHOLDS } from "./config/signal-registry";
 import type { PdfFontData } from "./pdf-fonts";
+
+// Y Shield logo — dark shield on transparent, 24×24 PNG
+const SHIELD_LOGO_B64 =
+  "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGYktHRAAAAAAAAPlDu38AAAAHdElNRQfqBgcBJRnkxk1NAAAB3UlEQVRIx63VPWuTYRQG4Cs17RAhrV/4FQV16qhuDuo/ECeddKiiQ3+CioKKgzhWBXHTf+CggwVRdFHXWpAOYuug2ECMTbGNw3sSYsLzJsHecMPzHs657+frPU9BLzahgqM4hsM4iB0ooYnf+I7P+Ii3eI8vWJPANpzCI8yhHmKDsB41j3Ea27vFJ/EKjSFEU2yE1mSnwaUNEO7mZRgJg1Ebj2KnQTeW8XMIseVgD1IGv3AbL2NPU1jFLG6iNozBXhzCeUzhg2xfW2jKrucUzkVuJW+J03oP6Q8eYhy7cTdW08A97EEZDyK3u266n0FT9tPcx2ZM4F1wImIzkdNMGRTDYCWxshFcwNfY51kU4kCv4GLONq90GlSxnkguxmye4U3EjkSsmBBfD8224A/ZjUhhJ87K2sEczkQshdXQbBsstRxzcELWc+oxzkM1NNsGi1joU3RAdqPGY5yHhdBsG1Txok9RGbuC5T65z3WdATzBfE7RGLZga4xT+ISnrY9Og3k5v3zkVoKpq1nDrbyJjuKq9LvwLZh6B64ZoDOXcMdwj08jakr9xDtNbsi6aj/xGq4PI97CmOylW8oRX5S1i7FhxVso4CRe+7eprUXseOT8N/bLumo1OIN9gxT+BV2p0W4atyJmAAAAAElFTkSuQmCC";
 
 // ─── Self-Hoster Customization ─────────────────────────────────────
 interface ReportBranding {
@@ -280,9 +284,16 @@ function drawLine(page: PDFPage, x1: number, y1: number, x2: number, y2: number,
 
 // ─── Page Header / Footer ────────────────────────────────────────
 
-function drawPageHeader(page: PDFPage, fonts: Fonts, pageLabel?: string): void {
+function drawPageHeader(page: PDFPage, fonts: Fonts, pageLabel?: string, logoImage?: PDFImage): void {
   const y = PAGE_H - MARGIN;
-  drawText(page, REPORT_CONFIG.brandName, MARGIN, y - 12, fonts.bold, 12, COLORS.accent);
+  let textX = MARGIN;
+  // Draw logo if available and branding allows it
+  if (logoImage && REPORT_CONFIG.showLogo) {
+    const logoSize = 14;
+    page.drawImage(logoImage, { x: MARGIN, y: y - 14, width: logoSize, height: logoSize });
+    textX = MARGIN + logoSize + 4;
+  }
+  drawText(page, REPORT_CONFIG.brandName, textX, y - 12, fonts.bold, 12, COLORS.accent);
   const rightText = pageLabel || REPORT_CONFIG.brandTagline;
   const rw = textWidth(fonts.regular, rightText, 10);
   drawText(page, rightText, PAGE_W - MARGIN - rw, y - 11, fonts.regular, 10, COLORS.dim);
@@ -705,7 +716,7 @@ function severityImpact(severity: string | undefined): number {
 // PAGE BUILDERS
 // ═══════════════════════════════════════════════════════════════════
 
-function buildPage1(doc: PDFDocument, fonts: Fonts, data: AnalysisData): PDFPage {
+function buildPage1(doc: PDFDocument, fonts: Fonts, data: AnalysisData, logoImage?: PDFImage): PDFPage {
   const page = doc.addPage([PAGE_W, PAGE_H]);
   const ds = data.domain_score;
   const composite = ds.composite;
@@ -713,7 +724,7 @@ function buildPage1(doc: PDFDocument, fonts: Fonts, data: AnalysisData): PDFPage
   const archetype = ds.archetype?.detected || "General";
   const color = tierColor(tier);
 
-  drawPageHeader(page, fonts, REPORT_CONFIG.brandTagline);
+  drawPageHeader(page, fonts, REPORT_CONFIG.brandTagline, logoImage);
 
   let y = CONTENT_TOP;
 
@@ -853,9 +864,9 @@ function buildPage1(doc: PDFDocument, fonts: Fonts, data: AnalysisData): PDFPage
   return page;
 }
 
-function buildPage2_Security(doc: PDFDocument, fonts: Fonts, data: AnalysisData): PDFPage {
+function buildPage2_Security(doc: PDFDocument, fonts: Fonts, data: AnalysisData, logoImage?: PDFImage): PDFPage {
   const page = doc.addPage([PAGE_W, PAGE_H]);
-  drawPageHeader(page, fonts, "Security Detail");
+  drawPageHeader(page, fonts, "Security Detail", logoImage);
 
   const ds = data.domain_score;
   const secAxis = ds.axes.security;
@@ -962,9 +973,14 @@ function buildPage2_Security(doc: PDFDocument, fonts: Fonts, data: AnalysisData)
   return page;
 }
 
-function buildPage3_SpeedFoundations(doc: PDFDocument, fonts: Fonts, data: AnalysisData): PDFPage {
+function buildPage3_SpeedFoundations(
+  doc: PDFDocument,
+  fonts: Fonts,
+  data: AnalysisData,
+  logoImage?: PDFImage,
+): PDFPage {
   const page = doc.addPage([PAGE_W, PAGE_H]);
-  drawPageHeader(page, fonts, "Speed & Foundations");
+  drawPageHeader(page, fonts, "Speed & Foundations", logoImage);
 
   const ds = data.domain_score;
   let y = CONTENT_TOP;
@@ -1141,9 +1157,14 @@ function buildPage3_SpeedFoundations(doc: PDFDocument, fonts: Fonts, data: Analy
   return page;
 }
 
-function buildPage4_ReputationDiscoverabilityEmail(doc: PDFDocument, fonts: Fonts, data: AnalysisData): PDFPage {
+function buildPage4_ReputationDiscoverabilityEmail(
+  doc: PDFDocument,
+  fonts: Fonts,
+  data: AnalysisData,
+  logoImage?: PDFImage,
+): PDFPage {
   const page = doc.addPage([PAGE_W, PAGE_H]);
-  drawPageHeader(page, fonts, "Reputation, Discoverability & Email");
+  drawPageHeader(page, fonts, "Reputation, Discoverability & Email", logoImage);
 
   const ds = data.domain_score;
   let y = CONTENT_TOP;
@@ -1323,11 +1344,16 @@ function buildPage4_ReputationDiscoverabilityEmail(doc: PDFDocument, fonts: Font
 // PAGE 5 — SCORE BREAKDOWN
 // ═══════════════════════════════════════════════════════════════════
 
-function buildPage5_ScoreBreakdown(doc: PDFDocument, fonts: Fonts, data: AnalysisData): PDFPage[] {
+function buildPage5_ScoreBreakdown(
+  doc: PDFDocument,
+  fonts: Fonts,
+  data: AnalysisData,
+  logoImage?: PDFImage,
+): PDFPage[] {
   const pages = [];
   let page = doc.addPage([PAGE_W, PAGE_H]);
   pages.push(page);
-  drawPageHeader(page, fonts, "Score Breakdown");
+  drawPageHeader(page, fonts, "Score Breakdown", logoImage);
 
   const ds = data.domain_score;
   const composite = ds.composite;
@@ -1413,7 +1439,7 @@ function buildPage5_ScoreBreakdown(doc: PDFDocument, fonts: Fonts, data: Analysi
     if (y < CONTENT_BOTTOM + 60) {
       page = doc.addPage([PAGE_W, PAGE_H]);
       pages.push(page);
-      drawPageHeader(page, fonts, "Score Breakdown (continued)");
+      drawPageHeader(page, fonts, "Score Breakdown (continued)", logoImage);
       y = CONTENT_TOP;
     }
 
@@ -1481,7 +1507,7 @@ function buildPage5_ScoreBreakdown(doc: PDFDocument, fonts: Fonts, data: Analysi
       if (y < CONTENT_BOTTOM + 30) {
         page = doc.addPage([PAGE_W, PAGE_H]);
         pages.push(page);
-        drawPageHeader(page, fonts, "Score Breakdown (continued)");
+        drawPageHeader(page, fonts, "Score Breakdown (continued)", logoImage);
         y = CONTENT_TOP;
       }
 
@@ -1493,7 +1519,7 @@ function buildPage5_ScoreBreakdown(doc: PDFDocument, fonts: Fonts, data: Analysi
         if (y < CONTENT_BOTTOM + 14) {
           page = doc.addPage([PAGE_W, PAGE_H]);
           pages.push(page);
-          drawPageHeader(page, fonts, "Score Breakdown (continued)");
+          drawPageHeader(page, fonts, "Score Breakdown (continued)", logoImage);
           y = CONTENT_TOP;
         }
 
@@ -1558,15 +1584,26 @@ export async function generatePdfReport(
     mono: await doc.embedFont(fontData.jetBrainsMono),
   };
 
+  // Embed shield logo for page headers
+  let logoImage: PDFImage | undefined;
+  if (REPORT_CONFIG.showLogo) {
+    try {
+      const logoBytes = Uint8Array.from(atob(SHIELD_LOGO_B64), (c) => c.charCodeAt(0));
+      logoImage = await doc.embedPng(logoBytes);
+    } catch {
+      // Logo embedding failed — continue without it
+    }
+  }
+
   // Build pages
   const allPages: PDFPage[] = [];
-  allPages.push(buildPage1(doc, fonts, data));
-  allPages.push(buildPage2_Security(doc, fonts, data));
-  allPages.push(buildPage3_SpeedFoundations(doc, fonts, data));
-  allPages.push(buildPage4_ReputationDiscoverabilityEmail(doc, fonts, data));
+  allPages.push(buildPage1(doc, fonts, data, logoImage));
+  allPages.push(buildPage2_Security(doc, fonts, data, logoImage));
+  allPages.push(buildPage3_SpeedFoundations(doc, fonts, data, logoImage));
+  allPages.push(buildPage4_ReputationDiscoverabilityEmail(doc, fonts, data, logoImage));
 
   // Page 5 may return multiple pages
-  const breakdownPages = buildPage5_ScoreBreakdown(doc, fonts, data);
+  const breakdownPages = buildPage5_ScoreBreakdown(doc, fonts, data, logoImage);
   allPages.push(...breakdownPages);
 
   // Add page footers with correct total
