@@ -3,7 +3,7 @@
      version="1.2" baseProfile="tiny-ps"
      viewBox="0 0 512 512" width="512" height="512">
   <title>Yoke</title>
-  <rect width="512" height="512" fill="#ffffff"/>
+  <!-- transparent background -->
   <!-- Shield outline with Y knocked out using even-odd fill -->
   <path fill-rule="evenodd" d="
     M256,72
@@ -48,5 +48,5 @@
     Q294,174 278,188
     Q264,200 256,210
     Z
-  " fill="#3a3a3a"/>
+  " fill="#58a6ff"/>
 </svg>
