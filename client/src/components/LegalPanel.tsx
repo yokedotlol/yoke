@@ -47,15 +47,45 @@ export function LegalPanel({ data }: { data: AnalysisResult }) {
               </span>
             </div>
             {page && (
-              <a
-                href={page.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--accent)", fontSize: "11px", textDecoration: "none" }}
-                title={page.url}
-              >
-                <ExternalLink size={11} />
-              </a>
+              <div className="flex items-center gap-1.5">
+                {page.source === "spa-inferred" && (
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      color: "var(--dim)",
+                      fontFamily: "var(--font-ui)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                    title="Detected via SPA client-side routing"
+                  >
+                    SPA
+                  </span>
+                )}
+                {page.source === "sitemap" && (
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      color: "var(--dim)",
+                      fontFamily: "var(--font-ui)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                    title="Found in sitemap.xml"
+                  >
+                    sitemap
+                  </span>
+                )}
+                <a
+                  href={page.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--accent)", fontSize: "11px", textDecoration: "none" }}
+                  title={page.url}
+                >
+                  <ExternalLink size={11} />
+                </a>
+              </div>
             )}
           </div>
         );
