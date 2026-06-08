@@ -544,7 +544,7 @@ export interface SocialMetaData {
   missing: string[];
 }
 export interface LegalData {
-  pages_found: Array<{ name: string; url: string }>;
+  pages_found: Array<{ name: string; url: string; source?: "html" | "head-probe" | "sitemap" | "spa-inferred" }>;
   cookie_consent_detected: boolean;
   consent_provider: string | null;
 }

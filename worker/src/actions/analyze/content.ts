@@ -759,16 +759,71 @@ const PROBE_PATHS: Record<string, string[]> = {
   "Terms of Service": ["/terms", "/tos", "/terms-of-service"],
 };
 
+// ─── SPA Detection Helpers ──────────────────────────────────────────
+
+/** Quick hash of the first N bytes of a string for SPA body comparison. */
+function simpleHash(str: string, maxLen = 2048): number {
+  const s = str.slice(0, maxLen);
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
+  }
+  return hash;
+}
+
+/** Detect whether HTML looks like an SPA shell (React, Vue, Angular, etc.). */
+function isSpaShell(html: string): boolean {
+  // Common SPA root markers
+  return (
+    /id=["'](root|app|__next|__nuxt)["']/i.test(html) ||
+    // Typical empty-body SPA: <body> with only a <div id="root"> and <script> tags
+    (/<body[^>]*>\s*<(div|noscript|script)\b/i.test(html) &&
+      (html.includes('type="module"') || /src=["'][^"']*\/(main|index|app|bundle)[.-]/i.test(html)))
+  );
+}
+
+/**
+ * Fetch sitemap.xml and extract all <loc> paths as normalized path strings.
+ * Returns null if sitemap is unavailable or unparseable.
+ */
+async function fetchSitemapPaths(domain: string, timeoutMs: number): Promise<Set<string> | null> {
+  try {
+    const res = await fetchWithTimeout(`https://${domain}/sitemap.xml`, { timeout: timeoutMs });
+    if (!res.ok) return null;
+    const text = await boundedText(res, 512 * 1024); // 512KB cap
+    if (!text.includes("<urlset") && !text.includes("<sitemapindex")) return null;
+
+    const paths = new Set<string>();
+    const locRegex = /<loc>([^<]+)<\/loc>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = locRegex.exec(text)) !== null) {
+      try {
+        const u = new URL(m[1]?.trim() ?? "");
+        // Only include paths from same domain
+        if (u.hostname === domain || u.hostname === `www.${domain}`) {
+          paths.add(u.pathname.replace(/\/$/, "") || "/");
+        }
+      } catch {
+        /* malformed URL — skip */
+      }
+    }
+    return paths.size > 0 ? paths : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function detectLegalPages(
   html: string,
   domain: string,
   env: Env,
   probeTimeoutMs = 4_000,
 ): Promise<LegalResult> {
-  const pagesFound: Array<{ name: string; url: string }> = [];
+  const pagesFound: Array<{ name: string; url: string; source?: "html" | "head-probe" | "sitemap" | "spa-inferred" }> =
+    [];
   const seen = new Set<string>();
 
-  // Extract all <a href="..."> links
+  // ─── Pass 1: Extract <a href="..."> links from HTML ───────────────
   const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match: RegExpExecArray | null;
   while ((match = linkRegex.exec(html)) !== null) {
@@ -792,27 +847,79 @@ export async function detectLegalPages(
             /* keep as-is */
           }
         }
-        pagesFound.push({ name: lp.name, url });
+        pagesFound.push({ name: lp.name, url, source: "html" });
       }
     }
   }
 
-  // Probe fallback: for page types not found in HTML, HEAD-request well-known paths
+  // ─── Pass 2: Sitemap cross-reference + HEAD probes (concurrent) ───
+  // Start sitemap fetch in parallel with HEAD probes — it resolves once
+  // and the result is shared by all probe groups that need it.
+  const sitemapPromise = fetchSitemapPaths(domain, probeTimeoutMs);
+
+  // Compute homepage hash for SPA body comparison (only if HTML looks like a SPA shell)
+  const homepageIsSpa = isSpaShell(html);
+  const homepageHash = homepageIsSpa ? simpleHash(html) : null;
+
   const probePromises: Promise<void>[] = [];
   for (const [name, paths] of Object.entries(PROBE_PATHS)) {
     if (seen.has(name)) continue; // Already found in HTML scan
 
     probePromises.push(
       (async () => {
+        // Check sitemap first (lightweight, already in-flight)
+        const sitemapPaths = await sitemapPromise;
+        if (sitemapPaths) {
+          for (const path of paths) {
+            if (seen.has(name)) return;
+            if (sitemapPaths.has(path)) {
+              const url = `https://${domain}${path}`;
+              pagesFound.push({ name, url, source: "sitemap" });
+              seen.add(name);
+              return;
+            }
+          }
+        }
+
+        // HEAD probe fallback
         for (const path of paths) {
-          if (seen.has(name)) break; // Another probe already found it
+          if (seen.has(name)) break;
           try {
             const url = `https://${domain}${path}`;
             const result = await probeHeadWithFallback(url, env, { timeout: probeTimeoutMs });
             if (result.ok && result.contentType.includes("text/html")) {
-              pagesFound.push({ name, url });
+              pagesFound.push({ name, url, source: "head-probe" });
               seen.add(name);
               break;
+            }
+
+            // SPA heuristic: if HEAD returned 404 and homepage is a SPA shell,
+            // do a lightweight GET for the first path only and compare body
+            // to the homepage. Identical body = SPA catch-all = route likely exists.
+            if (
+              !result.ok &&
+              homepageHash !== null &&
+              path === paths[0] // Only try the first (canonical) path to limit fetches
+            ) {
+              try {
+                const getResp = await fetchWithTimeout(url, {
+                  redirect: "follow",
+                  timeout: probeTimeoutMs,
+                });
+                if (getResp.ok || getResp.status === 404) {
+                  const body = await boundedText(getResp, 4096); // Only need first 4KB
+                  const bodyHash = simpleHash(body);
+                  if (bodyHash === homepageHash && isSpaShell(body)) {
+                    // 404 response serves the same SPA shell as homepage —
+                    // the route exists client-side
+                    pagesFound.push({ name, url, source: "spa-inferred" });
+                    seen.add(name);
+                    break;
+                  }
+                }
+              } catch {
+                /* GET failed — move on */
+              }
             }
           } catch {
             /* timeout or network error — skip this path */
