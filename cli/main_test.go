@@ -163,14 +163,15 @@ func TestWrapText(t *testing.T) {
 
 func TestSortedAxesCanonicalOrder(t *testing.T) {
 	axes := map[string]AxisVal{
-		"trust":       {},
-		"security":    {},
-		"visibility":  {},
-		"performance": {},
-		"reliability": {},
+		"reputation":      {},
+		"security":        {},
+		"discoverability": {},
+		"speed":           {},
+		"foundations":     {},
+		"email":           {},
 	}
 	got := sortedAxes(axes)
-	want := []string{"security", "performance", "reliability", "trust", "visibility"}
+	want := []string{"security", "speed", "foundations", "reputation", "discoverability", "email"}
 	if len(got) != len(want) {
 		t.Fatalf("got %d axes, want %d", len(got), len(want))
 	}

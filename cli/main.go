@@ -375,11 +375,12 @@ type sseCheck struct {
 // fetchAnalysisStream connects to the SSE streaming endpoint and shows
 // live terminal progress as each check completes.  Falls back to the
 // plain JSON endpoint when the server doesn't support streaming.
-func fetchAnalysisStream(domain string) (*AnalysisResult, error) {
+func fetchAnalysisStream(domain string, force ...bool) (*AnalysisResult, error) {
 	client := &http.Client{Timeout: 120 * time.Second}
 
 	// Use POST /api/analyze which supports SSE streaming
-	payload := fmt.Sprintf(`{"domain":%q}`, domain)
+	forceVal := len(force) > 0 && force[0]
+	payload := fmt.Sprintf(`{"domain":%q,"force":%t}`, domain, forceVal)
 	req, err := http.NewRequest("POST", apiBase+"/api/analyze", strings.NewReader(payload))
 	if err != nil {
 		return nil, err
@@ -523,9 +524,10 @@ func fetchAnalysisStream(domain string) (*AnalysisResult, error) {
 // fetchAnalysisStreamWithProgress is like fetchAnalysisStream but calls a
 // progress callback instead of rendering to the terminal directly. Used by
 // compare to run two progress bars in parallel.
-func fetchAnalysisStreamWithProgress(domain string, onProgress func(checks []sseCheck, completed, total int)) (*AnalysisResult, error) {
+func fetchAnalysisStreamWithProgress(domain string, onProgress func(checks []sseCheck, completed, total int), force ...bool) (*AnalysisResult, error) {
 	client := &http.Client{Timeout: 120 * time.Second}
-	payload := fmt.Sprintf(`{"domain":%q}`, domain)
+	forceVal := len(force) > 0 && force[0]
+	payload := fmt.Sprintf(`{"domain":%q,"force":%t}`, domain, forceVal)
 	req, err := http.NewRequest("POST", apiBase+"/api/analyze", strings.NewReader(payload))
 	if err != nil {
 		return nil, err
@@ -980,6 +982,7 @@ func wrapText(text string, width int) []string {
 // ─── Commands ───────────────────────────────────────────────────────
 
 var jsonOutput bool
+var freshScan bool
 
 func main() {
 	// Initialize API base URL from config/env (supports self-hosting)
@@ -1004,6 +1007,7 @@ func main() {
 		RunE:    runAnalyze,
 		SilenceUsage: true,
 		Example: `  yoke stripe.com                        # full analysis
+  yoke stripe.com --fresh                  # bypass cache, force fresh scan
   yoke stripe.com --json                 # raw JSON output
   yoke stripe.com --json | jq .ssl       # extract specific fields
   yoke score google.com                  # quick score check
@@ -1016,6 +1020,7 @@ func main() {
 		return err
 	})
 	root.PersistentFlags().BoolVar(&jsonOutput, "json", false, "raw JSON output")
+	root.PersistentFlags().BoolVar(&freshScan, "fresh", false, "bypass cache and force a fresh scan")
 
 	score := &cobra.Command{
 		Use:   "score <domain>",
@@ -1075,10 +1080,10 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	domain := normalizeDomain(args[0])
 
 	if jsonOutput {
-		return printRawJSON(apiBase + "/" + domain)
+		return printRawJSON(domain, freshScan)
 	}
 
-	result, err := fetchAnalysisStream(domain)
+	result, err := fetchAnalysisStream(domain, freshScan)
 	if err != nil {
 		return err
 	}
@@ -1091,7 +1096,7 @@ func runScore(cmd *cobra.Command, args []string) error {
 
 	if jsonOutput {
 		// Fetch full analysis but output only minimal score JSON
-		result, err := fetchAnalysisStream(domain)
+		result, err := fetchAnalysisStream(domain, freshScan)
 		if err != nil {
 			return err
 		}
@@ -1112,7 +1117,7 @@ func runScore(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	result, err := fetchAnalysisStream(domain)
+	result, err := fetchAnalysisStream(domain, freshScan)
 	if err != nil {
 		return err
 	}
@@ -1187,7 +1192,7 @@ func runCompare(cmd *cobra.Command, args []string) error {
 			d1total = total
 			renderCompareProgress()
 			mu.Unlock()
-		})
+		}, freshScan)
 		mu.Lock()
 		d1done = true
 		renderCompareProgress()
@@ -1203,7 +1208,7 @@ func runCompare(cmd *cobra.Command, args []string) error {
 			d2total = total
 			renderCompareProgress()
 			mu.Unlock()
-		})
+		}, freshScan)
 		mu.Lock()
 		d2done = true
 		renderCompareProgress()
@@ -1371,7 +1376,7 @@ func runAI(cmd *cobra.Command, args []string) error {
 					bar, dim.Render(fmt.Sprintf("%d/%d", completed, total)))
 			}
 			printedLines = 1
-		})
+		}, freshScan)
 		clearProgress(printedLines)
 	}
 
@@ -1698,11 +1703,24 @@ func runConfig(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func printRawJSON(url string) error {
+func printRawJSON(domain string, force bool) error {
 	client := &http.Client{Timeout: 90 * time.Second}
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return fmt.Errorf("request setup failed: %w", err)
+
+	var req *http.Request
+	var err error
+	if force {
+		// Use POST /api/analyze with force:true to bypass cache
+		payload := fmt.Sprintf(`{"domain":%q,"force":true}`, domain)
+		req, err = http.NewRequest("POST", apiBase+"/api/analyze", strings.NewReader(payload))
+		if err != nil {
+			return fmt.Errorf("request setup failed: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		req, err = http.NewRequest("GET", apiBase+"/"+domain, nil)
+		if err != nil {
+			return fmt.Errorf("request setup failed: %w", err)
+		}
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "yoke-cli/"+version)
