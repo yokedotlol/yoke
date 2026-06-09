@@ -35,5 +35,19 @@ binding = "REFERENCE_DATA"
 [triggers]
 crons = ["0 */1 * * *"]
 
+# ─── Durable Objects (optional) ──────────────────────────────────────
+# In-memory rate limiter — eliminates D1 reads/writes for rate limiting.
+# Activate by setting RATE_LIMIT_BACKEND = "do" in [vars].
+# Sharded across 256 DOs by IP hash for high throughput.
+#
+# [durable_objects]
+# bindings = [
+#   { name = "RATE_LIMITER", class_name = "RateLimiterDO" }
+# ]
+#
+# [[migrations]]
+# tag = "v1"
+# new_classes = ["RateLimiterDO"]
+
 # OG image rendering is now built into the main worker (og/ directory).
 # The separate og-worker service binding is no longer needed.

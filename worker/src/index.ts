@@ -16,6 +16,9 @@ import * as staticRoutes from "./routes/static";
 import { handleScheduled } from "./scheduled";
 import { serveAssetOrFallback, wantsJSON } from "./spa";
 
+// Re-export the Durable Object class so wrangler can find it
+export { RateLimiterDO } from "./rate-limiter-do";
+
 export default {
   async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     // HEAD → GET conversion: process as GET, return headers only
