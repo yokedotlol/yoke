@@ -63,7 +63,7 @@ curl -s https://yoke.lol/stripe.com | jq '.ssl'       # Specific section
 curl -s https://yoke.lol/stripe.com | jq '.domain_score'  # Scoring breakdown
 ```
 
-Rate limits: 50 analyses/hr per IP (cached results don't count). [Full API docs →](https://yoke.lol/api/docs)
+Rate limits: 20 analyses/hr per IP (cached results don't count). [Full API docs →](https://yoke.lol/api/docs)
 
 | Method | Path | Description |
 |--------|------|-------------|

@@ -352,3 +352,23 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **Rejected:** Fast-path scoring without PageSpeed (run 5 of 6 axes in ~8s for quicker cold start) — adds scoring complexity, and the neutral "not yet scanned" badge handles cold starts cleanly. Making cache warming solely the user's responsibility (provide a GitHub Action) — reduces adoption; offered as an optional extra instead. Retrofitting stale-while-revalidate into the analysis cache (inflate TTL, embed internal freshness timestamp) — requires changing cache read logic everywhere; a separate badge cache key is much simpler.
 
 **Directive:** Badge endpoints (`/badge/*`) must never trigger synchronous analysis — always a pure KV read + optional background work. Badge cache is always a separate derived key (`badge:<domain>`), never part of the analysis cache (`cache:analysis:<domain>`). All post-analysis enrichment (share_url, pdf_url, badge_url, percentiles, badge cache write) must go through the shared `finalizeResult()` function — never duplicated across code paths.
+
+---
+
+### 2026-06-08 — Rate limits tightened for DO cost ceiling
+
+**What changed:** All per-IP rate limits reduced to prevent Durable Objects request overage on the $5/mo Workers Paid plan. New defaults:
+- `/api/analyze`: 50 → **20**/hr
+- `/api/compare`: 50 → **20**/hr
+- `/api/subdomain-scan`: 30 → **15**/hr
+- `/api/subdomains`: 50 → **30**/hr
+- `/api/company`, `/api/news`, `/api/social`, `/api/reverse-ip`: 50 → **30**/hr
+- `/api/availability`: 60 → **30**/hr
+- `/api/js-audit`, `/api/suggestions`, `/api/ai-prompt`, `/report`: 20 → **10**/hr
+- `/api/track-tab`: 100 → **200**/hr (cheap telemetry, loosened)
+
+**Why:** Cost modeling showed DO requests are the binding constraint at 1M included/month on the Paid plan ($0.15/M overage). Each full scan (all tabs + AI) consumes ~16 DO requests (2 per rate-limited endpoint: dry-run check + record). At old limits, one heavy user maxing out analyze + all enrichments = 800 DO/hr. 100 concurrent heavy users = 80K DO/hr → would blow past 1M in 12 hours. New limits cap worst-case per-user DO consumption at ~200/hr. Need 500+ concurrent heavy users/hour to hit the 1M ceiling.
+
+**Rejected:** Removing rate limiting from track-tab entirely → still useful as a safety valve even for cheap endpoints. Keeping old limits and accepting overage → overage is cheap ($0.15/M) but unnecessary risk for a pre-launch project.
+
+**Directive:** Rate limit defaults are set for the $5/mo Workers Paid plan's included DO tier. Env var overrides (`RATE_LIMIT_*`) let self-hosters or future plan upgrades adjust without code changes. The 4 configurable limits (analyze, compare, subdomain, availability) are the only ones exposed as env vars — the rest are hardcoded in `shared.ts`.

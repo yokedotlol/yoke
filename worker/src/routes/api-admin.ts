@@ -577,31 +577,31 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       endpoints: {
         "GET /{domain}": {
           description: "Full domain analysis (content negotiation: JSON for curl/API clients, HTML for browsers)",
-          rate_limit: "50 req/hr",
+          rate_limit: "20 req/hr",
         },
         "POST /api/analyze": {
           description: "Full domain analysis. Supports SSE streaming (Accept: text/event-stream) or JSON response.",
           body: '{"domain": "example.com"}',
-          rate_limit: "50 req/hr",
+          rate_limit: "20 req/hr",
         },
         "POST /api/compare": {
           description: "Compare two domains side-by-side",
           body: '{"domain1": "a.com", "domain2": "b.com"}',
-          rate_limit: "50 req/hr",
+          rate_limit: "20 req/hr",
         },
         "POST /api/subdomains": {
           description: "Subdomain enumeration via certificate transparency logs",
           body: '{"domain": "example.com"}',
-          rate_limit: "50 req/hr",
+          rate_limit: "30 req/hr",
         },
         "GET /api/subdomains?domain=example.com": {
           description: "Subdomain enumeration (GET variant)",
-          rate_limit: "50 req/hr",
+          rate_limit: "30 req/hr",
         },
         "POST /api/subdomain-scan": {
           description: "Active subdomain DNS scan — resolves discovered subdomains",
           body: '{"domain": "example.com"}',
-          rate_limit: "30 req/hr",
+          rate_limit: "15 req/hr",
         },
         "POST /api/ai-analysis": {
           description:
@@ -612,36 +612,36 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
         "POST /api/company": {
           description: "Company/business info via Wikidata, Brandfetch, Crunchbase",
           body: '{"domain": "example.com"}',
-          rate_limit: "50 req/hr",
+          rate_limit: "30 req/hr",
         },
         "POST /api/news": {
           description: "Recent news articles about the domain",
           body: '{"domain": "example.com"}',
-          rate_limit: "50 req/hr",
+          rate_limit: "30 req/hr",
         },
         "POST /api/social": {
           description: "Social media account discovery",
           body: '{"domain": "example.com"}',
-          rate_limit: "50 req/hr",
+          rate_limit: "30 req/hr",
         },
         "POST /api/suggestions": {
           description: "Domain suggestions based on analysis",
           body: '{"domain": "example.com"}',
-          rate_limit: "20 req/hr",
+          rate_limit: "10 req/hr",
         },
         "POST /api/availability": {
           description: "Global availability check from multiple regions",
           body: '{"domain": "example.com"}',
-          rate_limit: "60 req/hr",
+          rate_limit: "30 req/hr",
         },
         "POST /api/reverse-ip": {
           description: "Reverse IP lookup — other domains on the same IP",
           body: '{"ip": "1.2.3.4"}',
-          rate_limit: "50 req/hr",
+          rate_limit: "30 req/hr",
         },
         "GET /api/js-audit?domain=example.com": {
           description: "Deep JS vulnerability scan — detects outdated/vulnerable client-side libraries",
-          rate_limit: "20 req/hr",
+          rate_limit: "10 req/hr",
         },
         "GET /api/health": {
           description: "Health check — basic status. Admin auth returns detailed error metrics.",

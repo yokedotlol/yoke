@@ -655,7 +655,7 @@ On Cloudflare Workers, Cloudflare's edge provides the first three layers automat
 
 Every Yoke instance — managed or self-hosted — ships with these protections built into the Worker code:
 
-- **Per-IP rate limiting** — configurable per-endpoint limits stored in D1 (default: 50 analyses/hr, 50 compares/hr, 30 subdomain scans/hr, 60 availability checks/hr). Set to `0` to disable.
+- **Per-IP rate limiting** — configurable per-endpoint limits stored in D1 (default: 20 analyses/hr, 20 compares/hr, 15 subdomain scans/hr, 30 availability checks/hr). Set to `0` to disable.
 - **SSRF protection** — all outbound fetches are checked against private/reserved IP ranges. Redirect chains are followed manually with SSRF checks at each hop.
 - **CORS policy** — `Access-Control-Allow-Origin: *` for GET/POST/OPTIONS (public API by design). Admin endpoints require Basic auth.
 - **Content-Security-Policy** — `frame-ancestors 'self'` prevents clickjacking.
@@ -754,10 +754,10 @@ Set via `npx wrangler secret put` (Cloudflare), `.env` (Docker), or workerd conf
 | `FLY_PROBE_URL` | Optional | Fly proxy URL |
 | `FLY_AUTH_SECRET` | Optional | Worker ↔ Fly proxy shared secret |
 | `PROBE_SECRET` | Optional | Docker probe container auth |
-| `RATE_LIMIT_ANALYZE` | Optional | Max analyses/hr per IP (default: 50, 0 = disable) |
-| `RATE_LIMIT_COMPARE` | Optional | Max compares/hr per IP (default: 50, 0 = disable) |
-| `RATE_LIMIT_SUBDOMAIN` | Optional | Max subdomain scans/hr per IP (default: 30, 0 = disable) |
-| `RATE_LIMIT_AVAILABILITY` | Optional | Max availability checks/hr per IP (default: 60, 0 = disable) |
+| `RATE_LIMIT_ANALYZE` | Optional | Max analyses/hr per IP (default: 20, 0 = disable) |
+| `RATE_LIMIT_COMPARE` | Optional | Max compares/hr per IP (default: 20, 0 = disable) |
+| `RATE_LIMIT_SUBDOMAIN` | Optional | Max subdomain scans/hr per IP (default: 15, 0 = disable) |
+| `RATE_LIMIT_AVAILABILITY` | Optional | Max availability checks/hr per IP (default: 30, 0 = disable) |
 | `CACHE_TTL_HOURS` | Optional | Analysis cache TTL in hours (default: 24, 0 = disable) |
 | `SITE_NAME` | Optional | White-label: replaces "Yoke" in the UI |
 | `SITE_TAGLINE` | Optional | White-label: homepage tagline |

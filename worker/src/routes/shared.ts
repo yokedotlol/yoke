@@ -90,20 +90,20 @@ export function checkAdminAuth(request: Request, adminKey: string | undefined): 
 
 function getRateLimits(env: Env): Record<string, { limit: number; windowSecs: number }> {
   return {
-    "/api/analyze": { limit: parseInt(env.RATE_LIMIT_ANALYZE || "50", 10), windowSecs: 3600 },
-    "/api/compare": { limit: parseInt(env.RATE_LIMIT_COMPARE || "50", 10), windowSecs: 3600 },
-    "/api/subdomain-scan": { limit: parseInt(env.RATE_LIMIT_SUBDOMAIN || "30", 10), windowSecs: 3600 },
-    "/api/subdomains": { limit: 50, windowSecs: 3600 },
-    "/api/company": { limit: 50, windowSecs: 3600 },
-    "/api/news": { limit: 50, windowSecs: 3600 },
-    "/api/social": { limit: 50, windowSecs: 3600 },
-    "/api/reverse-ip": { limit: 50, windowSecs: 3600 },
-    "/api/availability": { limit: parseInt(env.RATE_LIMIT_AVAILABILITY || "60", 10), windowSecs: 3600 },
-    "/api/js-audit": { limit: 20, windowSecs: 3600 },
-    "/api/track-tab": { limit: 100, windowSecs: 3600 },
-    "/api/suggestions": { limit: 20, windowSecs: 3600 },
-    "/api/ai-prompt": { limit: 20, windowSecs: 3600 },
-    "/report": { limit: 20, windowSecs: 3600 },
+    "/api/analyze": { limit: parseInt(env.RATE_LIMIT_ANALYZE || "20", 10), windowSecs: 3600 },
+    "/api/compare": { limit: parseInt(env.RATE_LIMIT_COMPARE || "20", 10), windowSecs: 3600 },
+    "/api/subdomain-scan": { limit: parseInt(env.RATE_LIMIT_SUBDOMAIN || "15", 10), windowSecs: 3600 },
+    "/api/subdomains": { limit: 30, windowSecs: 3600 },
+    "/api/company": { limit: 30, windowSecs: 3600 },
+    "/api/news": { limit: 30, windowSecs: 3600 },
+    "/api/social": { limit: 30, windowSecs: 3600 },
+    "/api/reverse-ip": { limit: 30, windowSecs: 3600 },
+    "/api/availability": { limit: parseInt(env.RATE_LIMIT_AVAILABILITY || "30", 10), windowSecs: 3600 },
+    "/api/js-audit": { limit: 10, windowSecs: 3600 },
+    "/api/track-tab": { limit: 200, windowSecs: 3600 },
+    "/api/suggestions": { limit: 10, windowSecs: 3600 },
+    "/api/ai-prompt": { limit: 10, windowSecs: 3600 },
+    "/report": { limit: 10, windowSecs: 3600 },
   };
 }
 
