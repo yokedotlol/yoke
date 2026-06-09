@@ -10,7 +10,7 @@ import { CORS_HEADERS, cleanDomain } from "../helpers";
 import { trackUsage } from "../usage-tracking";
 import {
   addHeaders,
-  checkRateLimit,
+  checkRateLimitAuto,
   json,
   jsonError,
   parseBody,
@@ -28,7 +28,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const adminBypass = env.ADMIN_KEY && timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY);
     const rl = adminBypass
       ? { blocked: null, headers: {}, record: rateLimitNoop }
-      : await checkRateLimit(env.STATS_DB, clientIP, "/api/analyze", env);
+      : await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/analyze", env);
     if (rl.blocked) {
       _track("analyze", 429);
       return rl.blocked;
@@ -71,7 +71,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // POST /api/compare
   if (method === "POST" && path === "/api/compare") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/compare", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/compare", env);
     if (rl.blocked) {
       _track("compare", 429);
       return rl.blocked;
@@ -90,7 +90,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // POST /api/subdomains
   if (method === "POST" && path === "/api/subdomains") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/subdomains", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/subdomains", env);
     if (rl.blocked) {
       _track("subdomains", 429);
       return rl.blocked;
@@ -108,7 +108,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // GET /api/subdomains?domain=X — subdomain enumeration (GET alias)
   if (method === "GET" && path === "/api/subdomains") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/subdomains", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/subdomains", env);
     if (rl.blocked) {
       _track("subdomains", 429);
       return rl.blocked;
@@ -129,7 +129,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // POST /api/subdomain-scan
   if (method === "POST" && path === "/api/subdomain-scan") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/subdomain-scan", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/subdomain-scan", env);
     if (rl.blocked) {
       _track("subdomain-scan", 429);
       return rl.blocked;
@@ -147,7 +147,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // POST /api/suggestions
   if (method === "POST" && path === "/api/suggestions") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/suggestions", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/suggestions", env);
     if (rl.blocked) return rl.blocked;
     const body = await parseBody<{ domain?: string }>(request);
     if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);

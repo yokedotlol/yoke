@@ -32,7 +32,7 @@ import {
   addHeaders,
   adminJson,
   checkAdminAuth,
-  checkRateLimit,
+  checkRateLimitAuto,
   json,
   jsonError,
   parseBody,
@@ -156,7 +156,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   // POST /api/track-tab — anonymous tab view analytics
   if (method === "POST" && path === "/api/track-tab") {
     if (!env.STATS_DB || env.DISABLE_ANALYTICS) return json({ ok: true });
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/track-tab", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/track-tab", env);
     if (rl.blocked) return rl.blocked;
     const body = await parseBody<{ domain?: string; tab?: string }>(request);
     if (!body.tab) return jsonError("tab required", "MISSING_TAB", 400);
@@ -184,7 +184,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const adminBypass = env.ADMIN_KEY && timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY);
     const rl = adminBypass
       ? { blocked: null, headers: {}, record: rateLimitNoop }
-      : await checkRateLimit(env.STATS_DB, clientIP, "/api/js-audit", env);
+      : await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/js-audit", env);
     if (rl.blocked) {
       _track("js-audit", 429);
       return rl.blocked;

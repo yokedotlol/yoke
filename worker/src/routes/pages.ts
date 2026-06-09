@@ -14,7 +14,7 @@ import {
   matchSharePath,
 } from "../share";
 import { handleSPARoute, matchDomainPath } from "../spa";
-import { checkRateLimit, jsonError, type RouteContext } from "./shared";
+import { checkRateLimitAuto, jsonError, type RouteContext } from "./shared";
 
 /** Handle page-level routes (share cards, reports, SPA).
  *  Returns a Response if matched, null otherwise. */
@@ -54,7 +54,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
         "unknown",
       env,
     );
-    const rl = await checkRateLimit(env.STATS_DB, reportIP, "/report", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, reportIP, "/report", env);
     if (rl.blocked) {
       trackRequest(env, request, { endpoint: "report", domain: reportDomain, status: 429, latencyMs: 0 });
       return rl.blocked;

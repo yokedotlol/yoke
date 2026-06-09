@@ -6,14 +6,14 @@ import { getReverseIP } from "../actions/reverse-ip";
 import { getSocialAccounts } from "../actions/social";
 import { cleanDomain } from "../helpers";
 import { trackUsage } from "../usage-tracking";
-import { addHeaders, checkRateLimit, json, jsonError, parseBody, type RouteContext } from "./shared";
+import { addHeaders, checkRateLimitAuto, json, jsonError, parseBody, type RouteContext } from "./shared";
 
 export async function handle(rc: RouteContext): Promise<Response | null> {
   const { request, path, method, env, clientIP, track: _track } = rc;
 
   // POST /api/company
   if (method === "POST" && path === "/api/company") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/company", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/company", env);
     if (rl.blocked) {
       _track("company", 429);
       return rl.blocked;
@@ -31,7 +31,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // POST /api/news
   if (method === "POST" && path === "/api/news") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/news", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/news", env);
     if (rl.blocked) {
       _track("news", 429);
       return rl.blocked;
@@ -49,7 +49,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // POST /api/social
   if (method === "POST" && path === "/api/social") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/social", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/social", env);
     if (rl.blocked) {
       _track("social", 429);
       return rl.blocked;
@@ -67,7 +67,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // POST /api/reverse-ip
   if (method === "POST" && path === "/api/reverse-ip") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/reverse-ip", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/reverse-ip", env);
     if (rl.blocked) {
       _track("reverse-ip", 429);
       return rl.blocked;
@@ -90,7 +90,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // POST /api/availability
   if (method === "POST" && path === "/api/availability") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/availability", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/availability", env);
     if (rl.blocked) {
       _track("availability", 429);
       return rl.blocked;

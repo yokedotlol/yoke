@@ -2,7 +2,7 @@
 import { buildAIPrompt, getAIAnalysis } from "../actions/ai-analysis";
 import { cleanDomain, getFromCache } from "../helpers";
 import { trackUsage } from "../usage-tracking";
-import { addHeaders, checkRateLimit, json, jsonError, parseBody, type RouteContext } from "./shared";
+import { addHeaders, checkRateLimitAuto, json, jsonError, parseBody, type RouteContext } from "./shared";
 
 export async function handle(rc: RouteContext): Promise<Response | null> {
   const { request, path, method, env, ctx, clientIP, track: _track } = rc;
@@ -25,7 +25,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // POST /api/ai-prompt — returns the assembled prompt for the prompt editor (no LLM call)
   if (method === "POST" && path === "/api/ai-prompt") {
-    const rl = await checkRateLimit(env.STATS_DB, clientIP, "/api/ai-prompt", env);
+    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/ai-prompt", env);
     if (rl.blocked) return rl.blocked;
     const body = await parseBody<{ domain?: string }>(request);
     if (!body.domain || typeof body.domain !== "string") return jsonError("domain is required", "MISSING_DOMAIN", 400);
