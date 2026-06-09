@@ -31,6 +31,10 @@ export interface Env {
   REFERENCE_DATA: KVNamespace;
   /** Analysis cache TTL override in hours (default: 1) */
   CACHE_TTL_HOURS?: string;
+  /** Rate limit backend: "d1" (default) or "do" (Durable Object) */
+  RATE_LIMIT_BACKEND?: string;
+  /** Durable Object namespace for rate limiting (required when RATE_LIMIT_BACKEND=do) */
+  RATE_LIMITER?: DurableObjectNamespace;
   /** Comma-separated list of self-hosted domain names (for self-fetch bypass). Defaults to yoke.lol. */
   SELF_DOMAINS?: string;
   /** Custom site name for self-hosted instances (default: "Yoke") */

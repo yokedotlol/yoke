@@ -4,6 +4,7 @@
 import type { Env } from "../helpers";
 import { CORS_HEADERS } from "../helpers";
 import { logError } from "../logger";
+import { shardKeyFromIP } from "../rate-limiter-do";
 
 // ─── JSON Response Helpers ──────────────────────────────────────────
 
@@ -288,6 +289,185 @@ export async function checkRateLimit(
     // Fail-open for general endpoints (they don't cost money)
   }
   return { blocked: null, headers: {}, record: rateLimitNoop };
+}
+
+// ─── Durable Object Rate Limiting ───────────────────────────────────
+
+/**
+ * DO-backed rate limit check. Zero D1 reads/writes — all state lives
+ * in the Durable Object's RAM. Falls open on any DO error.
+ */
+export async function checkRateLimitDO(
+  rateLimiter: DurableObjectNamespace | undefined,
+  ip: string,
+  endpoint: string,
+  env: Env,
+): Promise<RateLimitResult> {
+  if (!rateLimiter) return { blocked: null, headers: {}, record: rateLimitNoop };
+  const limits = getRateLimits(env);
+  const config = limits[endpoint];
+  if (!config || config.limit === 0) return { blocked: null, headers: {}, record: rateLimitNoop };
+
+  // Fast path: in-memory block cache (shared with D1 path — avoids DO round-trip for known blocks)
+  const cacheKey = `${ip}:${endpoint}`;
+  const now = Math.floor(Date.now() / 1000);
+  const cachedResetAt = blockCache.get(cacheKey);
+  if (cachedResetAt && cachedResetAt > now) {
+    const secsLeft = cachedResetAt - now;
+    const rlHeaders = {
+      "X-RateLimit-Limit": String(config.limit),
+      "X-RateLimit-Remaining": "0",
+      "X-RateLimit-Reset": String(cachedResetAt),
+      "Retry-After": String(secsLeft),
+    };
+    return {
+      blocked: new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded",
+          code: "RATE_LIMITED",
+          status: 429,
+          limit: config.limit,
+          remaining: 0,
+          reset: cachedResetAt,
+          window: `${config.windowSecs / 3600} hour`,
+          retry_after: secsLeft,
+          self_host: "https://github.com/yokedotlol/yoke#self-hosting",
+          message: "For heavy usage, self-host with no limits. See our setup guide.",
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            ...CORS_HEADERS,
+            ...rlHeaders,
+          },
+        },
+      ),
+      headers: rlHeaders,
+      record: rateLimitNoop,
+    };
+  } else if (cachedResetAt) {
+    blockCache.delete(cacheKey);
+  }
+
+  try {
+    const shardKey = shardKeyFromIP(ip);
+    const doId = rateLimiter.idFromName(shardKey);
+    const stub = rateLimiter.get(doId);
+
+    // Dry-run check first — we'll record only if the response isn't served from cache
+    const resp = await stub.fetch(
+      new Request("https://do/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ip,
+          endpoint,
+          limit: config.limit,
+          windowSecs: config.windowSecs,
+          dryRun: true,
+        }),
+      }),
+    );
+
+    if (!resp.ok) {
+      // DO returned an error — fail open
+      logError("rate limit DO error", { status: resp.status });
+      return { blocked: null, headers: {}, record: rateLimitNoop };
+    }
+
+    const result = (await resp.json()) as { allowed: boolean; limit: number; remaining: number; resetAt: number };
+
+    if (!result.allowed) {
+      blockCacheSet(cacheKey, result.resetAt);
+      const rlHeaders = {
+        "X-RateLimit-Limit": String(result.limit),
+        "X-RateLimit-Remaining": "0",
+        "X-RateLimit-Reset": String(result.resetAt),
+        "Retry-After": String(Math.max(1, result.resetAt - now)),
+      };
+      return {
+        blocked: new Response(
+          JSON.stringify({
+            error: "Rate limit exceeded",
+            code: "RATE_LIMITED",
+            status: 429,
+            limit: result.limit,
+            remaining: 0,
+            reset: result.resetAt,
+            window: `${config.windowSecs / 3600} hour`,
+            retry_after: Math.max(1, result.resetAt - now),
+            self_host: "https://github.com/yokedotlol/yoke#self-hosting",
+            message: "For heavy usage, self-host with no limits. See our setup guide.",
+          }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json",
+              ...CORS_HEADERS,
+              ...rlHeaders,
+            },
+          },
+        ),
+        headers: rlHeaders,
+        record: rateLimitNoop,
+      };
+    }
+
+    // Allowed — return a record() callback that fires the real (non-dry-run) request
+    const recordHit = async () => {
+      try {
+        await stub.fetch(
+          new Request("https://do/check", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ip,
+              endpoint,
+              limit: config.limit,
+              windowSecs: config.windowSecs,
+              dryRun: false,
+            }),
+          }),
+        );
+      } catch {
+        // Best-effort — don't fail the request
+      }
+    };
+
+    return {
+      blocked: null,
+      headers: {
+        "X-RateLimit-Limit": String(result.limit),
+        "X-RateLimit-Remaining": String(result.remaining),
+        "X-RateLimit-Reset": String(result.resetAt),
+      },
+      record: recordHit,
+    };
+  } catch (err) {
+    logError("rate limit DO error", { error: err instanceof Error ? err.message : String(err) });
+    // Fail-open — same policy as D1 path
+  }
+  return { blocked: null, headers: {}, record: rateLimitNoop };
+}
+
+// ─── Unified Rate Limit Dispatcher ──────────────────────────────────
+
+/**
+ * Feature-flagged rate limit check.
+ * When env.RATE_LIMIT_BACKEND === "do" and the RATE_LIMITER binding exists,
+ * uses the Durable Object path. Otherwise falls back to D1.
+ */
+export async function checkRateLimitAuto(
+  db: D1Database | undefined,
+  ip: string,
+  endpoint: string,
+  env: Env,
+): Promise<RateLimitResult> {
+  if (env.RATE_LIMIT_BACKEND === "do" && env.RATE_LIMITER) {
+    return checkRateLimitDO(env.RATE_LIMITER, ip, endpoint, env);
+  }
+  return checkRateLimit(db, ip, endpoint, env);
 }
 
 // ─── Route Handler Context ──────────────────────────────────────────
