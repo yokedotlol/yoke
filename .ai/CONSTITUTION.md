@@ -65,6 +65,35 @@ This means:
 - Filtering thresholds (e.g., `compositeDelta < 0.1`) must never create unexplained gaps. If filtering removes items, a residual explanation must cover the remainder.
 - **The invariant: for every axis, `sum(displayed_items) = 100 - axis_score`.** No silent deductions.
 
+## Cost Awareness
+
+Yoke runs on usage-based cloud pricing. Every new feature must account for its per-request cloud cost.
+
+### Cloudflare (Workers Paid $5/mo)
+| Resource | Free Tier | Overage |
+|----------|-----------|---------|
+| Workers requests | 10M/month | $0.30/M |
+| D1 reads | 25B/month | $0.001/M |
+| D1 writes | 50M/month | $1.00/M |
+| KV reads | 10M/month | $0.50/M |
+| KV writes | 1M/month | $5.00/M |
+| Durable Objects | included | $0.15/M requests |
+
+### Per-Request Budget (current)
+- **Uncached analysis:** ~5-7 D1 writes, ~3-4 D1 reads, ~2 KV reads, ~2 KV writes
+- **Cached analysis:** ~1-2 D1 writes (rate limit + tracking), ~2-3 D1 reads
+- **Badge request:** ~1 KV read (cache hit), ~1 D1 write (tracking)
+
+### Cost Rules
+- **Calculate before shipping.** Every feature that adds D1/KV operations must include a cost estimate at 10x/100x current traffic.
+- **Ephemeral state → Durable Objects or in-memory.** Rate limiting, session counters, and other short-lived state should avoid D1 writes. DO in-memory counters have zero per-write cost.
+- **KV writes are 5× more expensive than D1 writes.** Use KV for read-heavy cache (analysis results), D1 for write-heavy tracking (scores, usage).
+- **Batch D1 writes.** Use `db.batch()` to combine multiple writes into a single operation where possible.
+- **Cache-aware rate limiting.** Cache hits must not burn rate limit D1 writes — the `record()` pattern enforces this.
+
+### Self-Hosting Cost Profile
+Self-hosters on Docker Compose pay only for their VPS (~$10-20/mo). No CF/Fly.io bills. This is a key selling point — document it.
+
 ## Red Lines
 
 - **No internal docs in the public repo.** Calibration methodology, scoring rationale, planning notes, audit reports → `~/workspace/yoke-internal/` locally, never committed.

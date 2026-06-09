@@ -101,6 +101,29 @@
 - [ ] **White-label env vars are optional with sensible defaults.** Missing `SITE_NAME` defaults to "Yoke", missing `HIDE_*` defaults to showing everything.
   - _Verify:_ Check `config.js` generation in `index.ts` — all white-label vars must have fallback values.
 
+- [ ] **Self-hosted instances have zero rate limits.** Rate limiting is a hosted-service concern, not a self-hosting concern. Self-hosters control their own traffic.
+  - _Verify:_ Docker Compose and self-hosting docs must not impose rate limits.
+
+- [ ] **Self-hosted instances must not phone home.** No analytics, telemetry, or API calls to yoke.lol from self-hosted instances.
+  - _Verify:_ `grep -r 'yoke.lol' worker/src/` — any references must be in white-label defaults, not in runtime API calls.
+
+- [ ] **Docker Compose is the maintained self-hosting path.** Three containers: Caddy (TLS + reverse proxy + MTA-STS), workerd (miniflare), probe (SSL/PageSpeed Go binary). Bare-metal is community-maintained.
+  - _Verify:_ `docker-compose.yml` exists and defines all three services.
+
+## Billing & Cost
+
+- [ ] **Per-request D1 write budget stays under 10.** No feature may add more than 2 D1 writes per request without explicit cost justification.
+  - _Verify:_ Count INSERT/UPDATE statements in the hot path for each endpoint.
+
+- [ ] **Ephemeral state avoids D1.** Rate limiting, session tracking, and other short-lived data should use Durable Objects (in-memory) or KV with TTL, not D1 row inserts.
+  - _Verify:_ Rate limiter implementation does not INSERT into D1 on every request (once DO migration is complete).
+
+- [ ] **Cache hits must not incur D1 writes.** The `record()` deferred-write pattern must be skipped for cached responses.
+  - _Verify:_ In api-core.ts, `record()` is only called when `!cached`.
+
+- [ ] **Badge requests are read-only at the edge.** `/badge/*` endpoints read from KV cache only. D1 writes for `badge_domains` tracking happen via `backgroundWork()`, never synchronously.
+  - _Verify:_ Badge handler does not `await` any D1 operation in the response path.
+
 - [ ] **Fly proxy has zero public endpoints.** Every route requires `FLY_AUTH_SECRET` auth.
   - _Verify:_ `curl -s https://yoke-probe.fly.dev/health` without auth header must return 401.
 

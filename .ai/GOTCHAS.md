@@ -173,3 +173,24 @@
 
 **Don't:** Add post-analysis side effects directly to `api-core.ts` or `analyze-stream.ts`. Don't duplicate enrichment logic across code paths.
 **Do:** All post-analysis enrichment goes through the shared `finalizeResult()` function in `worker/src/actions/analyze/finalize.ts`. Both paths call it once. New side effects are added in one place and automatically apply to both JSON and SSE responses.
+
+---
+
+### D1 row writes are expensive at scale — know your per-request write budget
+
+**What happened:** open-distance.com wrote 1.38 billion rows to D1 (map tile data, done twice). At $1/million rows written beyond the 50M free tier, this cost ~$1,330. The CF dashboard showed $500/day in usage but the billing panel showed $0 — the usage view shows gross operations before the free tier is applied, while billing shows net charges. The discrepancy delayed the realization.
+
+**Don't:** Assume D1 is free. Don't write per-request analytics/tracking/rate-limiting rows to D1 without calculating the monthly write budget at 10x/100x/1000x traffic. Don't trust the CF usage dashboard for billing — always check the actual billing panel.
+**Do:** Calculate your per-request D1 write count and multiply by expected monthly requests. For Yoke specifically: each uncached analysis does ~5-7 D1 writes (rate limit record, score insert, daily snapshot, usage tracking, request meta). At 100K requests/day that's ~15-21M writes/month — still within free tier. At 1M requests/day it's $150-210/month just for D1 writes. Consider Durable Objects for ephemeral state like rate limiting (in-memory, no per-write cost). Batch D1 writes where possible using `db.batch()`.
+
+---
+
+### Cloudflare free-tier thresholds are per-month, not per-day
+
+**What happened:** Confusion between CF free plan (daily limits) and CF paid plan (monthly limits with different thresholds). The $5/mo Workers Paid plan changes the billing model entirely.
+
+**Don't:** Assume free-plan thresholds when on the paid plan, or vice versa.
+**Do:** Know exactly which plan you're on and the corresponding limits:
+- **Workers Paid ($5/mo):** 10M requests/month, D1: 25B reads + 50M writes/month, KV: 10M reads + 1M writes/month
+- **Workers Free:** 100K requests/day, D1: 5M reads/day + 100K writes/day, KV: 100K reads/day + 1K writes/day
+Track which threshold you'll hit first at your growth rate.
