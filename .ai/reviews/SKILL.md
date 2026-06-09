@@ -4,7 +4,7 @@ Comprehensive, multi-expert review process for the Yoke codebase and product. Ru
 
 ## Review Panels
 
-This system uses **20 expert panels**, each with a dedicated prompt in `panels/`. Panels are designed to run as parallel tasks in any AI agent harness.
+This system uses **21 expert panels**, each with a dedicated prompt in `panels/`. Panels are designed to run as parallel tasks in any AI agent harness.
 
 | # | Panel | Prompt | Focus |
 |---|-------|--------|-------|
@@ -28,6 +28,7 @@ This system uses **20 expert panels**, each with a dedicated prompt in `panels/`
 | 18 | Domain Scoring Audit | `domain-scoring-audit.md` | Per-domain scoring fairness with 5 expert personas |
 | 19 | Performance & Load | `performance-load.md` | Cold starts, bundle size, D1 latency, concurrent load |
 | 20 | Data Privacy & Regulatory | `data-privacy.md` | GDPR, CCPA, data retention, consent, privacy policy |
+| 21 | Billing & Cost | `billing-cost.md` | CF/Fly.io pricing exposure, per-request costs, scaling forecasts, DO migration |
 
 ## How to Run
 
@@ -57,7 +58,7 @@ Re-check all open findings from the last Yoke review in docs/internal/reviews/.
 
 1. **Check for prior findings** — Look in `docs/internal/reviews/` for previous review output
 2. **Spawn panels** — Run in two batches:
-   - **Batch A (code-focused):** System Design, Code Quality, Scoring & Signals, Security & Privacy, FOSS Legal, CI/CD, Documentation, Accessibility, Performance, Privacy
+   - **Batch A (code-focused):** System Design, Code Quality, Scoring & Signals, Security & Privacy, FOSS Legal, CI/CD, Documentation, Accessibility, Performance, Privacy, Billing & Cost
    - **Batch B (live-site + product):** QA Browser, QA CLI/API, HN Heckler, r/selfhosted Heckler, WP & Consultant, Business & Product, Self-Hosting Operator, Ground Truth Validator, Platform Best Practices
    - **Standalone:** Domain Scoring Audit (per-domain, run separately)
 3. **Collect results** — Each panel writes findings to `docs/internal/reviews/panel-[name].md`
