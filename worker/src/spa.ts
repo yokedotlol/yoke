@@ -3,7 +3,7 @@
 
 import { runAnalysis } from "./actions/analyze/core";
 import { finalizeResult } from "./actions/analyze/finalize";
-import { BudgetExceededError } from "./analysis-budget";
+import { BudgetExceededError, recordEndpointHit } from "./analysis-budget";
 import { tierFromComposite } from "./config/signal-registry";
 import type { Env } from "./helpers";
 import {
@@ -16,7 +16,6 @@ import {
   YOKE_VERSION,
 } from "./helpers";
 import { checkRateLimitAuto, timingSafeEq } from "./routes/shared";
-import { trackUsage } from "./usage-tracking";
 
 // ─── Security Headers ────────────────────────────────────────────────
 // Applied to all HTML responses served by the worker.
@@ -357,7 +356,7 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
     await finalizeResult(clean, resultData, request, env);
 
     // Track usage — mirrors POST /api/analyze tracking
-    trackUsage(env.STATS_DB, "analyze", !!env.DISABLE_ANALYTICS).catch(() => {});
+    recordEndpointHit(env, "analyze");
 
     const isCached = coreResult.kind === "cached";
 

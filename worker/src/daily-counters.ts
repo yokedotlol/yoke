@@ -8,7 +8,7 @@
 // the table works even if the migration (0005_daily_counters.sql) hasn't been
 // applied manually.
 
-import type { BudgetStats } from "./analysis-budget-do";
+import type { BudgetStats, EndpointCounts } from "./analysis-budget-do";
 import type { Env } from "./helpers";
 
 const CREATE_SQL = `CREATE TABLE IF NOT EXISTS daily_counters (
@@ -69,6 +69,69 @@ export async function flushBudgetCounters(db: D1Database | undefined, stats: Bud
       await db.prepare(CREATE_SQL).run();
       tableReady = true;
       await db.batch(rows.map(([m, v]) => upsert(m, v)));
+    } catch {
+      /* non-critical instrumentation */
+    }
+  }
+}
+
+// ─── endpoint_usage flush ────────────────────────────────────────────
+// endpoint_usage holds one row per (endpoint, day). The per-request UPSERT that
+// used to populate it was the last per-request D1 write on the hot path; it's
+// been replaced by an in-memory DO counter (AnalysisBudgetDO.endpoints) flushed
+// here on the hourly cron. The usage panel's read (getUsageStats) is unchanged.
+
+const ENDPOINT_USAGE_TABLE_SQL = `CREATE TABLE IF NOT EXISTS endpoint_usage (
+  endpoint TEXT NOT NULL,
+  day TEXT NOT NULL,
+  hits INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (endpoint, day)
+)`;
+const ENDPOINT_USAGE_INDEX_SQL = `CREATE INDEX IF NOT EXISTS idx_endpoint_usage_day ON endpoint_usage(day)`;
+
+let endpointTableReady = false;
+
+async function ensureEndpointTable(db: D1Database): Promise<void> {
+  if (endpointTableReady) return;
+  await db.batch([db.prepare(ENDPOINT_USAGE_TABLE_SQL), db.prepare(ENDPOINT_USAGE_INDEX_SQL)]);
+  endpointTableReady = true;
+}
+
+/**
+ * Flush the budget DO's current-day per-endpoint hit counts into endpoint_usage.
+ *
+ * Mirrors flushBudgetCounters' SET semantics: the DO holds cumulative day totals
+ * (NOT per-flush deltas), so we SET `hits = excluded.hits` rather than adding.
+ * Repeated hourly flushes are therefore idempotent and converge on the DO's
+ * authoritative count — no double-count across flushes, no count lost between
+ * them. Zero-count endpoints are skipped (nothing to write).
+ */
+export async function flushEndpointCounters(
+  db: D1Database | undefined,
+  day: string,
+  endpoints: EndpointCounts | undefined,
+): Promise<void> {
+  if (!db || !endpoints) return;
+  const rows = Object.entries(endpoints).filter(([, hits]) => hits > 0);
+  if (rows.length === 0) return;
+
+  const upsert = (endpoint: string, hits: number) =>
+    db
+      .prepare(
+        `INSERT INTO endpoint_usage (endpoint, day, hits) VALUES (?, ?, ?)
+         ON CONFLICT (endpoint, day) DO UPDATE SET hits = excluded.hits`,
+      )
+      .bind(endpoint, day, hits);
+
+  try {
+    await ensureEndpointTable(db);
+    await db.batch(rows.map(([e, h]) => upsert(e, h)));
+  } catch {
+    // Self-heal then retry once.
+    try {
+      await db.batch([db.prepare(ENDPOINT_USAGE_TABLE_SQL), db.prepare(ENDPOINT_USAGE_INDEX_SQL)]);
+      endpointTableReady = true;
+      await db.batch(rows.map(([e, h]) => upsert(e, h)));
     } catch {
       /* non-critical instrumentation */
     }

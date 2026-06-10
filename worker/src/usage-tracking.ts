@@ -1,5 +1,9 @@
-// Lightweight endpoint usage tracking — daily counters per endpoint in D1
-// One row per endpoint per day, incremented on each call via UPSERT
+// Lightweight endpoint usage tracking — daily counters per endpoint in D1.
+// One row per (endpoint, day). The hot-path per-request UPSERT was removed in
+// favor of an in-memory DO counter (AnalysisBudgetDO.endpoints) flushed hourly
+// by the cron (see flushEndpointCounters in daily-counters.ts). This module now
+// only OWNS the table schema (ensureTable) and the read side (getUsageStats);
+// the usage panel's read shape is unchanged.
 
 const TABLE_SQL = `CREATE TABLE IF NOT EXISTS endpoint_usage (
   endpoint TEXT NOT NULL,
@@ -16,24 +20,6 @@ async function ensureTable(db: D1Database): Promise<void> {
   if (tableReady) return;
   await db.batch([db.prepare(TABLE_SQL), db.prepare(INDEX_SQL)]);
   tableReady = true;
-}
-
-/** Track endpoint usage. Returns a promise — caller should pass to ctx.waitUntil() or await it. */
-export function trackUsage(db: D1Database | undefined, endpoint: string, disabled?: boolean): Promise<void> {
-  if (!db || disabled) return Promise.resolve();
-  const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  return ensureTable(db)
-    .then(() =>
-      db
-        .prepare(
-          `INSERT INTO endpoint_usage (endpoint, day, hits) VALUES (?, ?, 1)
-       ON CONFLICT(endpoint, day) DO UPDATE SET hits = hits + 1`,
-        )
-        .bind(endpoint, day)
-        .run(),
-    )
-    .then(() => {})
-    .catch(() => {}); // silently ignore tracking failures
 }
 
 /** Get usage stats for the last N days */

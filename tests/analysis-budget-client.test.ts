@@ -7,6 +7,7 @@ import {
   recordApiCall,
   recordCacheHit,
   recordCacheMiss,
+  recordEndpointHit,
   resolveBudgetLimit,
 } from "@worker/analysis-budget";
 import type { Env } from "@worker/helpers";
@@ -127,6 +128,52 @@ describe("analysis-budget client", () => {
       recordApiCall(env, "whoisfreaks");
       recordCacheHit(env);
       recordCacheMiss(env);
+      recordEndpointHit(env, "analyze");
     }).not.toThrow();
+  });
+
+  it("recordEndpointHit POSTs the endpoint name to /endpoint (fire-and-forget)", async () => {
+    const hits: string[] = [];
+    let path = "";
+    const ns = {
+      idFromName: () => ({}) as unknown as DurableObjectId,
+      get: () =>
+        ({
+          fetch: async (req: Request) => {
+            path = new URL(req.url).pathname;
+            const body = (await req.json()) as { endpoint?: string };
+            if (body.endpoint) hits.push(body.endpoint);
+            return new Response(JSON.stringify({ ok: true }), { status: 200 });
+          },
+        }) as unknown as DurableObjectStub,
+    } as unknown as DurableObjectNamespace;
+    const env = { ANALYSIS_BUDGET: ns } as unknown as Env;
+
+    recordEndpointHit(env, "analyze");
+    recordEndpointHit(env, "compare");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(path).toBe("/endpoint");
+    expect(hits).toEqual(["analyze", "compare"]);
+  });
+
+  it("recordEndpointHit honors DISABLE_ANALYTICS (no DO call)", async () => {
+    let called = false;
+    const ns = {
+      idFromName: () => ({}) as unknown as DurableObjectId,
+      get: () =>
+        ({
+          fetch: async () => {
+            called = true;
+            return new Response(JSON.stringify({ ok: true }), { status: 200 });
+          },
+        }) as unknown as DurableObjectStub,
+    } as unknown as DurableObjectNamespace;
+    const env = { ANALYSIS_BUDGET: ns, DISABLE_ANALYTICS: "1" } as unknown as Env;
+
+    recordEndpointHit(env, "analyze");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(called).toBe(false);
   });
 });

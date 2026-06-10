@@ -52,6 +52,16 @@ export interface BudgetMetrics {
 /** Bumpable metric names (the `/bump` endpoint payload). */
 export type BudgetMetric = keyof BudgetMetrics;
 
+/**
+ * Per-endpoint hit counts for the current UTC day (`{ endpoint: count }`).
+ *
+ * Like `metrics`, these are cheap fire-and-forget observability counters that
+ * keep the hot path off D1 — every API request used to do a per-request
+ * endpoint_usage UPSERT; now it bumps this in-memory map instead. The hourly
+ * cron flushes the cumulative day totals into the endpoint_usage table.
+ */
+export type EndpointCounts = Record<string, number>;
+
 /** Result of a stats() call. */
 export interface BudgetStats {
   day: string;
@@ -59,6 +69,7 @@ export interface BudgetStats {
   limit: number;
   breakdown: BudgetBreakdown;
   metrics: BudgetMetrics;
+  endpoints: EndpointCounts;
 }
 
 /** Persisted shape in DO storage. */
@@ -67,6 +78,7 @@ interface BudgetState {
   count: number;
   breakdown: BudgetBreakdown;
   metrics: BudgetMetrics;
+  endpoints: EndpointCounts;
 }
 
 /** Default global daily analysis budget when env override is absent/invalid. */
@@ -82,6 +94,13 @@ function emptyBreakdown(): BudgetBreakdown {
 function emptyMetrics(): BudgetMetrics {
   return { whoisfreaks_calls: 0, pagespeed_calls: 0, cache_hits: 0, cache_misses: 0 };
 }
+
+function emptyEndpoints(): EndpointCounts {
+  return {};
+}
+
+/** Max distinct endpoint keys tracked per day — bounds memory against junk labels. */
+const MAX_ENDPOINT_KEYS = 256;
 
 const METRIC_KEYS: readonly BudgetMetric[] = ["whoisfreaks_calls", "pagespeed_calls", "cache_hits", "cache_misses"];
 
@@ -140,6 +159,18 @@ export class AnalysisBudgetDO {
         return jsonResponse({ ok: true });
       }
 
+      // Fire-and-forget per-endpoint hit counter. Like /bump, this never counts
+      // toward the budget — it only increments the in-memory endpoint tally the
+      // hourly cron flushes into endpoint_usage.
+      if (url.pathname === "/endpoint" && request.method === "POST") {
+        const body = (await request.json()) as { endpoint?: string };
+        if (!body.endpoint || typeof body.endpoint !== "string") {
+          return jsonResponse({ error: "missing endpoint" }, 400);
+        }
+        await this.recordEndpoint(body.endpoint);
+        return jsonResponse({ ok: true });
+      }
+
       if (url.pathname === "/stats" && request.method === "GET") {
         const result = await this.stats(limit);
         return jsonResponse(result);
@@ -165,12 +196,29 @@ export class AnalysisBudgetDO {
     if (!this.cache) {
       const stored = await this.state.storage.get<BudgetState>("budget");
       this.cache = stored
-        ? { ...stored, metrics: { ...emptyMetrics(), ...stored.metrics } } // back-compat: pre-metrics rows
-        : { day: utcDay(), count: 0, breakdown: emptyBreakdown(), metrics: emptyMetrics() };
+        ? {
+            ...stored,
+            // back-compat: pre-metrics / pre-endpoints rows
+            metrics: { ...emptyMetrics(), ...stored.metrics },
+            endpoints: { ...emptyEndpoints(), ...stored.endpoints },
+          }
+        : {
+            day: utcDay(),
+            count: 0,
+            breakdown: emptyBreakdown(),
+            metrics: emptyMetrics(),
+            endpoints: emptyEndpoints(),
+          };
     }
     const today = utcDay();
     if (this.cache.day !== today) {
-      this.cache = { day: today, count: 0, breakdown: emptyBreakdown(), metrics: emptyMetrics() };
+      this.cache = {
+        day: today,
+        count: 0,
+        breakdown: emptyBreakdown(),
+        metrics: emptyMetrics(),
+        endpoints: emptyEndpoints(),
+      };
       await this.state.storage.put("budget", this.cache);
     }
     return this.cache;
@@ -198,6 +246,21 @@ export class AnalysisBudgetDO {
     await this.state.storage.put("budget", st);
   }
 
+  /**
+   * Increment the day's hit count for an endpoint. Pure observability — never
+   * consults or affects the budget. New keys are capped at MAX_ENDPOINT_KEYS so
+   * an attacker spraying distinct labels can't grow DO state unboundedly
+   * (further distinct keys are dropped; existing ones still count).
+   */
+  async recordEndpoint(endpoint: string): Promise<void> {
+    const st = await this.load();
+    if (st.endpoints[endpoint] === undefined && Object.keys(st.endpoints).length >= MAX_ENDPOINT_KEYS) {
+      return;
+    }
+    st.endpoints[endpoint] = (st.endpoints[endpoint] ?? 0) + 1;
+    await this.state.storage.put("budget", st);
+  }
+
   /** Read today's count, limit, per-path breakdown, and auxiliary metrics. */
   async stats(limit: number): Promise<BudgetStats> {
     const st = await this.load();
@@ -207,6 +270,7 @@ export class AnalysisBudgetDO {
       limit,
       breakdown: { ...st.breakdown },
       metrics: { ...st.metrics },
+      endpoints: { ...st.endpoints },
     };
   }
 }

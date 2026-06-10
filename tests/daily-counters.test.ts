@@ -1,16 +1,19 @@
 // daily_counters flush/read tests — verifies UPSERT semantics + retention prune.
 
 import type { BudgetStats } from "@worker/analysis-budget-do";
-import { flushBudgetCounters, pruneOldRows, readDailyCounter } from "@worker/daily-counters";
+import { flushBudgetCounters, flushEndpointCounters, pruneOldRows, readDailyCounter } from "@worker/daily-counters";
 import type { Env } from "@worker/helpers";
 import { describe, expect, it } from "vitest";
 
 /**
- * In-memory D1 stub implementing just enough of the daily_counters UPSERT and
- * SELECT to assert behavior. Keyed by (metric, day).
+ * In-memory D1 stub implementing just enough of the daily_counters /
+ * endpoint_usage UPSERT + SELECT to assert behavior. daily_counters is keyed by
+ * (metric, day); endpoint_usage by (endpoint, day). `endpointUsage` is exposed
+ * so tests can assert SET (not increment) semantics across flushes.
  */
-function memoryD1(captured?: { deletes: string[] }): D1Database {
+function memoryD1(captured?: { deletes: string[] }): D1Database & { endpointUsage: Map<string, number> } {
   const table = new Map<string, number>(); // `${metric}|${day}` -> value
+  const endpointUsage = new Map<string, number>(); // `${endpoint}|${day}` -> hits
 
   function makeStmt(sql: string, binds: unknown[] = []): D1PreparedStatement {
     return {
@@ -27,6 +30,9 @@ function memoryD1(captured?: { deletes: string[] }): D1Database {
         if (sql.startsWith("INSERT INTO daily_counters")) {
           const [metric, day, value] = binds as [string, string, number];
           table.set(`${metric}|${day}`, value); // ON CONFLICT DO UPDATE SET = value
+        } else if (sql.startsWith("INSERT INTO endpoint_usage")) {
+          const [endpoint, day, hits] = binds as [string, string, number];
+          endpointUsage.set(`${endpoint}|${day}`, hits); // ON CONFLICT DO UPDATE SET = excluded.hits
         } else if (sql.startsWith("DELETE FROM")) {
           captured?.deletes.push(sql);
         }
@@ -50,7 +56,8 @@ function memoryD1(captured?: { deletes: string[] }): D1Database {
     },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
+    endpointUsage,
+  } as unknown as D1Database & { endpointUsage: Map<string, number> };
 }
 
 function makeStats(overrides: Partial<BudgetStats> = {}): BudgetStats {
@@ -115,6 +122,37 @@ describe("daily_counters", () => {
   it("readDailyCounter returns 0 for an absent metric", async () => {
     const db = memoryD1();
     expect(await readDailyCounter(db, "analyses_total", "1999-01-01")).toBe(0);
+  });
+
+  it("flushes per-endpoint counts into endpoint_usage", async () => {
+    const db = memoryD1();
+    await flushEndpointCounters(db, "2026-06-10", { analyze: 5, compare: 2, news: 1 });
+
+    expect(db.endpointUsage.get("analyze|2026-06-10")).toBe(5);
+    expect(db.endpointUsage.get("compare|2026-06-10")).toBe(2);
+    expect(db.endpointUsage.get("news|2026-06-10")).toBe(1);
+  });
+
+  it("endpoint flush is idempotent — two consecutive flushes do NOT double-count", async () => {
+    const db = memoryD1();
+    // First hourly flush: DO cumulative day total so far.
+    await flushEndpointCounters(db, "2026-06-10", { analyze: 5, compare: 2 });
+    // Second flush later in the day: DO total has grown. Because the DO holds
+    // cumulative totals and we SET (not add), the row reflects the latest total,
+    // NOT 5 + 8. This is the key no-double-count guarantee.
+    await flushEndpointCounters(db, "2026-06-10", { analyze: 8, compare: 3 });
+
+    expect(db.endpointUsage.get("analyze|2026-06-10")).toBe(8);
+    expect(db.endpointUsage.get("compare|2026-06-10")).toBe(3);
+  });
+
+  it("endpoint flush is a no-op for empty/zero/undefined inputs", async () => {
+    const db = memoryD1();
+    await flushEndpointCounters(db, "2026-06-10", {});
+    await flushEndpointCounters(db, "2026-06-10", { analyze: 0 });
+    await flushEndpointCounters(db, "2026-06-10", undefined);
+    await flushEndpointCounters(undefined, "2026-06-10", { analyze: 5 });
+    expect(db.endpointUsage.size).toBe(0);
   });
 
   it("pruneOldRows deletes request_meta past the retention window", async () => {
