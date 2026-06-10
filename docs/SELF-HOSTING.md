@@ -124,11 +124,19 @@ The wrangler.toml file is gitignored.
 
 ### Step 4: Migrations
 
+Migrations are hand-targeted at a specific D1 by database name (there is no
+`wrangler d1 migrations apply` step). Run, against **yoke-stats**:
+
 ```bash
 npx wrangler d1 execute yoke-stats --file=worker/migrations/0002_domain_scores.sql
+npx wrangler d1 execute yoke-stats --file=worker/migrations/0003_badge_domains.sql
 ```
 
 > `0001_init.sql` is deprecated (old D1 cache layer, replaced by KV). Skip it.
+>
+> `0004_drop_domain_cache.sql` only matters if you previously ran `0001_init.sql`
+> against a **yoke-cache** DB; it drops the now-unused `domain_cache` table.
+> Fresh self-hosters who skipped `0001` can ignore it.
 
 ### Step 5: Secrets
 
