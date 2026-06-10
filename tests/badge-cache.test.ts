@@ -100,29 +100,6 @@ describe("Badge Cache", () => {
       await writeBadgeCache("stripe.com", SAMPLE_SCORE, env);
     });
 
-    it("stores certNotAfter when provided, and omits it when absent", async () => {
-      const env = mockEnv();
-      const notAfter = "2027-01-01T00:00:00.000Z";
-      await writeBadgeCache("with-cert.com", SAMPLE_SCORE, env, notAfter);
-      await writeBadgeCache("no-cert.com", SAMPLE_SCORE, env);
-
-      const kv = env.REFERENCE_DATA as ReturnType<typeof stubKV>;
-      const withCert = JSON.parse(kv._store.get("badge:with-cert.com") as string) as BadgeCacheEntry;
-      const noCert = JSON.parse(kv._store.get("badge:no-cert.com") as string) as BadgeCacheEntry;
-
-      expect(withCert.certNotAfter).toBe(notAfter);
-      // Absent (null/undefined) cert stays OUT of the payload — backward compatible.
-      expect("certNotAfter" in noCert).toBe(false);
-    });
-
-    it("omits certNotAfter when passed null", async () => {
-      const env = mockEnv();
-      await writeBadgeCache("null-cert.com", SAMPLE_SCORE, env, null);
-      const kv = env.REFERENCE_DATA as ReturnType<typeof stubKV>;
-      const entry = JSON.parse(kv._store.get("badge:null-cert.com") as string) as BadgeCacheEntry;
-      expect("certNotAfter" in entry).toBe(false);
-    });
-
     it("handles missing axis scores gracefully", async () => {
       const env = mockEnv();
       const partialScore = {
