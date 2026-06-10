@@ -45,13 +45,22 @@ crons = ["0 */1 * * *"]
 # in RAM; a per-DO alarm GCs expired windows. Exported from src/index.ts.
 [durable_objects]
 bindings = [
-  { name = "RATE_LIMITER", class_name = "RateLimiterDO" }
+  { name = "RATE_LIMITER", class_name = "RateLimiterDO" },
+  # Single-instance global daily analysis budget (caps expensive cache-miss
+  # scans per UTC day; default ceiling 3000, override with GLOBAL_ANALYSIS_BUDGET).
+  { name = "ANALYSIS_BUDGET", class_name = "AnalysisBudgetDO" }
 ]
 
-# The DO uses storage (alarms) → register it as a SQLite-backed class.
+# The DOs use storage (alarms / durable counters) → register as SQLite-backed.
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RateLimiterDO"]
+
+# AnalysisBudgetDO added later → its own migration tag (forward-only; a DO class
+# cannot be un-created by an automatic rollback).
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["AnalysisBudgetDO"]
 
 # OG image rendering is now built into the main worker (og/ directory).
 # The separate og-worker service binding is no longer needed.

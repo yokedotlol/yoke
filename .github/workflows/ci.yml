@@ -168,9 +168,17 @@ jobs:
           name = "RATE_LIMITER"
           class_name = "RateLimiterDO"
 
+          [[durable_objects.bindings]]
+          name = "ANALYSIS_BUDGET"
+          class_name = "AnalysisBudgetDO"
+
           [[migrations]]
           tag = "v1"
           new_sqlite_classes = ["RateLimiterDO"]
+
+          [[migrations]]
+          tag = "v2"
+          new_sqlite_classes = ["AnalysisBudgetDO"]
 
           [triggers]
           crons = ["0 */1 * * *"]
@@ -310,9 +318,17 @@ jobs:
           name = "RATE_LIMITER"
           class_name = "RateLimiterDO"
 
+          [[durable_objects.bindings]]
+          name = "ANALYSIS_BUDGET"
+          class_name = "AnalysisBudgetDO"
+
           [[migrations]]
           tag = "v1"
           new_sqlite_classes = ["RateLimiterDO"]
+
+          [[migrations]]
+          tag = "v2"
+          new_sqlite_classes = ["AnalysisBudgetDO"]
 
           [triggers]
           crons = ["0 */1 * * *"]
