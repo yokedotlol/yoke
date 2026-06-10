@@ -35,19 +35,23 @@ binding = "REFERENCE_DATA"
 [triggers]
 crons = ["0 */1 * * *"]
 
-# ─── Durable Objects (optional) ──────────────────────────────────────
-# In-memory rate limiter — eliminates D1 reads/writes for rate limiting.
-# Activate by setting RATE_LIMIT_BACKEND = "do" in [vars].
-# Sharded across 256 DOs by IP hash for high throughput.
+# ─── Durable Objects: rate limiter ───────────────────────────────────
+# Recommended backend — cheaper than the D1 default; activate by binding the DO
+# + deploying + running the migration. Once RATE_LIMITER is bound the worker
+# uses it automatically (default backend = "do" when the binding exists). Set
+# RATE_LIMIT_BACKEND = "d1" in [vars] to force the old D1 limiter instead.
 #
-# [durable_objects]
-# bindings = [
-#   { name = "RATE_LIMITER", class_name = "RateLimiterDO" }
-# ]
-#
-# [[migrations]]
-# tag = "v1"
-# new_classes = ["RateLimiterDO"]
+# In-memory, sharded across 256 DOs by IP hash for high throughput. State lives
+# in RAM; a per-DO alarm GCs expired windows. Exported from src/index.ts.
+[durable_objects]
+bindings = [
+  { name = "RATE_LIMITER", class_name = "RateLimiterDO" }
+]
+
+# The DO uses storage (alarms) → register it as a SQLite-backed class.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RateLimiterDO"]
 
 # OG image rendering is now built into the main worker (og/ directory).
 # The separate og-worker service binding is no longer needed.

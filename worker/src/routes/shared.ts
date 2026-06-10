@@ -455,8 +455,13 @@ export async function checkRateLimitDO(
 
 /**
  * Feature-flagged rate limit check.
- * When env.RATE_LIMIT_BACKEND === "do" and the RATE_LIMITER binding exists,
- * uses the Durable Object path. Otherwise falls back to D1.
+ *
+ * The Durable Object backend (cheaper than D1 — no per-request reads/writes) is
+ * the default *whenever the RATE_LIMITER binding exists*. Set
+ * RATE_LIMIT_BACKEND = "d1" to force the D1 path even with the DO bound.
+ *
+ * If RATE_LIMITER is not bound (e.g. a deployment that hasn't enabled the DO),
+ * this safely falls back to the D1 limiter regardless of RATE_LIMIT_BACKEND.
  */
 export async function checkRateLimitAuto(
   db: D1Database | undefined,
@@ -464,7 +469,8 @@ export async function checkRateLimitAuto(
   endpoint: string,
   env: Env,
 ): Promise<RateLimitResult> {
-  if (env.RATE_LIMIT_BACKEND === "do" && env.RATE_LIMITER) {
+  const backend = env.RATE_LIMIT_BACKEND ?? "do";
+  if (backend === "do" && env.RATE_LIMITER) {
     return checkRateLimitDO(env.RATE_LIMITER, ip, endpoint, env);
   }
   return checkRateLimit(db, ip, endpoint, env);

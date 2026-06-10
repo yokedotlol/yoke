@@ -31,7 +31,9 @@ export interface Env {
   REFERENCE_DATA: KVNamespace;
   /** Analysis cache TTL override in hours (default: 1) */
   CACHE_TTL_HOURS?: string;
-  /** Rate limit backend: "d1" (default) or "do" (Durable Object) */
+  /** Rate limit backend: "do" (Durable Object) or "d1". Default: "do" when the
+   *  RATE_LIMITER binding is present, else "d1". Set to "d1" to force the D1
+   *  path even when the DO is bound. */
   RATE_LIMIT_BACKEND?: string;
   /** Durable Object namespace for rate limiting (required when RATE_LIMIT_BACKEND=do) */
   RATE_LIMITER?: DurableObjectNamespace;
