@@ -1,3 +1,4 @@
+import { recordApiCall } from "../../analysis-budget";
 import { logApiError } from "../../api-errors";
 import { PERF_CACHE_TTL_MS } from "../../config/cache";
 import { type Env, fetchWithTimeout, flyProbeFetch, getFlyProbeUrl } from "../../helpers";
@@ -40,6 +41,9 @@ export async function checkPageSpeed(
       // Ensure strategy field reflects what we asked for
       result.strategy = strategy;
       if (result.score != null) {
+        // Billable PageSpeed run succeeded (via Fly proxy) — record for the cost
+        // dashboard. Fire-and-forget; the cache-hit path above never reaches here.
+        recordApiCall(env, "pagespeed");
         // Cache successful results for 24h
         if (env.REFERENCE_DATA) {
           try {
@@ -149,6 +153,9 @@ async function tryPageSpeedDirect(
       error: null,
       screenshot: screenshotData,
     };
+    // Billable PageSpeed run succeeded (direct API) — record for the cost
+    // dashboard only when a real score came back. Fire-and-forget.
+    if (result.score != null) recordApiCall(env, "pagespeed");
     return result;
   } catch (e) {
     console.error(`[PageSpeed/${strategy}] Direct API error:`, e instanceof Error ? e.message : String(e));

@@ -29,6 +29,14 @@ function statsReq(limit: number): Request {
   return new Request("https://do/stats", { method: "GET", headers: { "X-Budget-Limit": String(limit) } });
 }
 
+function bumpReq(metric: string): Request {
+  return new Request("https://do/bump", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ metric }),
+  });
+}
+
 describe("AnalysisBudgetDO", () => {
   it("increments count + per-path breakdown on charge", async () => {
     const obj = new AnalysisBudgetDO(stubState());
@@ -93,6 +101,51 @@ describe("AnalysisBudgetDO", () => {
     // Day mismatch → reset to 0 for today.
     expect(stats.count).toBe(0);
     expect(stats.day).toBe(new Date().toISOString().slice(0, 10));
+  });
+
+  it("starts with zeroed auxiliary metrics in stats", async () => {
+    const obj = new AnalysisBudgetDO(stubState());
+    const stats = await (await obj.fetch(statsReq(10))).json();
+    expect(stats.metrics).toEqual({ whoisfreaks_calls: 0, pagespeed_calls: 0, cache_hits: 0, cache_misses: 0 });
+  });
+
+  it("bumps auxiliary metrics WITHOUT counting against the budget", async () => {
+    const obj = new AnalysisBudgetDO(stubState());
+    await obj.fetch(bumpReq("whoisfreaks_calls"));
+    await obj.fetch(bumpReq("whoisfreaks_calls"));
+    await obj.fetch(bumpReq("pagespeed_calls"));
+    await obj.fetch(bumpReq("cache_hits"));
+    await obj.fetch(bumpReq("cache_hits"));
+    await obj.fetch(bumpReq("cache_misses"));
+
+    const stats = await (await obj.fetch(statsReq(10))).json();
+    expect(stats.metrics.whoisfreaks_calls).toBe(2);
+    expect(stats.metrics.pagespeed_calls).toBe(1);
+    expect(stats.metrics.cache_hits).toBe(2);
+    expect(stats.metrics.cache_misses).toBe(1);
+    // Budget count untouched by bumps.
+    expect(stats.count).toBe(0);
+  });
+
+  it("rejects an unknown bump metric with 400", async () => {
+    const obj = new AnalysisBudgetDO(stubState());
+    const resp = await obj.fetch(bumpReq("not-a-real-metric"));
+    expect(resp.status).toBe(400);
+  });
+
+  it("persists metrics across DO instances and back-fills legacy state without metrics", async () => {
+    const state = stubState();
+    // Seed today's state in the PRE-metrics shape (no `metrics` key).
+    await state.storage.put("budget", {
+      day: new Date().toISOString().slice(0, 10),
+      count: 3,
+      breakdown: { curl: 3, analyze: 0, compare: 0, badge: 0, other: 0 },
+    });
+    const obj = new AnalysisBudgetDO(state);
+    await obj.fetch(bumpReq("cache_hits"));
+    const stats = await (await obj.fetch(statsReq(100))).json();
+    expect(stats.count).toBe(3); // budget preserved
+    expect(stats.metrics.cache_hits).toBe(1); // metrics back-filled + bumped
   });
 
   it("returns a 500 JSON error on malformed charge body (caller fails open)", async () => {

@@ -3,8 +3,13 @@
 // Provides fail-open charge() + stats() helpers and the typed error thrown
 // when the daily ceiling is hit.
 
-import { ANALYSIS_BUDGET_DO_NAME, type BudgetStats, DEFAULT_GLOBAL_ANALYSIS_BUDGET } from "./analysis-budget-do";
-import type { Env } from "./helpers";
+import {
+  ANALYSIS_BUDGET_DO_NAME,
+  type BudgetMetric,
+  type BudgetStats,
+  DEFAULT_GLOBAL_ANALYSIS_BUDGET,
+} from "./analysis-budget-do";
+import { backgroundWork, type Env } from "./helpers";
 import { logError } from "./logger";
 
 /** Source/path label threaded from call sites for per-path accounting. */
@@ -89,4 +94,43 @@ export async function readBudgetStats(env: Env): Promise<BudgetStats | null> {
     logError("analysis budget DO error", { error: err instanceof Error ? err.message : String(err) });
     return null;
   }
+}
+
+// ─── Fire-and-forget observability counters ─────────────────────────
+// These bump in-memory DO metrics ONLY — no per-request D1/KV writes. They run
+// as background work (ctx.waitUntil) so they add zero latency to the response
+// and never block it. The hourly cron flushes them into daily_counters.
+// Fail-OPEN and silent: instrumentation must never affect a real request.
+
+/** POST /bump to the budget DO. Awaitable, but always swallows errors. */
+async function bumpMetric(env: Env, metric: BudgetMetric): Promise<void> {
+  const stub = budgetStub(env);
+  if (!stub) return;
+  try {
+    await stub.fetch(
+      new Request("https://do/bump", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metric }),
+      }),
+    );
+  } catch {
+    // Instrumentation is best-effort — never surface or rethrow.
+  }
+}
+
+/** Record a successful billable paid-API call (fire-and-forget). */
+export function recordApiCall(env: Env, name: "whoisfreaks" | "pagespeed"): void {
+  const metric: BudgetMetric = name === "whoisfreaks" ? "whoisfreaks_calls" : "pagespeed_calls";
+  backgroundWork(env, bumpMetric(env, metric));
+}
+
+/** Record an analysis cache hit (fire-and-forget). */
+export function recordCacheHit(env: Env): void {
+  backgroundWork(env, bumpMetric(env, "cache_hits"));
+}
+
+/** Record an analysis cache miss (fire-and-forget). */
+export function recordCacheMiss(env: Env): void {
+  backgroundWork(env, bumpMetric(env, "cache_misses"));
 }

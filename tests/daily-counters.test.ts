@@ -59,6 +59,7 @@ function makeStats(overrides: Partial<BudgetStats> = {}): BudgetStats {
     count: 7,
     limit: 3000,
     breakdown: { curl: 3, analyze: 2, compare: 1, badge: 1, other: 0 },
+    metrics: { whoisfreaks_calls: 4, pagespeed_calls: 6, cache_hits: 20, cache_misses: 5 },
     ...overrides,
   };
 }
@@ -74,6 +75,27 @@ describe("daily_counters", () => {
     expect(await readDailyCounter(db, "analyses_compare", "2026-06-10")).toBe(1);
     expect(await readDailyCounter(db, "analyses_badge", "2026-06-10")).toBe(1);
     expect(await readDailyCounter(db, "badge_refreshes", "2026-06-10")).toBe(1);
+  });
+
+  it("flushes auxiliary cost metrics (paid-API counts + cache hits/misses)", async () => {
+    const db = memoryD1();
+    await flushBudgetCounters(db, makeStats());
+
+    expect(await readDailyCounter(db, "whoisfreaks_calls", "2026-06-10")).toBe(4);
+    expect(await readDailyCounter(db, "pagespeed_calls", "2026-06-10")).toBe(6);
+    expect(await readDailyCounter(db, "cache_hits", "2026-06-10")).toBe(20);
+    expect(await readDailyCounter(db, "cache_misses", "2026-06-10")).toBe(5);
+  });
+
+  it("flushes safely when an older DO omits the metrics field", async () => {
+    const db = memoryD1();
+    const legacy = makeStats();
+    // Simulate a stats payload from a DO that predates the metrics field.
+    (legacy as { metrics?: unknown }).metrics = undefined;
+    await flushBudgetCounters(db, legacy);
+
+    expect(await readDailyCounter(db, "analyses_total", "2026-06-10")).toBe(7);
+    expect(await readDailyCounter(db, "whoisfreaks_calls", "2026-06-10")).toBe(0);
   });
 
   it("UPSERT is idempotent — re-flush SETs (does not increment) the cumulative total", async () => {
