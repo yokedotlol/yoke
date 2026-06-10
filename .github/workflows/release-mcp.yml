@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -24,8 +25,9 @@ jobs:
           npm ci
           npm run build
 
+      - name: Update npm (OIDC trusted publishing requires npm >= 11.5.1)
+        run: npm install -g npm@latest
+
       - name: Publish
         working-directory: mcp
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: npm publish --access public --provenance
