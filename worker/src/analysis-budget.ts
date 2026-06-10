@@ -119,6 +119,23 @@ async function bumpMetric(env: Env, metric: BudgetMetric): Promise<void> {
   }
 }
 
+/** POST /endpoint to the budget DO. Awaitable, but always swallows errors. */
+async function bumpEndpoint(env: Env, endpoint: string): Promise<void> {
+  const stub = budgetStub(env);
+  if (!stub) return;
+  try {
+    await stub.fetch(
+      new Request("https://do/endpoint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint }),
+      }),
+    );
+  } catch {
+    // Instrumentation is best-effort — never surface or rethrow.
+  }
+}
+
 /** Record a successful billable paid-API call (fire-and-forget). */
 export function recordApiCall(env: Env, name: "whoisfreaks" | "pagespeed"): void {
   const metric: BudgetMetric = name === "whoisfreaks" ? "whoisfreaks_calls" : "pagespeed_calls";
@@ -133,4 +150,15 @@ export function recordCacheHit(env: Env): void {
 /** Record an analysis cache miss (fire-and-forget). */
 export function recordCacheMiss(env: Env): void {
   backgroundWork(env, bumpMetric(env, "cache_misses"));
+}
+
+/**
+ * Record one endpoint hit (fire-and-forget). Replaces the per-request
+ * endpoint_usage D1 UPSERT: bumps an in-memory DO counter the hourly cron
+ * flushes into endpoint_usage, so the hot path never touches D1. Honors
+ * DISABLE_ANALYTICS (self-hosted opt-out), matching the old trackUsage gate.
+ */
+export function recordEndpointHit(env: Env, endpoint: string): void {
+  if (env.DISABLE_ANALYTICS) return;
+  backgroundWork(env, bumpEndpoint(env, endpoint));
 }

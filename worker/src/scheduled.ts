@@ -12,7 +12,7 @@
 // were also removed — the sweep was fully retired, not just unscheduled.)
 
 import { readBudgetStats } from "./analysis-budget";
-import { flushBudgetCounters, pruneOldRows } from "./daily-counters";
+import { flushBudgetCounters, flushEndpointCounters, pruneOldRows } from "./daily-counters";
 import type { Env } from "./helpers";
 import { logWarn } from "./logger";
 
@@ -25,10 +25,15 @@ import { logWarn } from "./logger";
 export async function handleScheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
   env._ctx = ctx;
 
-  // Flush the global budget DO's current-day totals into daily_counters (UPSERT).
+  // Flush the global budget DO's current-day totals into D1 (UPSERT). One read
+  // of DO stats feeds both the daily_counters flush and the per-endpoint
+  // endpoint_usage flush (the latter replaces the old per-request D1 write).
   try {
     const stats = await readBudgetStats(env);
-    if (stats) await flushBudgetCounters(env.STATS_DB, stats);
+    if (stats) {
+      await flushBudgetCounters(env.STATS_DB, stats);
+      await flushEndpointCounters(env.STATS_DB, stats.day, stats.endpoints);
+    }
   } catch (e) {
     logWarn("[yoke:cron] budget flush failed", { error: e instanceof Error ? e.message : String(e) });
   }

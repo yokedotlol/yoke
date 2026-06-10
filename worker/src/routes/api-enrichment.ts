@@ -4,8 +4,8 @@ import { getCompanyInfo } from "../actions/company";
 import { getNews } from "../actions/news";
 import { getReverseIP } from "../actions/reverse-ip";
 import { getSocialAccounts } from "../actions/social";
+import { recordEndpointHit } from "../analysis-budget";
 import { cleanDomain } from "../helpers";
-import { trackUsage } from "../usage-tracking";
 import { addHeaders, checkRateLimitAuto, json, jsonError, parseBody, type RouteContext } from "./shared";
 
 export async function handle(rc: RouteContext): Promise<Response | null> {
@@ -24,7 +24,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getCompanyInfo(env.REFERENCE_DATA!, domain, body.force, env.STATS_DB);
     if (!result.cached) await rl.record();
-    await trackUsage(env.STATS_DB, "company", !!env.DISABLE_ANALYTICS);
+    recordEndpointHit(env, "company");
     _track("company", 200, domain);
     return addHeaders(json(result), rl.headers);
   }
@@ -42,7 +42,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getNews(env.REFERENCE_DATA!, domain, env.STATS_DB);
     if (!result.cached) await rl.record();
-    await trackUsage(env.STATS_DB, "news", !!env.DISABLE_ANALYTICS);
+    recordEndpointHit(env, "news");
     _track("news", 200, domain);
     return addHeaders(json(result), rl.headers);
   }
@@ -60,7 +60,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getSocialAccounts(env.REFERENCE_DATA!, domain, env);
     if (!result.cached) await rl.record();
-    await trackUsage(env.STATS_DB, "social", !!env.DISABLE_ANALYTICS);
+    recordEndpointHit(env, "social");
     _track("social", 200, domain);
     return addHeaders(json(result), rl.headers);
   }
@@ -83,7 +83,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     }
     const result = await getReverseIP(env.REFERENCE_DATA!, ip);
     if (!result.cached) await rl.record();
-    await trackUsage(env.STATS_DB, "reverse-ip", !!env.DISABLE_ANALYTICS);
+    recordEndpointHit(env, "reverse-ip");
     _track("reverse-ip", 200);
     return addHeaders(json(result), rl.headers);
   }
@@ -103,7 +103,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const cf = (request as Request & { cf?: { colo?: string; country?: string; city?: string } }).cf;
     const result = await checkGlobalAvailability(domain, { colo: cf?.colo, country: cf?.country, city: cf?.city }, env);
     await rl.record();
-    await trackUsage(env.STATS_DB, "availability", !!env.DISABLE_ANALYTICS);
+    recordEndpointHit(env, "availability");
     _track("availability", 200, domain);
     return addHeaders(json(result), rl.headers);
   }

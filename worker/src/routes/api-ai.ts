@@ -1,7 +1,7 @@
 // AI API routes: ai-analysis, ai-prompt
 import { buildAIPrompt, getAIAnalysis } from "../actions/ai-analysis";
+import { recordEndpointHit } from "../analysis-budget";
 import { cleanDomain, getFromCache } from "../helpers";
-import { trackUsage } from "../usage-tracking";
 import { addHeaders, checkRateLimitAuto, json, jsonError, parseBody, type RouteContext } from "./shared";
 
 export async function handle(rc: RouteContext): Promise<Response | null> {
@@ -14,7 +14,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     // Track usage only after validation succeeds
-    await trackUsage(env.STATS_DB, "ai-analysis", !!env.DISABLE_ANALYTICS);
+    recordEndpointHit(env, "ai-analysis");
     // BYO API key passthrough — when present, use the client's OpenRouter key
     const byoKey = request.headers.get("X-OpenRouter-Key") || undefined;
     const byoModel = body.model || undefined;
