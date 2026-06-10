@@ -37,6 +37,16 @@ export interface Env {
   RATE_LIMIT_BACKEND?: string;
   /** Durable Object namespace for rate limiting (required when RATE_LIMIT_BACKEND=do) */
   RATE_LIMITER?: DurableObjectNamespace;
+  /** Durable Object namespace for the global daily analysis budget (single instance). */
+  ANALYSIS_BUDGET?: DurableObjectNamespace;
+  /** Global daily analysis (cache-miss) ceiling. Default: 3000. Resets 00:00 UTC. */
+  GLOBAL_ANALYSIS_BUDGET?: string;
+  /** Hours before a legitimately-analyzed badge triggers a refresh-on-view. Default: 6. */
+  BADGE_REFRESH_INTERVAL_HRS?: string;
+  /** Days after which a badge is served as "stale — re-scan". Default: 30. */
+  BADGE_STALE_DAYS?: string;
+  /** Retention window (days) for request_meta rows in the cleanup path. Default: 90. */
+  REQUEST_META_RETENTION_DAYS?: string;
   /** Comma-separated list of self-hosted domain names (for self-fetch bypass). Defaults to yoke.lol. */
   SELF_DOMAINS?: string;
   /** Custom site name for self-hosted instances (default: "Yoke") */

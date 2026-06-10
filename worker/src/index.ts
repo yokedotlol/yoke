@@ -16,7 +16,8 @@ import * as staticRoutes from "./routes/static";
 import { handleScheduled } from "./scheduled";
 import { serveAssetOrFallback, wantsJSON } from "./spa";
 
-// Re-export the Durable Object class so wrangler can find it
+// Re-export the Durable Object classes so wrangler can find them
+export { AnalysisBudgetDO } from "./analysis-budget-do";
 export { RateLimiterDO } from "./rate-limiter-do";
 
 export default {
