@@ -1,0 +1,123 @@
+// ─── Daily cost counters ─────────────────────────────────────────────
+// Minimal cost instrumentation. One row per (metric, day) — NO per-request
+// rows. Populated by the hourly cron, which flushes the global budget DO's
+// current-day totals here via UPSERT. Read by the usage panel's
+// "Cost & Budget" section.
+//
+// Self-healing: a CREATE TABLE IF NOT EXISTS runs before the first write so
+// the table works even if the migration (0005_daily_counters.sql) hasn't been
+// applied manually.
+
+import type { BudgetStats } from "./analysis-budget-do";
+import type { Env } from "./helpers";
+
+// TODO(stats): paid-API success counts + cache hit-rate — deferred
+
+const CREATE_SQL = `CREATE TABLE IF NOT EXISTS daily_counters (
+  metric TEXT NOT NULL,
+  day TEXT NOT NULL,
+  value INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (metric, day)
+)`;
+
+let tableReady = false;
+
+async function ensureTable(db: D1Database): Promise<void> {
+  if (tableReady) return;
+  await db.prepare(CREATE_SQL).run();
+  tableReady = true;
+}
+
+/**
+ * Flush the budget DO's current-day totals into daily_counters via UPSERT.
+ *
+ * The DO holds cumulative day totals, so we SET (not increment) — repeated
+ * hourly flushes are idempotent and converge on the DO's authoritative count.
+ */
+export async function flushBudgetCounters(db: D1Database | undefined, stats: BudgetStats): Promise<void> {
+  if (!db) return;
+  const { day, count, breakdown } = stats;
+  const rows: Array<[string, number]> = [
+    ["analyses_total", count],
+    ["analyses_curl", breakdown.curl],
+    ["analyses_analyze", breakdown.analyze],
+    ["analyses_compare", breakdown.compare],
+    ["analyses_badge", breakdown.badge],
+    ["badge_refreshes", breakdown.badge],
+  ];
+
+  const upsert = (metric: string, value: number) =>
+    db
+      .prepare(
+        `INSERT INTO daily_counters (metric, day, value) VALUES (?, ?, ?)
+         ON CONFLICT (metric, day) DO UPDATE SET value = excluded.value`,
+      )
+      .bind(metric, day, value);
+
+  try {
+    await ensureTable(db);
+    await db.batch(rows.map(([m, v]) => upsert(m, v)));
+  } catch {
+    // Self-heal then retry once.
+    try {
+      await db.prepare(CREATE_SQL).run();
+      tableReady = true;
+      await db.batch(rows.map(([m, v]) => upsert(m, v)));
+    } catch {
+      /* non-critical instrumentation */
+    }
+  }
+}
+
+/** Read a single daily_counters value for a metric/day (0 when absent). */
+export async function readDailyCounter(db: D1Database | undefined, metric: string, day: string): Promise<number> {
+  if (!db) return 0;
+  try {
+    await ensureTable(db);
+    const row = await db
+      .prepare("SELECT value FROM daily_counters WHERE metric = ? AND day = ?")
+      .bind(metric, day)
+      .first<{ value: number }>();
+    return row?.value ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Lightweight cleanup run on the hourly cron. Prunes expired rate-limit and
+ * error rows, and enforces request_meta retention (the one table the manual
+ * /api/cleanup historically skipped). Best-effort — never throws.
+ */
+export async function pruneOldRows(env: Env): Promise<void> {
+  const db = env.STATS_DB;
+  if (!db) return;
+  const now = Date.now();
+  const cutoff1d = now - 24 * 60 * 60 * 1000;
+  const cutoff7d = now - 7 * 24 * 60 * 60 * 1000;
+  const retentionDays = requestMetaRetentionDays(env);
+  const rmCutoffDay = new Date(now - retentionDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const safeRun = async (sql: string, ...binds: unknown[]) => {
+    try {
+      await db
+        .prepare(sql)
+        .bind(...binds)
+        .run();
+    } catch {
+      /* table may not exist — ignore */
+    }
+  };
+
+  await safeRun("DELETE FROM ai_rate_limits WHERE ts < ?", cutoff1d);
+  await safeRun("DELETE FROM ai_domain_rate_limits WHERE ts < ?", cutoff1d);
+  await safeRun("DELETE FROM endpoint_rate_limits WHERE ts < ?", cutoff1d);
+  await safeRun("DELETE FROM api_errors WHERE ts < ?", cutoff7d);
+  await safeRun("DELETE FROM request_meta WHERE day < ?", rmCutoffDay);
+}
+
+/** Resolve request_meta retention (days) from env, defaulting to 90. */
+export function requestMetaRetentionDays(env: Env): number {
+  const parsed = env.REQUEST_META_RETENTION_DAYS ? Number.parseInt(env.REQUEST_META_RETENTION_DAYS, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 90;
+}

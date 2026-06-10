@@ -1,7 +1,9 @@
 // Server-rendered admin dashboard — zero client JS, admin-only
 // Shows OUR operational data, not user data. No IPs, no PII.
 
-import { CORS_HEADERS } from "./helpers";
+import { readBudgetStats } from "./analysis-budget";
+import { readDailyCounter } from "./daily-counters";
+import { CORS_HEADERS, type Env } from "./helpers";
 import { getRequestAnalytics } from "./request-tracking";
 import { getUsageStats } from "./usage-tracking";
 
@@ -27,8 +29,27 @@ function clientIcon(t: string): string {
   return { web: "🌐", extension: "🧩", cli: "⌨️", api: "🔌" }[t] || "❓";
 }
 
-export async function renderUsagePage(db: D1Database | undefined, days = 30, siteName = "Yoke"): Promise<Response> {
-  const [stats, rq] = await Promise.all([getUsageStats(db, days), getRequestAnalytics(db, days)]);
+export async function renderUsagePage(
+  db: D1Database | undefined,
+  days = 30,
+  siteName = "Yoke",
+  env?: Env,
+): Promise<Response> {
+  const today = new Date().toISOString().slice(0, 10);
+  const [stats, rq, budget, badgeRefreshesToday] = await Promise.all([
+    getUsageStats(db, days),
+    getRequestAnalytics(db, days),
+    env ? readBudgetStats(env) : Promise.resolve(null),
+    readDailyCounter(db, "badge_refreshes", today),
+  ]);
+
+  // Cost & Budget figures (live from the budget DO; falls back to "—" when unbound)
+  const budgetLimit = budget?.limit ?? null;
+  const budgetCount = budget?.count ?? null;
+  const budgetPct =
+    budgetLimit && budgetCount != null ? Math.min(100, Math.round((budgetCount / budgetLimit) * 100)) : 0;
+  const budgetColor = budgetPct >= 90 ? "var(--red)" : budgetPct >= 70 ? "var(--accent)" : "var(--green)";
+  const budgetBreakdown = budget?.breakdown ?? null;
 
   // Endpoint traffic
   const dayTotals: Record<string, number> = {};
@@ -146,6 +167,43 @@ export async function renderUsagePage(db: D1Database | undefined, days = 30, sit
     <div class="cs">domains re-analyzed</div>
   </div>
 </div>
+
+<!-- ═══ COST & BUDGET ═══ -->
+<h2>💰 Cost &amp; Budget <span style="font-size:0.65rem;color:var(--muted);font-weight:400">(today, UTC)</span></h2>
+<div class="cards">
+  <div class="card">
+    <div class="cl">Analyses Today</div>
+    <div class="cv" style="color:${budgetColor}">${budgetCount != null ? n(budgetCount) : "—"}${budgetLimit != null ? ` <span style="font-size:0.7rem;color:var(--muted)">/ ${n(budgetLimit)}</span>` : ""}</div>
+    <div class="cs">${budget ? `${budgetPct}% of global daily budget` : "budget DO not bound"}</div>
+  </div>
+  <div class="card">
+    <div class="cl">curl / JSON</div>
+    <div class="cv" style="color:var(--cyan)">${budgetBreakdown ? n(budgetBreakdown.curl) : "—"}</div>
+  </div>
+  <div class="card">
+    <div class="cl">/api/analyze</div>
+    <div class="cv" style="color:var(--cyan)">${budgetBreakdown ? n(budgetBreakdown.analyze) : "—"}</div>
+  </div>
+  <div class="card">
+    <div class="cl">/api/compare</div>
+    <div class="cv" style="color:var(--cyan)">${budgetBreakdown ? n(budgetBreakdown.compare) : "—"}</div>
+  </div>
+  <div class="card">
+    <div class="cl">Badge Refreshes</div>
+    <div class="cv" style="color:var(--purple)">${budgetBreakdown ? n(budgetBreakdown.badge) : n(badgeRefreshesToday)}</div>
+  </div>
+  <div class="card">
+    <div class="cl">Other</div>
+    <div class="cv">${budgetBreakdown ? n(budgetBreakdown.other) : "—"}</div>
+  </div>
+</div>
+${
+  budgetLimit != null
+    ? `<div style="margin-top:0.4rem;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+  <div style="height:100%;width:${budgetPct}%;background:${budgetColor};border-radius:4px"></div>
+</div>`
+    : ""
+}
 
 <!-- ═══ TRAFFIC OVER TIME ═══ -->
 <h2>📈 Traffic Over Time</h2>

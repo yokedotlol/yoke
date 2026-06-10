@@ -2,6 +2,7 @@
 // Single source of truth for all analysis logic.
 // Both the JSON endpoint and the SSE streaming endpoint use this.
 
+import { type AnalysisSource, chargeBudget } from "../../analysis-budget";
 import { logApiError, pruneApiErrors } from "../../api-errors";
 import { registry } from "../../checks/registry";
 import type { CheckContext, HttpProbeResult } from "../../checks/types";
@@ -379,13 +380,16 @@ const inFlightAnalyses = new Map<string, Promise<CoreResult>>();
  * @param env      - Cloudflare Worker environment bindings
  * @param skipCache - Force fresh analysis
  * @param callbacks - Optional streaming callbacks for progress reporting
+ * @param source    - Call-site label for the global budget per-path breakdown
  * @returns CoreResult with `kind` indicating cache hit, NXDOMAIN, or full analysis
+ * @throws BudgetExceededError when a cache-miss would exceed the global daily budget
  */
 export async function runAnalysis(
   domain: string,
   env: Env,
   skipCache: boolean,
   callbacks?: AnalysisCallbacks,
+  source: AnalysisSource = "other",
 ): Promise<CoreResult> {
   domain = normalizeDomain(domain);
   if (!domain?.includes(".")) {
@@ -405,7 +409,7 @@ export async function runAnalysis(
 
   // Wrap the actual work in a promise for coalescing.
   // Only store in the map for non-forced requests.
-  const promise = runAnalysisCore(domain, env, skipCache, callbacks);
+  const promise = runAnalysisCore(domain, env, skipCache, callbacks, source);
 
   if (!skipCache) {
     inFlightAnalyses.set(domain, promise);
@@ -422,6 +426,7 @@ async function runAnalysisCore(
   env: Env,
   skipCache: boolean,
   callbacks?: AnalysisCallbacks,
+  source: AnalysisSource = "other",
 ): Promise<CoreResult> {
   // Derive instance hostname for self-analysis bypass (CF Workers can't fetch themselves)
   let instanceHost: string | undefined;
@@ -470,6 +475,15 @@ async function runAnalysisCore(
   } catch {
     /* DNS check failed, proceed with full analysis */
   }
+
+  // ── Global daily budget gate ──────────────────────────────────────
+  // We reach here only on a cache MISS that is also not NXDOMAIN — i.e. the
+  // expensive ~25-API fan-out is about to run. Charge it against the global
+  // daily budget BEFORE fanning out. chargeBudget fails OPEN on infra errors
+  // (still attempts to count) and throws BudgetExceededError only when the DO
+  // explicitly reports the ceiling is hit. Callers translate that into a 429
+  // (interactive) or silently skip (badge refresh).
+  await chargeBudget(env, source);
 
   // ── DNS resolution + HTTP probe (concurrent) ──────────────────────
   await onPhase("dns", "running", "Resolving DNS…");

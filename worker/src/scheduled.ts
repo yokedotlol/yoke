@@ -1,12 +1,19 @@
-// ─── Scheduled Handler: Badge Pre-warm ───────────────────────────────
-// CF Workers scheduled event handler. Runs hourly via wrangler.toml
-// cron trigger. Sweeps badge_domains table (most stale first), checks
-// KV for each domain, re-analyzes only domains with missing or expired
-// badge cache entries. Time-budgeted to 10 minutes per run.
+// ─── Scheduled Handler ───────────────────────────────────────────────
+// CF Workers scheduled event handler. Runs hourly via the cron trigger.
 //
-// Also callable via POST /api/admin/badge-sweep for self-hosters.
+// The expensive badge pre-warm sweep that previously ran here was REMOVED:
+// it re-analyzed every tracked badge domain on a timer (a cost-model hole).
+// Badges now refresh lazily on-view (see api-badge.ts) and analyses are
+// capped by the global daily budget DO. The hourly cron instead does cheap,
+// bounded maintenance: flush the budget DO's current-day aggregates into the
+// daily_counters table, then prune stale rows.
+//
+// badgeSweep() is retained for self-hosters via POST /api/admin/badge-sweep,
+// but is no longer invoked on the cron.
 
+import { readBudgetStats } from "./analysis-budget";
 import { readBadgeCache } from "./badge-cache";
+import { flushBudgetCounters, pruneOldRows } from "./daily-counters";
 import type { Env } from "./helpers";
 import { logInfo, logWarn } from "./logger";
 
@@ -123,10 +130,27 @@ export async function badgeSweep(env: Env): Promise<SweepResult> {
 }
 
 /**
- * Cloudflare Workers scheduled event handler.
+ * Cloudflare Workers scheduled event handler (hourly cron).
  * Wired up in index.ts as the `scheduled` export.
+ *
+ * NOTE: the badge pre-warm sweep is intentionally NOT called here anymore —
+ * see the file header. The cron now only flushes budget aggregates and prunes.
  */
 export async function handleScheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
   env._ctx = ctx;
-  await badgeSweep(env);
+
+  // Flush the global budget DO's current-day totals into daily_counters (UPSERT).
+  try {
+    const stats = await readBudgetStats(env);
+    if (stats) await flushBudgetCounters(env.STATS_DB, stats);
+  } catch (e) {
+    logWarn("[yoke:cron] budget flush failed", { error: e instanceof Error ? e.message : String(e) });
+  }
+
+  // Lightweight cleanup: prune stale rate-limit / error / request_meta rows.
+  try {
+    await pruneOldRows(env);
+  } catch (e) {
+    logWarn("[yoke:cron] prune failed", { error: e instanceof Error ? e.message : String(e) });
+  }
 }

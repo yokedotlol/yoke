@@ -127,11 +127,15 @@ export function scoreBadgeOptions(
   };
 }
 
-/** Build neutral "not yet scanned" badge options */
-export function neutralBadgeOptions(label: string, style?: "flat" | "flat-square"): BadgeOptions {
+/** Build a neutral badge ("not yet scanned" by default, or a custom message). */
+export function neutralBadgeOptions(
+  label: string,
+  style?: "flat" | "flat-square",
+  message = "not yet scanned",
+): BadgeOptions {
   return {
     label,
-    message: "not yet scanned",
+    message,
     color: NEUTRAL_COLOR,
     style,
   };

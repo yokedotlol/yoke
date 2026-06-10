@@ -13,11 +13,28 @@ import { backgroundWork, CORS_HEADERS, cleanDomain, YOKE_VERSION } from "../help
 import { logInfo, logWarn } from "../logger";
 import type { RouteContext } from "./shared";
 
-/** Stale threshold: trigger background refresh after 20 hours */
-const STALE_THRESHOLD_MS = 20 * 60 * 60 * 1000;
+// TODO(badge): serve-time SSL/cliff eval — deferred, needs cert notAfter in badge payload
+
+/** Default refresh-on-view interval in hours (env: BADGE_REFRESH_INTERVAL_HRS). */
+const DEFAULT_REFRESH_INTERVAL_HRS = 6;
+
+/** Default stale-decay window in days (env: BADGE_STALE_DAYS). */
+const DEFAULT_STALE_DAYS = 30;
 
 /** Lock TTL to prevent cache stampede (60 seconds) */
 const PENDING_LOCK_TTL = 60;
+
+/** Refresh-on-view threshold (ms): re-analyze an already-scanned domain after this age. */
+function refreshThresholdMs(env: Env): number {
+  const hrs = env.BADGE_REFRESH_INTERVAL_HRS ? Number.parseInt(env.BADGE_REFRESH_INTERVAL_HRS, 10) : Number.NaN;
+  return (Number.isFinite(hrs) && hrs > 0 ? hrs : DEFAULT_REFRESH_INTERVAL_HRS) * 60 * 60 * 1000;
+}
+
+/** Stale-decay threshold (ms): serve "stale — re-scan" once a badge is older than this. */
+function staleThresholdMs(env: Env): number {
+  const days = env.BADGE_STALE_DAYS ? Number.parseInt(env.BADGE_STALE_DAYS, 10) : Number.NaN;
+  return (Number.isFinite(days) && days > 0 ? days : DEFAULT_STALE_DAYS) * 24 * 60 * 60 * 1000;
+}
 
 /**
  * Cache-Control for a scored badge (analyzedAt present): 1h fresh, then serve
@@ -95,20 +112,32 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   const defaultLabel = axisParam ? `${siteName} ${capitalize(axisParam)}` : siteName;
   const label = labelParam || defaultLabel;
 
+  const refreshMs = refreshThresholdMs(env);
+  const staleMs = staleThresholdMs(env);
+
   // Read badge cache — single KV get
   const cached = await readBadgeCache(domain, env);
 
   if (cached) {
-    // Check staleness — trigger background refresh if > 20h old
     const age = Date.now() - new Date(cached.analyzedAt).getTime();
-    if (age > STALE_THRESHOLD_MS) {
+
+    // Stale-decay: a long-untouched badge no longer reflects reality — serve a
+    // neutral "stale — re-scan" badge rather than a misleading old score.
+    if (age > staleMs) {
+      if (dotJson) return shieldsJson(label, null, null, null, "stale — re-scan");
+      return svgResponse(neutralBadgeOptions(label, style, "stale — re-scan"), null);
+    }
+
+    // Refresh-on-view: this domain was legitimately analyzed (badge cache exists),
+    // so a demand-driven refresh is allowed once it ages past the interval.
+    if (age > refreshMs) {
       triggerBackgroundAnalysis(domain, env);
     }
 
     // Resolve score: specific axis or composite
     const { score, tier } = resolveScore(cached, axisParam);
 
-    // Track badge domain (non-blocking)
+    // Track badge domain (non-blocking) — only for already-analyzed domains.
     trackBadgeDomain(domain, env);
 
     if (dotJson) {
@@ -120,9 +149,22 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   // Badge cache miss — try analysis cache before returning "not yet scanned"
   const fromAnalysis = await readAnalysisCacheScore(domain, env);
   if (fromAnalysis) {
+    const age = Date.now() - new Date(fromAnalysis.analyzedAt).getTime();
+
+    // Stale-decay applies to the analysis-cache path too.
+    if (age > staleMs) {
+      if (dotJson) return shieldsJson(label, null, null, null, "stale — re-scan");
+      return svgResponse(neutralBadgeOptions(label, style, "stale — re-scan"), null);
+    }
+
     // Write badge cache in the background so next request is fast
     backgroundWork(env, writeBadgeCache(domain, fromAnalysis, env));
     trackBadgeDomain(domain, env);
+
+    // Refresh-on-view: already analyzed, so a demand-driven refresh is allowed.
+    if (age > refreshMs) {
+      triggerBackgroundAnalysis(domain, env);
+    }
 
     const { score, tier } = resolveScoreFromRaw(fromAnalysis, axisParam);
     if (dotJson) {
@@ -131,10 +173,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     return svgResponse(scoreBadgeOptions(label, score, tier, style), fromAnalysis.analyzedAt);
   }
 
-  // True cold start — no badge cache, no analysis cache
-  trackBadgeDomain(domain, env);
-  triggerBackgroundAnalysis(domain, env);
-
+  // True cold start — no badge cache, no analysis cache. PURE READ:
+  // serve a neutral "not yet scanned" badge. Do NOT trigger analysis and do NOT
+  // seed badge_domains — a crafted badge URL must not provoke an expensive scan.
   if (dotJson) {
     return shieldsJson(label, null, null, null);
   }
@@ -155,8 +196,14 @@ function resolveScore(cached: BadgeCacheEntry, axisParam: string | null): { scor
 }
 
 /** Return shields.io endpoint JSON */
-function shieldsJson(label: string, score: number | null, tier: string | null, analyzedAt: string | null): Response {
-  const message = score != null && tier ? `${score} ${tier}` : "not yet scanned";
+function shieldsJson(
+  label: string,
+  score: number | null,
+  tier: string | null,
+  analyzedAt: string | null,
+  neutralMessage = "not yet scanned",
+): Response {
+  const message = score != null && tier ? `${score} ${tier}` : neutralMessage;
   const color = tier ? TIER_SHIELD_COLORS[tier] || "lightgrey" : "lightgrey";
 
   const body = {
@@ -220,8 +267,18 @@ function triggerBackgroundAnalysis(domain: string, env: Env): void {
       try {
         // Dynamic import to avoid circular dependency
         const { runAnalysis } = await import("../actions/analyze/core");
+        const { BudgetExceededError } = await import("../analysis-budget");
         logInfo("[yoke:badge] Background analysis triggered", { domain });
-        await runAnalysis(domain, env, false);
+        try {
+          // source="badge" → counts toward the badge bucket; over-budget is silently skipped.
+          await runAnalysis(domain, env, false, undefined, "badge");
+        } catch (e) {
+          if (e instanceof BudgetExceededError) {
+            logInfo("[yoke:badge] Refresh skipped — global budget reached", { domain });
+            return; // serve stale; do not surface an error
+          }
+          throw e;
+        }
       } catch (e) {
         logWarn("[yoke:badge] Background analysis failed", {
           domain,

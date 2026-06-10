@@ -1,4 +1,5 @@
 // Core API routes: analyze, compare, subdomains, subdomain-scan, suggestions
+
 import { runAnalysis } from "../actions/analyze/core";
 import { finalizeResult } from "../actions/analyze/finalize";
 import { analyzeDomainStream } from "../actions/analyze-stream";
@@ -6,6 +7,7 @@ import { compareDomains } from "../actions/compare";
 import { scanSubdomains } from "../actions/subdomain-scan";
 import { getSubdomains } from "../actions/subdomains";
 import { getDomainSuggestions } from "../actions/suggestions";
+import { BudgetExceededError } from "../analysis-budget";
 import { CORS_HEADERS, cleanDomain } from "../helpers";
 import { trackUsage } from "../usage-tracking";
 import {
@@ -47,7 +49,16 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       _track("analyze", 200, domain);
       return analyzeDomainStream(domain, env, request, skipCache, rl.headers);
     }
-    const coreResult = await runAnalysis(domain, env, skipCache);
+    let coreResult: Awaited<ReturnType<typeof runAnalysis>>;
+    try {
+      coreResult = await runAnalysis(domain, env, skipCache, undefined, "analyze");
+    } catch (err) {
+      if (err instanceof BudgetExceededError) {
+        _track("analyze", 429, domain);
+        return addHeaders(jsonError("Analysis budget reached, try later", "BUDGET_EXCEEDED", 429), rl.headers);
+      }
+      throw err;
+    }
 
     // NXDOMAIN — domain doesn't exist
     if (coreResult.kind === "nxdomain") {

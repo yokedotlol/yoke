@@ -1,10 +1,16 @@
 // ─── Domain Analysis Orchestrator ────────────────────────────────────
 // JSON endpoint — delegates all analysis logic to the shared core pipeline.
 
+import type { AnalysisSource } from "../analysis-budget";
 import { CORS_HEADERS, type Env, normalizeDomain } from "../helpers";
 import { runAnalysis } from "./analyze/core";
 
-export async function analyzeDomain(domain: string, env: Env, skipCache = false): Promise<Response> {
+export async function analyzeDomain(
+  domain: string,
+  env: Env,
+  skipCache = false,
+  source: AnalysisSource = "analyze",
+): Promise<Response> {
   domain = normalizeDomain(domain);
   if (!domain?.includes(".")) {
     return new Response(JSON.stringify({ error: "Invalid domain", code: "INVALID_DOMAIN", status: 400 }), {
@@ -13,7 +19,7 @@ export async function analyzeDomain(domain: string, env: Env, skipCache = false)
     });
   }
 
-  const result = await runAnalysis(domain, env, skipCache);
+  const result = await runAnalysis(domain, env, skipCache, undefined, source);
 
   // NXDOMAIN — domain doesn't exist, return 422
   if (result.kind === "nxdomain") {
