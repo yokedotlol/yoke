@@ -25,15 +25,6 @@ export interface BadgeCacheEntry {
   };
   /** ISO timestamp of when the analysis was performed */
   analyzedAt: string;
-  /**
-   * SSL cert expiry (notAfter) as an ISO timestamp, when known at analysis time.
-   *
-   * OPTIONAL + backward-compatible: badges cached before this field existed
-   * simply omit it, and the serve path skips the cert-staleness check when it's
-   * absent. Used ONLY as a staleness trigger (demote to "re-scan"), never as an
-   * "expired" verdict — see the serve path in routes/api-badge.ts for why.
-   */
-  certNotAfter?: string;
 }
 
 /** Badge cache TTL in seconds (48 hours) */
@@ -67,7 +58,6 @@ export async function writeBadgeCache(
   domain: string,
   domainScore: { composite: number; tier: string; axes: Record<string, { score?: number }> },
   env: Env,
-  certNotAfter?: string | null,
 ): Promise<void> {
   if (!env.REFERENCE_DATA) return;
   try {
@@ -80,7 +70,6 @@ export async function writeBadgeCache(
       tier: domainScore.tier,
       axes,
       analyzedAt: new Date().toISOString(),
-      ...(certNotAfter ? { certNotAfter } : {}),
     };
     await env.REFERENCE_DATA.put(`badge:${domain}`, JSON.stringify(entry), {
       expirationTtl: BADGE_CACHE_TTL,
