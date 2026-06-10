@@ -91,7 +91,7 @@ export async function analyzeDomainStream(
         },
       };
 
-      const result = await runAnalysis(domain, env, skipCache, callbacks);
+      const result = await runAnalysis(domain, env, skipCache, callbacks, "analyze");
 
       // Shared enrichment: share_url, pdf_url, badge_url, percentiles, badge cache
       const resultData = result.data as Record<string, unknown>;

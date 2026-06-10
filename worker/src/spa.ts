@@ -3,6 +3,7 @@
 
 import { runAnalysis } from "./actions/analyze/core";
 import { finalizeResult } from "./actions/analyze/finalize";
+import { BudgetExceededError } from "./analysis-budget";
 import { tierFromComposite } from "./config/signal-registry";
 import type { Env } from "./helpers";
 import {
@@ -10,9 +11,11 @@ import {
   cleanDomain as cleanDomainHelper,
   getBaseUrl,
   getBranding,
+  hashIp,
   MIN_CLIENT_VERSION,
   YOKE_VERSION,
 } from "./helpers";
+import { checkRateLimitAuto, timingSafeEq } from "./routes/shared";
 import { trackUsage } from "./usage-tracking";
 
 // ─── Security Headers ────────────────────────────────────────────────
@@ -315,9 +318,40 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
       });
     }
 
+    // Rate limit the curl/JSON API. Shares the "/api/analyze" per-IP bucket so a
+    // GET+POST combo can't double the effective ceiling. Admin key bypasses
+    // (mirrors POST /api/analyze). The credit is only consumed on a cache MISS —
+    // cached responses stay free, same as POST /api/analyze.
+    const adminBypass = env.ADMIN_KEY && timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY);
+    let rl: Awaited<ReturnType<typeof checkRateLimitAuto>> | null = null;
+    if (!adminBypass) {
+      const ip = await hashIp(
+        request.headers.get("cf-connecting-ip") ||
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+          "unknown",
+        env,
+      );
+      rl = await checkRateLimitAuto(env.STATS_DB, ip, "/api/analyze", env);
+      if (rl.blocked) return rl.blocked;
+    }
+
     // Use the same runAnalysis + finalizeResult path as POST /api/analyze
-    const coreResult = await runAnalysis(clean, env, false);
+    let coreResult: Awaited<ReturnType<typeof runAnalysis>>;
+    try {
+      coreResult = await runAnalysis(clean, env, false, undefined, "curl");
+    } catch (err) {
+      if (err instanceof BudgetExceededError) {
+        return new Response(
+          JSON.stringify({ error: "Analysis budget reached, try later", code: "BUDGET_EXCEEDED", status: 429 }),
+          { status: 429, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+        );
+      }
+      throw err;
+    }
     const resultData = coreResult.data as Record<string, unknown>;
+
+    // Only consume rate-limit credit for non-cached results (cached stays free).
+    if (rl && coreResult.kind !== "cached") await rl.record();
 
     // Shared enrichment: share URLs, badge URLs, percentiles, badge cache write
     await finalizeResult(clean, resultData, request, env);

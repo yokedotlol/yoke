@@ -2,6 +2,7 @@
 // Accepts two domains, runs analysis on both (using cache when fresh),
 // and returns comparison data with delta highlights.
 
+import { BudgetExceededError } from "../analysis-budget";
 import { CORS_HEADERS, type Env, normalizeDomain } from "../helpers";
 import { analyzeDomain } from "./analyze";
 
@@ -44,8 +45,24 @@ export async function compareDomains(body: CompareRequest, env: Env): Promise<Re
   }
 
   // Run both analyses in parallel — analyzeDomain returns a Response,
-  // so we need to extract JSON from each
-  const [resp1, resp2] = await Promise.all([analyzeDomain(d1, env), analyzeDomain(d2, env)]);
+  // so we need to extract JSON from each. A cache-miss on either side may
+  // exceed the global daily budget → surface a 429 to the interactive caller.
+  let resp1: Response;
+  let resp2: Response;
+  try {
+    [resp1, resp2] = await Promise.all([
+      analyzeDomain(d1, env, false, "compare"),
+      analyzeDomain(d2, env, false, "compare"),
+    ]);
+  } catch (err) {
+    if (err instanceof BudgetExceededError) {
+      return new Response(
+        JSON.stringify({ error: "Analysis budget reached, try later", code: "BUDGET_EXCEEDED", status: 429 }),
+        { status: 429, headers: { "Content-Type": "application/json", ...CORS_HEADERS } },
+      );
+    }
+    throw err;
+  }
 
   const [data1, data2] = await Promise.all([
     resp1.json() as Promise<Record<string, unknown>>,
