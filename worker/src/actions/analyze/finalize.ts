@@ -54,8 +54,15 @@ export async function finalizeResult(
       badge_json_url: badgeJsonUrl,
     };
 
-    // 5. Badge cache write (non-blocking background work)
-    backgroundWork(env, writeBadgeCache(domain, { composite: ds.composite, tier: ds.tier, axes: ds.axes }, env));
+    // 5. Badge cache write (non-blocking background work).
+    // Thread the SSL cert expiry (notAfter) through so the badge serve path can
+    // use it as a staleness trigger (NOT a verdict — see routes/api-badge.ts).
+    const ssl = resultData.ssl as { valid_to?: string | null } | null | undefined;
+    const certNotAfter = ssl?.valid_to ?? null;
+    backgroundWork(
+      env,
+      writeBadgeCache(domain, { composite: ds.composite, tier: ds.tier, axes: ds.axes }, env, certNotAfter),
+    );
   }
 
   // 4. Percentiles (always, even without domain_score)
