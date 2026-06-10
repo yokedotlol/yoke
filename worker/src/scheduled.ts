@@ -43,7 +43,11 @@ export async function badgeSweep(env: Env): Promise<SweepResult> {
     return result;
   }
 
-  // Fetch all tracked badge domains, most stale first
+  // Fetch all tracked badge domains. ORDER BY last_requested ASC now resolves
+  // to first-seen order: trackBadgeDomain no longer bumps last_requested per
+  // hit (it's frozen at first-seen). That's fine — the sweep below re-checks
+  // each domain's KV badge-cache staleness anyway, so the ordering is just a
+  // stable traversal, not a freshness signal.
   let domains: string[];
   try {
     const rows = await env.STATS_DB.prepare("SELECT domain FROM badge_domains ORDER BY last_requested ASC").all<{
