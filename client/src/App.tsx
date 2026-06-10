@@ -5,6 +5,7 @@ import { ApiTeaser, CurlBar } from "./components/CurlShowcase";
 import { DomainScore } from "./components/DomainScore";
 import { DomainSignals, ExternalTools } from "./components/DomainSignals";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { NotRegisteredBanner } from "./components/NotRegisteredBanner";
 import { SkeletonPanel } from "./components/Panel";
 import { type PanelDef, PanelGrid, ResetLayoutButton } from "./components/PanelLayout";
 import { RecentLookups } from "./components/RecentLookups";
@@ -397,10 +398,19 @@ function OverviewTab({ data, streaming }: { data: AnalysisResult; streaming?: bo
     { id: "tranco", node: <TrancoPanel data={data} /> },
   ];
 
+  // When the domain doesn't exist, that's the only thing that matters: lead with a
+  // prominent banner and suppress the 0-100 score (a score for a nonexistent domain is misleading).
+  const notRegistered = data.not_registered === true;
+
   return (
     <div className="space-y-3">
-      {/* Domain Score — the headline */}
-      <DomainScore data={data} />
+      {notRegistered ? (
+        /* Not registered — the headline */
+        <NotRegisteredBanner domain={data.domain} />
+      ) : (
+        /* Domain Score — the headline */
+        <DomainScore data={data} />
+      )}
 
       {/* Circuit breaker: degraded upstream notice */}
       {data._meta?.degraded && data._meta.degraded.length > 0 && <DegradedBanner providers={data._meta.degraded} />}

@@ -27,7 +27,7 @@ export function VitalsStrip({ data }: { data: AnalysisResult }) {
 
   // Status color and label
   const statusColor = isNotRegistered
-    ? "var(--dim)"
+    ? "var(--warning)"
     : isRestricted
       ? "var(--warning)"
       : isUp
