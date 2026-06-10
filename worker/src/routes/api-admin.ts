@@ -19,6 +19,7 @@ import {
   SIGNAL_REGISTRY,
   TIER_THRESHOLDS,
 } from "../config/signal-registry";
+import { requestMetaRetentionDays } from "../daily-counters";
 import { loadData } from "../data/kv-loader";
 import type { VulnerableLibrary } from "../data/vulnerable-libraries";
 import { scanForVulnerableLibraries, VULNERABLE_LIBRARIES } from "../data/vulnerable-libraries";
@@ -51,7 +52,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const days = parseInt(url.searchParams.get("days") ?? "30", 10);
     const stats = await getUsageStats(env.STATS_DB, days);
     if (path === "/api/usage") return adminJson(stats);
-    return renderUsagePage(env.STATS_DB, days, brand.name);
+    return renderUsagePage(env.STATS_DB, days, brand.name, env);
   }
 
   // GET /api/health — basic health always public; detailed errors require admin auth
@@ -372,7 +373,15 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     } catch (e) {
       results.api_errors = `error: ${e instanceof Error ? e.message : String(e)}`;
     }
-    // request_meta: infinite retention — no pruning
+    // request_meta: enforce retention (default 90 days) — previously unbounded.
+    try {
+      const retentionDays = requestMetaRetentionDays(env);
+      const rmCutoffDay = new Date(Date.now() - retentionDays * 86400000).toISOString().slice(0, 10);
+      const rmRes = await env.STATS_DB.prepare("DELETE FROM request_meta WHERE day < ?").bind(rmCutoffDay).run();
+      results.request_meta = `${rmRes.meta?.changes ?? "?"} rows deleted (>${retentionDays} days old)`;
+    } catch (e) {
+      results.request_meta = `error: ${e instanceof Error ? e.message : String(e)}`;
+    }
     return adminJson({ ok: true, cleaned_at: new Date().toISOString(), results });
   }
 
