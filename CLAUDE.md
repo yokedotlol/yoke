@@ -45,7 +45,8 @@ Embeddable shields-style domain score badges:
 
 - **`/badge/<domain>.svg`** — Direct SVG badge (standalone, no external deps)
 - **`/badge/<domain>.json`** — Shields.io endpoint protocol
-- **`POST /api/admin/badge-sweep`** — Admin: trigger badge pre-warm sweep
+
+Badges refresh lazily on-view (demand-gated): cold-start is a pure read, already-analyzed domains refresh after `BADGE_REFRESH_INTERVAL_HRS` (under the global budget), and a badge older than `BADGE_STALE_DAYS` — or one whose cached SSL cert `notAfter` has passed — demotes to a neutral "stale — re-scan". The old timer-based pre-warm sweep and its `POST /api/admin/badge-sweep` endpoint were removed.
 
 KV key: `badge:<domain>` (48h TTL, ~200 bytes). D1 table: `badge_domains` (tracks requested domains). Badge cache is written as a side effect of every analysis via `finalizeResult()` in `worker/src/actions/analyze/finalize.ts`.
 

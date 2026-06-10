@@ -877,17 +877,7 @@ Share cards use HMAC-SHA256 signed URLs for social sharing with OG image preview
 
 Embeddable badges work out of the box — every analysis automatically writes badge cache data. No extra setup required.
 
-**Pre-warm cron (optional):** On Cloudflare Workers, the badge pre-warm cron runs automatically every hour via `wrangler.toml` triggers. For self-hosted deployments without CF cron:
-
-- **Option A:** Set up a system cron to hit the admin endpoint:
-  ```bash
-  # Every hour — refresh badge cache for tracked domains
-  0 * * * * curl -s -X POST -H "X-Admin-Key: YOUR_ADMIN_KEY" http://localhost:8787/api/admin/badge-sweep
-  ```
-
-- **Option B:** Skip it. Layers 1 (natural traffic) and 2 (stale-while-revalidate) handle most cases. The pre-warm cron is only needed if you have badge consumers on pages that don't otherwise generate Yoke traffic.
-
-**Monitoring:** The admin endpoint returns `{ checked, refreshed, skipped, budget_exhausted }`. Each sweep run has a 10-minute wall-clock budget and processes the most stale domains first. If `budget_exhausted` is consistently `true`, increase your cron frequency (e.g., every 30 minutes) so all domains get refreshed.
+**Refresh model:** Badges refresh lazily on-view — there is no pre-warm cron to configure (the old timer-based sweep and its `POST /api/admin/badge-sweep` endpoint were removed). A badge served from cache is refreshed in the background once it ages past `BADGE_REFRESH_INTERVAL_HRS` (default 6h), staying under the global daily analysis budget. A badge older than `BADGE_STALE_DAYS` (default 30d) — or one whose cached SSL cert expiry (`notAfter`) has passed — is demoted to a neutral "stale — re-scan" rendering and re-scanned on demand. The hourly cron now only flushes cost counters and prunes stale rows.
 
 **White-label:** Badge label text uses the `SITE_NAME` environment variable (defaults to "Yoke").
 

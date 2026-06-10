@@ -346,6 +346,7 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 - `badge_domains` D1 table in existing `yoke-stats` database for tracking domains with badge requests
 - CF Workers `scheduled` event handler for the pre-warm cron
 - `POST /api/admin/badge-sweep` admin endpoint for self-hosters to trigger sweeps without CF cron
+  - **Superseded (2026-06):** the timer-based pre-warm sweep was a cost-model hole (re-analyzed every tracked domain on a timer). It was removed along with the `POST /api/admin/badge-sweep` endpoint and the `badgeSweep()` helper. Badges now refresh lazily on-view (demand-gated, under the global budget), and a cached badge whose SSL cert `notAfter` has passed demotes to a neutral "stale — re-scan" (a staleness trigger, never an "expired" verdict). The hourly cron now only flushes cost counters + prunes.
 
 **Prerequisite refactor:** Extracted duplicated post-analysis enrichment (share_url, pdf_url, percentiles injection) from both JSON path (`api-core.ts`) and SSE path (`analyze-stream.ts`) into a shared `finalizeResult()` function in `worker/src/actions/analyze/finalize.ts`. Badge cache write and badge_url injection added to this shared function, eliminating the dual-path divergence bug class entirely.
 
