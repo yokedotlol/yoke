@@ -39,6 +39,7 @@ Thumbs.db
 /tmp/worker.js
 
 # Lockfiles (bun.lock is canonical)
+/package-lock.json
 client/package-lock.json
 worker/package-lock.json
 og-worker/package-lock.json
@@ -47,6 +48,8 @@ og-worker/package-lock.json
 worker/src/resvg_bg.wasm
 worker/src/resvg.js
 cli/yoke
+# stray `go build` artifact (canonical binary is cli/yoke; released via GoReleaser)
+cli/cli
 *.zip
 
 # Calibration data (large JSON files)
