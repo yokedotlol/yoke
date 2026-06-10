@@ -59,7 +59,7 @@ export async function getUsageStats(
   if (!db) return { by_endpoint: {}, by_day: [], total: 0 };
   await ensureTable(db);
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
-  const tsCutoff = Date.now() - 7 * 86400000; // tab_views: last 7 days
+  const tabCutoffDay = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10); // tab_views: last 7 days
 
   const [summaryResult, dailyResult] = await db.batch([
     db
@@ -85,12 +85,13 @@ export async function getUsageStats(
     hits: r.hits,
   }));
 
-  // Tab views summary (last 7 days, best-effort)
+  // Tab views summary (last 7 days, best-effort). tab_views is now daily-
+  // aggregated (one row per tab/day), so we SUM the per-day view counts.
   let tab_views: Record<string, number> | undefined;
   try {
     const tvResult = await db
-      .prepare("SELECT tab, COUNT(*) as cnt FROM tab_views WHERE ts >= ? GROUP BY tab ORDER BY cnt DESC")
-      .bind(tsCutoff)
+      .prepare("SELECT tab, SUM(views) as cnt FROM tab_views WHERE day >= ? GROUP BY tab ORDER BY cnt DESC")
+      .bind(tabCutoffDay)
       .all();
     if (tvResult.results && tvResult.results.length > 0) {
       tab_views = {};
