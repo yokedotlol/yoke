@@ -398,19 +398,10 @@ function OverviewTab({ data, streaming }: { data: AnalysisResult; streaming?: bo
     { id: "tranco", node: <TrancoPanel data={data} /> },
   ];
 
-  // When the domain doesn't exist, that's the only thing that matters: lead with a
-  // prominent banner and suppress the 0-100 score (a score for a nonexistent domain is misleading).
-  const notRegistered = data.not_registered === true;
-
   return (
     <div className="space-y-3">
-      {notRegistered ? (
-        /* Not registered — the headline */
-        <NotRegisteredBanner domain={data.domain} />
-      ) : (
-        /* Domain Score — the headline */
-        <DomainScore data={data} />
-      )}
+      {/* Domain Score — the headline */}
+      <DomainScore data={data} />
 
       {/* Circuit breaker: degraded upstream notice */}
       {data._meta?.degraded && data._meta.degraded.length > 0 && <DegradedBanner providers={data._meta.degraded} />}
@@ -1000,8 +991,8 @@ export function App() {
         {/* Normal Analysis Mode */}
         {!compareMode && (
           <>
-            {/* Tab Bar - shown when we have results or are loading */}
-            {(analyze.data || analyze.isPending) && (
+            {/* Tab Bar - shown when we have results or are loading (never for NXDOMAIN) */}
+            {(analyze.data || analyze.isPending) && !analyze.data?.not_registered && (
               <div className="mt-3 mb-3 sticky top-0 z-10" style={{ background: "var(--bg)" }}>
                 <nav aria-label="Analysis tabs">
                   <TabBar active={activeTab} onChange={handleTabChange} />
@@ -1049,17 +1040,19 @@ export function App() {
                   Analyzing domain…
                 </div>
                 <StreamingProgress progress={analyze.progress} />
-                {analyze.partialData && hasEnoughForTabs(analyze.partialData) && (
-                  <div className="mt-3">
-                    <ErrorBoundary fallbackLabel="This tab encountered an error" key={`${activeTab}-streaming`}>
-                      <TabContent
-                        tab={activeTab}
-                        data={cleanTechStack(analyze.partialData as AnalysisResult)}
-                        streaming
-                      />
-                    </ErrorBoundary>
-                  </div>
-                )}
+                {analyze.partialData &&
+                  !analyze.partialData.not_registered &&
+                  hasEnoughForTabs(analyze.partialData) && (
+                    <div className="mt-3">
+                      <ErrorBoundary fallbackLabel="This tab encountered an error" key={`${activeTab}-streaming`}>
+                        <TabContent
+                          tab={activeTab}
+                          data={cleanTechStack(analyze.partialData as AnalysisResult)}
+                          streaming
+                        />
+                      </ErrorBoundary>
+                    </div>
+                  )}
               </>
             )}
 
@@ -1115,30 +1108,38 @@ export function App() {
             )}
 
             {/* Final results */}
-            {analyze.data && !analyze.isPending && (
-              <div className="mt-0" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
-                <div role="status" aria-live="polite" className="sr-only">
-                  Analysis complete for {analyze.data.domain}
+            {analyze.data &&
+              !analyze.isPending &&
+              (analyze.data.not_registered ? (
+                /* NXDOMAIN — no analysis check produces meaningful data, so show only the banner.
+                   No tab bar, no panels, no curl/share bars. */
+                <div className="mt-3">
+                  <NotRegisteredBanner domain={analyze.data.domain} />
                 </div>
-                {/* Curl API showcase bar — hidden on tabs without direct API mapping */}
-                {activeTab !== "ai" && activeTab !== "explore" && (
-                  <div className="mb-3">
-                    <CurlBar domain={analyze.data.domain} activeTab={activeTab} />
+              ) : (
+                <div className="mt-0" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+                  <div role="status" aria-live="polite" className="sr-only">
+                    Analysis complete for {analyze.data.domain}
                   </div>
-                )}
-                <ShareBar
-                  domain={analyze.data.domain}
-                  composite={analyze.data.domain_score?.composite}
-                  tier={analyze.data.domain_score?.tier}
-                  axes={analyze.data.domain_score?.axes}
-                  analyzedAt={analyze.data.analyzed_at}
-                  pdfUrl={analyze.data._meta?.pdf_url}
-                />
-                <ErrorBoundary fallbackLabel="This tab encountered an error" key={activeTab}>
-                  <TabContent tab={activeTab} data={cleanTechStack(analyze.data)} />
-                </ErrorBoundary>
-              </div>
-            )}
+                  {/* Curl API showcase bar — hidden on tabs without direct API mapping */}
+                  {activeTab !== "ai" && activeTab !== "explore" && (
+                    <div className="mb-3">
+                      <CurlBar domain={analyze.data.domain} activeTab={activeTab} />
+                    </div>
+                  )}
+                  <ShareBar
+                    domain={analyze.data.domain}
+                    composite={analyze.data.domain_score?.composite}
+                    tier={analyze.data.domain_score?.tier}
+                    axes={analyze.data.domain_score?.axes}
+                    analyzedAt={analyze.data.analyzed_at}
+                    pdfUrl={analyze.data._meta?.pdf_url}
+                  />
+                  <ErrorBoundary fallbackLabel="This tab encountered an error" key={activeTab}>
+                    <TabContent tab={activeTab} data={cleanTechStack(analyze.data)} />
+                  </ErrorBoundary>
+                </div>
+              ))}
 
             {/* Empty state — SEO-friendly landing content */}
             {!analyze.data && !analyze.isPending && !analyze.error && (
