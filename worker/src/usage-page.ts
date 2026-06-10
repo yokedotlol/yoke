@@ -36,11 +36,24 @@ export async function renderUsagePage(
   env?: Env,
 ): Promise<Response> {
   const today = new Date().toISOString().slice(0, 10);
-  const [stats, rq, budget, badgeRefreshesToday] = await Promise.all([
+  const [
+    stats,
+    rq,
+    budget,
+    badgeRefreshesToday,
+    whoisCallsToday,
+    pagespeedCallsToday,
+    cacheHitsToday,
+    cacheMissesToday,
+  ] = await Promise.all([
     getUsageStats(db, days),
     getRequestAnalytics(db, days),
     env ? readBudgetStats(env) : Promise.resolve(null),
     readDailyCounter(db, "badge_refreshes", today),
+    readDailyCounter(db, "whoisfreaks_calls", today),
+    readDailyCounter(db, "pagespeed_calls", today),
+    readDailyCounter(db, "cache_hits", today),
+    readDailyCounter(db, "cache_misses", today),
   ]);
 
   // Cost & Budget figures (live from the budget DO; falls back to "—" when unbound)
@@ -50,6 +63,17 @@ export async function renderUsagePage(
     budgetLimit && budgetCount != null ? Math.min(100, Math.round((budgetCount / budgetLimit) * 100)) : 0;
   const budgetColor = budgetPct >= 90 ? "var(--red)" : budgetPct >= 70 ? "var(--accent)" : "var(--green)";
   const budgetBreakdown = budget?.breakdown ?? null;
+
+  // Paid-API success counts + cache hit-rate. The budget DO holds the live
+  // current-day metrics; daily_counters (flushed hourly) is the fallback for
+  // when the DO is unbound or evicted mid-day.
+  const m = budget?.metrics ?? null;
+  const whoisCalls = m ? m.whoisfreaks_calls : whoisCallsToday;
+  const pagespeedCalls = m ? m.pagespeed_calls : pagespeedCallsToday;
+  const cacheHits = m ? m.cache_hits : cacheHitsToday;
+  const cacheMisses = m ? m.cache_misses : cacheMissesToday;
+  const cacheTotal = cacheHits + cacheMisses;
+  const cacheHitRate = cacheTotal > 0 ? Math.round((cacheHits / cacheTotal) * 100) : null;
 
   // Endpoint traffic
   const dayTotals: Record<string, number> = {};
@@ -195,6 +219,21 @@ export async function renderUsagePage(
   <div class="card">
     <div class="cl">Other</div>
     <div class="cv">${budgetBreakdown ? n(budgetBreakdown.other) : "—"}</div>
+  </div>
+  <div class="card">
+    <div class="cl">Cache Hit-Rate</div>
+    <div class="cv" style="color:var(--green)">${cacheHitRate != null ? `${cacheHitRate}%` : "—"}</div>
+    <div class="cs">${cacheTotal > 0 ? `${n(cacheHits)} hit / ${n(cacheMisses)} miss` : "no lookups yet"}</div>
+  </div>
+  <div class="card">
+    <div class="cl">WhoisFreaks Calls</div>
+    <div class="cv" style="color:var(--accent)">${n(whoisCalls)}</div>
+    <div class="cs">paid API (today)</div>
+  </div>
+  <div class="card">
+    <div class="cl">PageSpeed Calls</div>
+    <div class="cv" style="color:var(--accent)">${n(pagespeedCalls)}</div>
+    <div class="cs">paid API (today)</div>
   </div>
 </div>
 ${

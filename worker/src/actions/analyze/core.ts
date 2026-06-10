@@ -2,7 +2,7 @@
 // Single source of truth for all analysis logic.
 // Both the JSON endpoint and the SSE streaming endpoint use this.
 
-import { type AnalysisSource, chargeBudget } from "../../analysis-budget";
+import { type AnalysisSource, chargeBudget, recordCacheHit, recordCacheMiss } from "../../analysis-budget";
 import { logApiError, pruneApiErrors } from "../../api-errors";
 import { registry } from "../../checks/registry";
 import type { CheckContext, HttpProbeResult } from "../../checks/types";
@@ -447,6 +447,7 @@ async function runAnalysisCore(
         const envelope = JSON.parse(raw) as { data: unknown; cached_at: number };
         if (Date.now() - envelope.cached_at < getAnalysisCacheTtlMs(env)) {
           const parsed = envelope.data as AnalysisResult;
+          recordCacheHit(env); // fire-and-forget cost-dashboard counter
           return { kind: "cached", data: { ...parsed, cached: true, cached_at: envelope.cached_at } };
         }
       }
@@ -478,7 +479,10 @@ async function runAnalysisCore(
 
   // ── Global daily budget gate ──────────────────────────────────────
   // We reach here only on a cache MISS that is also not NXDOMAIN — i.e. the
-  // expensive ~25-API fan-out is about to run. Charge it against the global
+  // expensive ~25-API fan-out is about to run. Record the miss for the cost
+  // dashboard (fire-and-forget) before charging the budget.
+  recordCacheMiss(env);
+  // Charge it against the global
   // daily budget BEFORE fanning out. chargeBudget fails OPEN on infra errors
   // (still attempts to count) and throws BudgetExceededError only when the DO
   // explicitly reports the ceiling is hit. Callers translate that into a 429

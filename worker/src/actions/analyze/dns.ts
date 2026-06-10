@@ -1,3 +1,4 @@
+import { recordApiCall } from "../../analysis-budget";
 import { logApiError } from "../../api-errors";
 import type { Env } from "../../helpers";
 import { fetchWithTimeout, MULTI_PART_TLDS } from "../../helpers";
@@ -333,6 +334,8 @@ async function whoisFreaksFallback(domain: string, env?: Env): Promise<RdapResul
         logApiError(env.STATS_DB, { api: "whoisfreaks", status: res.status, message: `WHOIS lookup failed`, domain });
       return null;
     }
+    // Billable call succeeded — record for the cost dashboard (fire-and-forget).
+    if (env) recordApiCall(env, "whoisfreaks");
     const data = (await res.json()) as {
       create_date?: string;
       update_date?: string;

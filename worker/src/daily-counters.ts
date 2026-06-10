@@ -11,8 +11,6 @@
 import type { BudgetStats } from "./analysis-budget-do";
 import type { Env } from "./helpers";
 
-// TODO(stats): paid-API success counts + cache hit-rate — deferred
-
 const CREATE_SQL = `CREATE TABLE IF NOT EXISTS daily_counters (
   metric TEXT NOT NULL,
   day TEXT NOT NULL,
@@ -37,6 +35,9 @@ async function ensureTable(db: D1Database): Promise<void> {
 export async function flushBudgetCounters(db: D1Database | undefined, stats: BudgetStats): Promise<void> {
   if (!db) return;
   const { day, count, breakdown } = stats;
+  // metrics may be absent on stats produced by an older DO mid-deploy — default
+  // each counter to 0 so the flush stays robust.
+  const metrics = stats.metrics ?? { whoisfreaks_calls: 0, pagespeed_calls: 0, cache_hits: 0, cache_misses: 0 };
   const rows: Array<[string, number]> = [
     ["analyses_total", count],
     ["analyses_curl", breakdown.curl],
@@ -44,6 +45,11 @@ export async function flushBudgetCounters(db: D1Database | undefined, stats: Bud
     ["analyses_compare", breakdown.compare],
     ["analyses_badge", breakdown.badge],
     ["badge_refreshes", breakdown.badge],
+    // Auxiliary cost-dashboard metrics (paid-API success counts + cache hit-rate).
+    ["whoisfreaks_calls", metrics.whoisfreaks_calls],
+    ["pagespeed_calls", metrics.pagespeed_calls],
+    ["cache_hits", metrics.cache_hits],
+    ["cache_misses", metrics.cache_misses],
   ];
 
   const upsert = (metric: string, value: number) =>

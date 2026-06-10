@@ -9,7 +9,8 @@
 --
 -- Metrics written today:
 --   analyses_total, analyses_curl, analyses_analyze, analyses_compare,
---   analyses_badge, badge_refreshes
+--   analyses_badge, badge_refreshes,
+--   whoisfreaks_calls, pagespeed_calls, cache_hits, cache_misses
 --
 -- This table is also self-healed by a `CREATE TABLE IF NOT EXISTS` in
 -- worker/src/daily-counters.ts, so it works without applying this migration

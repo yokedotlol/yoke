@@ -1,6 +1,14 @@
 // analysis-budget client wrapper: fail-open behavior + over-budget throw.
 
-import { BudgetExceededError, chargeBudget, readBudgetStats, resolveBudgetLimit } from "@worker/analysis-budget";
+import {
+  BudgetExceededError,
+  chargeBudget,
+  readBudgetStats,
+  recordApiCall,
+  recordCacheHit,
+  recordCacheMiss,
+  resolveBudgetLimit,
+} from "@worker/analysis-budget";
 import type { Env } from "@worker/helpers";
 import { describe, expect, it } from "vitest";
 
@@ -77,11 +85,48 @@ describe("analysis-budget client", () => {
           count: 5,
           limit: 3000,
           breakdown: { curl: 5, analyze: 0, compare: 0, badge: 0, other: 0 },
+          metrics: { whoisfreaks_calls: 2, pagespeed_calls: 3, cache_hits: 10, cache_misses: 4 },
         },
       }),
     } as unknown as Env;
     const stats = await readBudgetStats(env);
     expect(stats?.count).toBe(5);
     expect(stats?.breakdown.curl).toBe(5);
+    expect(stats?.metrics.whoisfreaks_calls).toBe(2);
+    expect(stats?.metrics.cache_hits).toBe(10);
+  });
+
+  it("recordApiCall POSTs the correct /bump metric (fire-and-forget)", async () => {
+    const bumped: string[] = [];
+    const ns = {
+      idFromName: () => ({}) as unknown as DurableObjectId,
+      get: () =>
+        ({
+          fetch: async (req: Request) => {
+            const body = (await req.json()) as { metric?: string };
+            if (body.metric) bumped.push(body.metric);
+            return new Response(JSON.stringify({ ok: true }), { status: 200 });
+          },
+        }) as unknown as DurableObjectStub,
+    } as unknown as DurableObjectNamespace;
+    // backgroundWork runs the promise synchronously (no _ctx) but does not await it.
+    const env = { ANALYSIS_BUDGET: ns } as unknown as Env;
+
+    recordApiCall(env, "whoisfreaks");
+    recordApiCall(env, "pagespeed");
+    recordCacheHit(env);
+    recordCacheMiss(env);
+    await new Promise((r) => setTimeout(r, 0)); // let the fire-and-forget bumps settle
+
+    expect(bumped).toEqual(["whoisfreaks_calls", "pagespeed_calls", "cache_hits", "cache_misses"]);
+  });
+
+  it("record* helpers are no-ops (do not throw) when the DO is unbound", async () => {
+    const env = {} as Env;
+    expect(() => {
+      recordApiCall(env, "whoisfreaks");
+      recordCacheHit(env);
+      recordCacheMiss(env);
+    }).not.toThrow();
   });
 });

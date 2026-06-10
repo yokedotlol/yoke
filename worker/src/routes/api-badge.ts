@@ -13,7 +13,28 @@ import { backgroundWork, CORS_HEADERS, cleanDomain, YOKE_VERSION } from "../help
 import { logInfo, logWarn } from "../logger";
 import type { RouteContext } from "./shared";
 
-// TODO(badge): serve-time SSL/cliff eval — deferred, needs cert notAfter in badge payload
+/**
+ * Serve-time cert-expiry check — a STALENESS TRIGGER, not a verdict.
+ *
+ * If a cached badge carries an SSL cert `notAfter` that is now in the past, we
+ * treat the badge as stale (demote to the neutral "stale — re-scan" rendering)
+ * and trigger a gated refresh. We deliberately do NOT render or assert
+ * "expired" as a current-state claim, because a cached notAfter is unreliable:
+ * operators routinely renew certs BEFORE expiry, so a past cached notAfter only
+ * tells us "our snapshot is old," not "this site's cert is actually expired
+ * right now." Asserting expiry from stale data would be a false accusation —
+ * the honest move is to demote and re-scan to learn the live state.
+ *
+ * Returns true when the badge should be treated as stale on cert grounds.
+ * Backward-compatible: returns false when `certNotAfter` is absent (older
+ * cached badges) or unparseable.
+ */
+function certExpiryIsStale(certNotAfter: string | undefined, now: number): boolean {
+  if (!certNotAfter) return false; // not present (back-compat) → no opinion
+  const t = new Date(certNotAfter).getTime();
+  if (!Number.isFinite(t)) return false; // unparseable → no opinion
+  return now > t;
+}
 
 /** Default refresh-on-view interval in hours (env: BADGE_REFRESH_INTERVAL_HRS). */
 const DEFAULT_REFRESH_INTERVAL_HRS = 6;
@@ -119,11 +140,22 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   const cached = await readBadgeCache(domain, env);
 
   if (cached) {
-    const age = Date.now() - new Date(cached.analyzedAt).getTime();
+    const now = Date.now();
+    const age = now - new Date(cached.analyzedAt).getTime();
 
     // Stale-decay: a long-untouched badge no longer reflects reality — serve a
     // neutral "stale — re-scan" badge rather than a misleading old score.
     if (age > staleMs) {
+      if (dotJson) return shieldsJson(label, null, null, null, "stale — re-scan");
+      return svgResponse(neutralBadgeOptions(label, style, "stale — re-scan"), null);
+    }
+
+    // Cert-expiry staleness trigger (NOT a verdict): if our cached cert notAfter
+    // is in the past, the snapshot is stale — demote to the SAME neutral
+    // "stale — re-scan" rendering as the age-decay path and trigger a gated
+    // refresh to learn the live state. We never claim "expired".
+    if (certExpiryIsStale(cached.certNotAfter, now)) {
+      if (age > refreshMs) triggerBackgroundAnalysis(domain, env);
       if (dotJson) return shieldsJson(label, null, null, null, "stale — re-scan");
       return svgResponse(neutralBadgeOptions(label, style, "stale — re-scan"), null);
     }
@@ -149,7 +181,8 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   // Badge cache miss — try analysis cache before returning "not yet scanned"
   const fromAnalysis = await readAnalysisCacheScore(domain, env);
   if (fromAnalysis) {
-    const age = Date.now() - new Date(fromAnalysis.analyzedAt).getTime();
+    const now = Date.now();
+    const age = now - new Date(fromAnalysis.analyzedAt).getTime();
 
     // Stale-decay applies to the analysis-cache path too.
     if (age > staleMs) {
@@ -157,8 +190,16 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return svgResponse(neutralBadgeOptions(label, style, "stale — re-scan"), null);
     }
 
+    // Cert-expiry staleness trigger (NOT a verdict) — same rationale as the
+    // badge-cache path above.
+    if (certExpiryIsStale(fromAnalysis.certNotAfter ?? undefined, now)) {
+      if (age > refreshMs) triggerBackgroundAnalysis(domain, env);
+      if (dotJson) return shieldsJson(label, null, null, null, "stale — re-scan");
+      return svgResponse(neutralBadgeOptions(label, style, "stale — re-scan"), null);
+    }
+
     // Write badge cache in the background so next request is fast
-    backgroundWork(env, writeBadgeCache(domain, fromAnalysis, env));
+    backgroundWork(env, writeBadgeCache(domain, fromAnalysis, env, fromAnalysis.certNotAfter));
     trackBadgeDomain(domain, env);
 
     // Refresh-on-view: already analyzed, so a demand-driven refresh is allowed.
@@ -345,6 +386,8 @@ interface AnalysisCacheScore {
   tier: string;
   axes: Record<string, { score?: number }>;
   analyzedAt: string;
+  /** SSL cert expiry (notAfter) from the cached analysis, when present. */
+  certNotAfter: string | null;
 }
 
 /** Read score data from analysis cache when badge cache misses.
@@ -360,11 +403,13 @@ async function readAnalysisCacheScore(domain: string, env: Env): Promise<Analysi
       | undefined;
     if (!ds?.composite || !ds.tier || !ds.axes) return null;
     const analyzedAt = (envelope.data?.analyzed_at as string) || new Date(envelope.cached_at).toISOString();
+    const ssl = envelope.data?.ssl as { valid_to?: string | null } | null | undefined;
     return {
       composite: ds.composite,
       tier: ds.tier,
       axes: ds.axes,
       analyzedAt,
+      certNotAfter: ssl?.valid_to ?? null,
     };
   } catch {
     return null;

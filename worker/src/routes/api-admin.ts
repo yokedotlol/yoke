@@ -155,25 +155,27 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   }
 
   // POST /api/track-tab — anonymous tab view analytics
+  // Daily-aggregated: one row per (tab, day) incremented via UPSERT, mirroring
+  // endpoint_usage. The old per-call INSERT was a write-amp hole (one row per
+  // tab click); we only ever read aggregate counts, so per-event rows were waste.
   if (method === "POST" && path === "/api/track-tab") {
     if (!env.STATS_DB || env.DISABLE_ANALYTICS) return json({ ok: true });
     const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/track-tab", env);
     if (rl.blocked) return rl.blocked;
     const body = await parseBody<{ domain?: string; tab?: string }>(request);
     if (!body.tab) return jsonError("tab required", "MISSING_TAB", 400);
+    const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const upsertSql = `INSERT INTO tab_views (tab, day, views) VALUES (?, ?, 1)
+       ON CONFLICT(tab, day) DO UPDATE SET views = views + 1`;
     try {
-      await env.STATS_DB.prepare("INSERT INTO tab_views (tab, domain, ts) VALUES (?, ?, ?)")
-        .bind(body.tab, body.domain || "", Date.now())
-        .run();
+      await env.STATS_DB.prepare(upsertSql).bind(body.tab, day).run();
     } catch (e: unknown) {
       if (e instanceof Error && e.message?.includes("no such table")) {
         await env.STATS_DB.exec(
-          "CREATE TABLE IF NOT EXISTS tab_views (id INTEGER PRIMARY KEY AUTOINCREMENT, tab TEXT NOT NULL, domain TEXT, ts INTEGER NOT NULL)",
+          "CREATE TABLE IF NOT EXISTS tab_views (tab TEXT NOT NULL, day TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (tab, day))",
         );
-        await env.STATS_DB.exec("CREATE INDEX IF NOT EXISTS idx_tab_views_tab ON tab_views(tab, ts)");
-        await env.STATS_DB.prepare("INSERT INTO tab_views (tab, domain, ts) VALUES (?, ?, ?)")
-          .bind(body.tab, body.domain || "", Date.now())
-          .run();
+        await env.STATS_DB.exec("CREATE INDEX IF NOT EXISTS idx_tab_views_day ON tab_views(day)");
+        await env.STATS_DB.prepare(upsertSql).bind(body.tab, day).run();
       }
     }
     return json({ ok: true });
@@ -552,20 +554,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       elapsed_ms: elapsedMs,
       ...(errorDetails.length > 0 ? { error_samples: errorDetails } : {}),
     });
-  }
-
-  // POST /api/admin/badge-sweep — trigger badge pre-warm sweep
-  if (method === "POST" && path === "/api/admin/badge-sweep") {
-    if (!env.ADMIN_KEY || !timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY)) {
-      return adminJson({ error: "Unauthorized" }, 401);
-    }
-    try {
-      const { badgeSweep } = await import("../scheduled");
-      const result = await badgeSweep(env);
-      return adminJson({ ok: true, ...result });
-    } catch (e) {
-      return adminJson({ ok: false, error: e instanceof Error ? e.message : String(e) }, 500);
-    }
   }
 
   // GET /api/docs — serve HTML for browsers, JSON for API clients

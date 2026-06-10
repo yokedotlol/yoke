@@ -34,12 +34,31 @@ export interface ChargeResult {
   limit: number;
 }
 
+/**
+ * Auxiliary in-memory daily metrics that ride alongside the budget count.
+ *
+ * Unlike `count`/`breakdown` (the cost guard, which must survive eviction),
+ * these are cheap fire-and-forget observability counters. They live in the
+ * same DO so call sites never touch D1/KV on the hot path — the hourly cron
+ * flushes them into daily_counters. Losing a few on eviction is harmless.
+ */
+export interface BudgetMetrics {
+  whoisfreaks_calls: number;
+  pagespeed_calls: number;
+  cache_hits: number;
+  cache_misses: number;
+}
+
+/** Bumpable metric names (the `/bump` endpoint payload). */
+export type BudgetMetric = keyof BudgetMetrics;
+
 /** Result of a stats() call. */
 export interface BudgetStats {
   day: string;
   count: number;
   limit: number;
   breakdown: BudgetBreakdown;
+  metrics: BudgetMetrics;
 }
 
 /** Persisted shape in DO storage. */
@@ -47,6 +66,7 @@ interface BudgetState {
   day: string;
   count: number;
   breakdown: BudgetBreakdown;
+  metrics: BudgetMetrics;
 }
 
 /** Default global daily analysis budget when env override is absent/invalid. */
@@ -57,6 +77,16 @@ export const ANALYSIS_BUDGET_DO_NAME = "global-analysis-budget";
 
 function emptyBreakdown(): BudgetBreakdown {
   return { curl: 0, analyze: 0, compare: 0, badge: 0, other: 0 };
+}
+
+function emptyMetrics(): BudgetMetrics {
+  return { whoisfreaks_calls: 0, pagespeed_calls: 0, cache_hits: 0, cache_misses: 0 };
+}
+
+const METRIC_KEYS: readonly BudgetMetric[] = ["whoisfreaks_calls", "pagespeed_calls", "cache_hits", "cache_misses"];
+
+function isMetric(name: string): name is BudgetMetric {
+  return (METRIC_KEYS as readonly string[]).includes(name);
 }
 
 /** Current UTC date as YYYY-MM-DD. */
@@ -99,6 +129,17 @@ export class AnalysisBudgetDO {
         return jsonResponse(result);
       }
 
+      // Fire-and-forget observability bump. Does NOT count toward the budget —
+      // it only increments an auxiliary in-memory metric (cost dashboard).
+      if (url.pathname === "/bump" && request.method === "POST") {
+        const body = (await request.json()) as { metric?: string };
+        if (!body.metric || !isMetric(body.metric)) {
+          return jsonResponse({ error: "unknown metric" }, 400);
+        }
+        await this.bump(body.metric);
+        return jsonResponse({ ok: true });
+      }
+
       if (url.pathname === "/stats" && request.method === "GET") {
         const result = await this.stats(limit);
         return jsonResponse(result);
@@ -123,11 +164,13 @@ export class AnalysisBudgetDO {
   private async load(): Promise<BudgetState> {
     if (!this.cache) {
       const stored = await this.state.storage.get<BudgetState>("budget");
-      this.cache = stored ?? { day: utcDay(), count: 0, breakdown: emptyBreakdown() };
+      this.cache = stored
+        ? { ...stored, metrics: { ...emptyMetrics(), ...stored.metrics } } // back-compat: pre-metrics rows
+        : { day: utcDay(), count: 0, breakdown: emptyBreakdown(), metrics: emptyMetrics() };
     }
     const today = utcDay();
     if (this.cache.day !== today) {
-      this.cache = { day: today, count: 0, breakdown: emptyBreakdown() };
+      this.cache = { day: today, count: 0, breakdown: emptyBreakdown(), metrics: emptyMetrics() };
       await this.state.storage.put("budget", this.cache);
     }
     return this.cache;
@@ -145,10 +188,26 @@ export class AnalysisBudgetDO {
     return { allowed: true, count: st.count, limit };
   }
 
-  /** Read today's count, limit, and per-path breakdown. */
+  /**
+   * Increment an auxiliary metric. Separate from charge() — never consults or
+   * affects the budget limit; it's pure observability accounting.
+   */
+  async bump(metric: BudgetMetric): Promise<void> {
+    const st = await this.load();
+    st.metrics[metric] += 1;
+    await this.state.storage.put("budget", st);
+  }
+
+  /** Read today's count, limit, per-path breakdown, and auxiliary metrics. */
   async stats(limit: number): Promise<BudgetStats> {
     const st = await this.load();
-    return { day: st.day, count: st.count, limit, breakdown: { ...st.breakdown } };
+    return {
+      day: st.day,
+      count: st.count,
+      limit,
+      breakdown: { ...st.breakdown },
+      metrics: { ...st.metrics },
+    };
   }
 }
 
