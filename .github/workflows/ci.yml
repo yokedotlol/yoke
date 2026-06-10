@@ -164,6 +164,14 @@ jobs:
           pattern = "mta-sts.yoke.lol/*"
           zone_name = "yoke.lol"
 
+          [[durable_objects.bindings]]
+          name = "RATE_LIMITER"
+          class_name = "RateLimiterDO"
+
+          [[migrations]]
+          tag = "v1"
+          new_sqlite_classes = ["RateLimiterDO"]
+
           [triggers]
           crons = ["0 */1 * * *"]
           EOF
@@ -297,6 +305,14 @@ jobs:
           [[routes]]
           pattern = "mta-sts.yoke.lol/*"
           zone_name = "yoke.lol"
+
+          [[durable_objects.bindings]]
+          name = "RATE_LIMITER"
+          class_name = "RateLimiterDO"
+
+          [[migrations]]
+          tag = "v1"
+          new_sqlite_classes = ["RateLimiterDO"]
 
           [triggers]
           crons = ["0 */1 * * *"]

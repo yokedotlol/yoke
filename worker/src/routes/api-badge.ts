@@ -19,6 +19,25 @@ const STALE_THRESHOLD_MS = 20 * 60 * 60 * 1000;
 /** Lock TTL to prevent cache stampede (60 seconds) */
 const PENDING_LOCK_TTL = 60;
 
+/**
+ * Cache-Control for a scored badge (analyzedAt present): 1h fresh, then serve
+ * stale while revalidating for up to a day. A zone-level CF Cache Rule on
+ * /badge/* (respect_origin) honours these origin TTLs at the edge.
+ */
+const SCORED_CACHE_CONTROL = "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400";
+
+/**
+ * Cache-Control for a cold/neutral badge (analyzedAt null, i.e. "not yet
+ * scanned"): kept short so a freshly-scanned domain's badge flips to a real
+ * score within ~a minute instead of being stuck for an hour.
+ */
+const NEUTRAL_CACHE_CONTROL = "public, max-age=60, s-maxage=60";
+
+/** Pick the Cache-Control header value based on whether the badge is scored. */
+function cacheControlFor(analyzedAt: string | null): string {
+  return analyzedAt ? SCORED_CACHE_CONTROL : NEUTRAL_CACHE_CONTROL;
+}
+
 /** Tier → shields.io color name mapping */
 const TIER_SHIELD_COLORS: Record<string, string> = {
   Excellent: "brightgreen",
@@ -149,7 +168,7 @@ function shieldsJson(label: string, score: number | null, tier: string | null, a
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "Cache-Control": "max-age=300, s-maxage=300",
+    "Cache-Control": cacheControlFor(analyzedAt),
     "X-Yoke-Version": YOKE_VERSION,
     ...CORS_HEADERS,
   };
@@ -167,7 +186,7 @@ function svgResponse(opts: ReturnType<typeof scoreBadgeOptions>, analyzedAt: str
 
   const headers: Record<string, string> = {
     "Content-Type": "image/svg+xml",
-    "Cache-Control": "max-age=300, s-maxage=300",
+    "Cache-Control": cacheControlFor(analyzedAt),
     "X-Yoke-Version": YOKE_VERSION,
     ...CORS_HEADERS,
   };
@@ -213,7 +232,16 @@ function triggerBackgroundAnalysis(domain: string, env: Env): void {
   );
 }
 
-/** Track domain in badge_domains D1 table (non-blocking, self-healing) */
+/** Track domain in badge_domains D1 table (non-blocking, self-healing).
+ *
+ *  Uses INSERT OR IGNORE — records each domain once on first-seen only. The
+ *  previous per-hit `ON CONFLICT … DO UPDATE` (bumping last_requested /
+ *  request_count on every badge request) was removed because:
+ *    (a) it was a D1 write on the hot path — the expensive op per badge hit; and
+ *    (b) it was already inaccurate once badges are edge-cached (cached hits
+ *        never reach the origin), so the counts under-reported real traffic.
+ *  Real usage analytics should come from Cloudflare Analytics / logs instead.
+ *  The badge sweep only needs the domain list, not live per-hit counts. */
 function trackBadgeDomain(domain: string, env: Env): void {
   backgroundWork(
     env,
@@ -222,11 +250,8 @@ function trackBadgeDomain(domain: string, env: Env): void {
       const now = new Date().toISOString();
       try {
         await env.STATS_DB.prepare(
-          `INSERT INTO badge_domains (domain, first_requested, last_requested, request_count)
-           VALUES (?, ?, ?, 1)
-           ON CONFLICT(domain) DO UPDATE SET
-             last_requested = excluded.last_requested,
-             request_count = request_count + 1`,
+          `INSERT OR IGNORE INTO badge_domains (domain, first_requested, last_requested, request_count)
+           VALUES (?, ?, ?, 1)`,
         )
           .bind(domain, now, now)
           .run();
@@ -236,19 +261,11 @@ function trackBadgeDomain(domain: string, env: Env): void {
         if (msg.includes("no such table")) {
           try {
             await env.STATS_DB.exec(
-              `CREATE TABLE IF NOT EXISTS badge_domains (
-                domain TEXT PRIMARY KEY,
-                first_requested TEXT NOT NULL,
-                last_requested TEXT NOT NULL,
-                request_count INTEGER DEFAULT 1
-              )`,
+              `CREATE TABLE IF NOT EXISTS badge_domains (domain TEXT PRIMARY KEY, first_requested TEXT NOT NULL, last_requested TEXT NOT NULL, request_count INTEGER DEFAULT 1)`,
             );
             await env.STATS_DB.prepare(
-              `INSERT INTO badge_domains (domain, first_requested, last_requested, request_count)
-               VALUES (?, ?, ?, 1)
-               ON CONFLICT(domain) DO UPDATE SET
-                 last_requested = excluded.last_requested,
-                 request_count = request_count + 1`,
+              `INSERT OR IGNORE INTO badge_domains (domain, first_requested, last_requested, request_count)
+               VALUES (?, ?, ?, 1)`,
             )
               .bind(domain, now, now)
               .run();

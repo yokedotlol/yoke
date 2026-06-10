@@ -108,14 +108,24 @@ describe("Badge Routes", () => {
       expect(svg).toContain("not yet scanned");
     });
 
-    it("sets Cache-Control and CORS headers", async () => {
+    it("sets long scored Cache-Control and CORS headers on a scored badge", async () => {
       const entry = makeBadgeEntry();
       const env = mockEnv({ "badge:stripe.com": JSON.stringify(entry) });
       const resp = await worker.fetch(req("/badge/stripe.com.svg"), env);
 
-      expect(resp.headers.get("Cache-Control")).toBe("max-age=300, s-maxage=300");
+      expect(resp.headers.get("Cache-Control")).toBe(
+        "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",
+      );
       expect(resp.headers.get("Access-Control-Allow-Origin")).toBe("*");
       expect(resp.headers.get("X-Yoke-Version")).toBeTruthy();
+    });
+
+    it("sets short Cache-Control on a cold/neutral (not yet scanned) badge", async () => {
+      const env = mockEnv();
+      const resp = await worker.fetch(req("/badge/unknown.com.svg"), env);
+
+      expect(resp.headers.get("Cache-Control")).toBe("public, max-age=60, s-maxage=60");
+      expect(resp.headers.get("ETag")).toBeNull();
     });
 
     it("sets ETag on cache hit", async () => {
@@ -186,6 +196,70 @@ describe("Badge Routes", () => {
       const env = mockEnv();
       const resp = await worker.fetch(req("/badge/stripe.com.json"), env);
       expect(resp.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    });
+
+    it("sets long scored Cache-Control on a scored JSON badge", async () => {
+      const entry = makeBadgeEntry();
+      const env = mockEnv({ "badge:stripe.com": JSON.stringify(entry) });
+      const resp = await worker.fetch(req("/badge/stripe.com.json"), env);
+      expect(resp.headers.get("Cache-Control")).toBe(
+        "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",
+      );
+    });
+
+    it("sets short Cache-Control on a cold/neutral JSON badge", async () => {
+      const env = mockEnv();
+      const resp = await worker.fetch(req("/badge/unknown.com.json"), env);
+      expect(resp.headers.get("Cache-Control")).toBe("public, max-age=60, s-maxage=60");
+    });
+  });
+
+  describe("badge_domains tracking", () => {
+    it("records the domain with INSERT OR IGNORE and no per-hit UPDATE", async () => {
+      const queries: string[] = [];
+      // Capturing D1 stub: record every prepared SQL string.
+      const result = {
+        results: [],
+        success: true,
+        meta: {
+          duration: 0,
+          changes: 0,
+          last_row_id: 0,
+          changed_db: false,
+          size_after: 0,
+          rows_read: 0,
+          rows_written: 0,
+        },
+      };
+      const capturingDb = {
+        prepare: (query: string) => {
+          queries.push(query);
+          const stmt = {
+            bind: () => stmt,
+            first: async () => null,
+            all: async () => result,
+            run: async () => result,
+            raw: async () => [],
+          };
+          return stmt as unknown as D1PreparedStatement;
+        },
+        exec: async () => ({ count: 0, duration: 0 }),
+        batch: async () => [result],
+        dump: async () => new ArrayBuffer(0),
+      } as unknown as D1Database;
+
+      const entry = makeBadgeEntry();
+      const env = mockEnv({ "badge:stripe.com": JSON.stringify(entry) }, { STATS_DB: capturingDb });
+      await worker.fetch(req("/badge/stripe.com.svg"), env);
+
+      // Allow the non-blocking backgroundWork promise to settle.
+      await new Promise((r) => setTimeout(r, 0));
+
+      const trackQuery = queries.find((q) => q.includes("badge_domains"));
+      expect(trackQuery).toBeTruthy();
+      expect(trackQuery).toContain("INSERT OR IGNORE INTO badge_domains");
+      expect(trackQuery).not.toContain("ON CONFLICT");
+      expect(trackQuery).not.toContain("request_count + 1");
     });
   });
 
