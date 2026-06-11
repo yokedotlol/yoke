@@ -1111,11 +1111,9 @@ export function App() {
             {analyze.data &&
               !analyze.isPending &&
               (analyze.data.not_registered ? (
-                /* NXDOMAIN — no analysis check produces meaningful data, so show only the banner.
-                   No tab bar, no panels, no curl/share bars. */
-                <div className="mt-3">
-                  <NotRegisteredBanner domain={analyze.data.domain} />
-                </div>
+                /* NXDOMAIN — no analysis check produces meaningful data, so show only the
+                   not-registered empty-state result. No tab bar, no panels, no curl/share bars. */
+                <NotRegisteredBanner domain={analyze.data.domain} />
               ) : (
                 <div className="mt-0" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
                   <div role="status" aria-live="polite" className="sr-only">
