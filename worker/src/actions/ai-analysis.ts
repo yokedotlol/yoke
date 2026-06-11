@@ -1,5 +1,5 @@
 import { logApiError } from "../api-errors";
-import { AI_CACHE_TTL_MS } from "../config/cache";
+import { AI_CACHE_TTL_MS, getAnalysisCacheTtlMs } from "../config/cache";
 import { CORS_HEADERS, type Env, fetchWithTimeout, getFromCache, normalizeDomain, setCache } from "../helpers";
 import { logError, logWarn } from "../logger";
 
@@ -670,10 +670,12 @@ export async function getAIAnalysis(
       headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   }
-  const analysisCache = (await getFromCache(env.REFERENCE_DATA, normalized, "analysis", 60 * 60 * 1000)) as Record<
-    string,
-    unknown
-  > | null;
+  const analysisCache = (await getFromCache(
+    env.REFERENCE_DATA,
+    normalized,
+    "analysis",
+    getAnalysisCacheTtlMs(env),
+  )) as Record<string, unknown> | null;
 
   if (!analysisCache) {
     return new Response(JSON.stringify({ error: "Domain not yet analyzed. Run a standard analysis first." }), {

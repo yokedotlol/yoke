@@ -1,7 +1,7 @@
 // AI API routes: ai-analysis, ai-prompt
 import { buildAIPrompt, getAIAnalysis } from "../actions/ai-analysis";
 import { recordEndpointHit } from "../analysis-budget";
-import { cleanDomain, getFromCache } from "../helpers";
+import { cleanDomain, getAnalysisCacheTtlMs, getFromCache } from "../helpers";
 import { addHeaders, checkRateLimitAuto, json, jsonError, parseBody, type RouteContext } from "./shared";
 
 export async function handle(rc: RouteContext): Promise<Response | null> {
@@ -32,10 +32,12 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const normalized = domain.toLowerCase();
-    const analysisCache = (await getFromCache(env.REFERENCE_DATA!, normalized, "analysis", 60 * 60 * 1000)) as Record<
-      string,
-      unknown
-    > | null;
+    const analysisCache = (await getFromCache(
+      env.REFERENCE_DATA!,
+      normalized,
+      "analysis",
+      getAnalysisCacheTtlMs(env),
+    )) as Record<string, unknown> | null;
     if (!analysisCache) {
       return jsonError("Domain not yet analyzed. Run a standard analysis first.", "NOT_ANALYZED", 400);
     }

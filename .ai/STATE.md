@@ -33,7 +33,7 @@
 | Metric | Value |
 |--------|-------|
 | Total tests | 362 |
-| Test files | 18 |
+| Test files | 24 |
 | Calibration tests | 33 (in `scoring-calibration.test.ts`) |
 | Total expect() calls | 713 |
 
