@@ -22,6 +22,7 @@ const bindings = {
   SHARE_SECRET: process.env.SHARE_SECRET || "",
   ADMIN_KEY: process.env.ADMIN_KEY || "",
   SELF_DOMAINS: `${YOKE_DOMAIN},www.${YOKE_DOMAIN}`,
+  RATE_LIMIT_BACKEND: process.env.RATE_LIMIT_BACKEND || "do",
   FLY_PROBE_URL: "http://probe:8788",
   FLY_AUTH_SECRET: process.env.PROBE_SECRET || "",
   SITE_NAME: process.env.SITE_NAME || "Yoke",
@@ -128,6 +129,13 @@ const mf = new Miniflare({
   // ── D1 database (SQLite-backed, persistent) ────────────────────
   d1Databases: ["STATS_DB"],
   d1Persist: "/data/d1",
+
+  // ── Durable Objects (in-memory rate limiter) ───────────────────
+  // Eliminates D1 reads/writes for rate limiting. State is ephemeral —
+  // if the DO is evicted, counters reset (acceptable for rate limiting).
+  durableObjects: {
+    RATE_LIMITER: "RateLimiterDO",
+  },
 
   // ── ASSETS service binding (SPA fallback) ──────────────────────
   serviceBindings: {

@@ -766,6 +766,7 @@ Set via `npx wrangler secret put` (Cloudflare), `.env` (Docker), or workerd conf
 | `RATE_LIMIT_COMPARE` | Optional | Max compares/hr per IP (default: 20, 0 = disable) |
 | `RATE_LIMIT_SUBDOMAIN` | Optional | Max subdomain scans/hr per IP (default: 15, 0 = disable) |
 | `RATE_LIMIT_AVAILABILITY` | Optional | Max availability checks/hr per IP (default: 30, 0 = disable) |
+| `RATE_LIMIT_BACKEND` | Optional | `do` (Durable Objects, default) or `d1`. DO uses in-memory counters — faster and avoids D1 read/write costs |
 | `CACHE_TTL_HOURS` | Optional | Analysis cache TTL in hours (default: 24, 0 = disable) |
 | `SITE_NAME` | Optional | White-label: replaces "Yoke" in the UI |
 | `SITE_TAGLINE` | Optional | White-label: homepage tagline |
