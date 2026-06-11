@@ -20,7 +20,6 @@ All notable changes to Yoke are documented here.
 - **Smarter Cache-Control** — scored badges get `max-age=3600, stale-while-revalidate=86400`; cold/neutral badges get `max-age=60` so freshly-scanned domains flip fast.
 - **`trackBadgeDomain` de-amped** — switched from `INSERT … ON CONFLICT DO UPDATE` (D1 write on every hit) to `INSERT OR IGNORE` (first-seen only).
 - **`badge_domains` junk pruned** — `/api/cleanup` now removes badge_domains rows for domains that were never actually analyzed.
-- **Cert-expiry staleness trigger** — optional `certNotAfter` in badge cache; expired cert demotes to "stale — re-scan" and triggers a re-scan (never asserts "expired" as a verdict from stale data).
 
 ### Rate Limiting
 - **Durable Object rate limiter** — new `RateLimiterDO` with feature-flagged activation; `checkRateLimitAuto` defaults to DO when bound, falls back to D1.
