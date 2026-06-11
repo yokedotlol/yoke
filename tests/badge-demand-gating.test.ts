@@ -91,7 +91,7 @@ describe("Badge demand-gating", () => {
 
     expect(resp.status).toBe(200);
     const svg = await resp.text();
-    expect(svg).toContain("not yet scanned");
+    expect(svg).toContain("no recent scans");
 
     // Must NOT seed badge_domains (no INSERT) and must NOT take the stampede lock.
     expect(queries.some((q) => q.includes("badge_domains"))).toBe(false);

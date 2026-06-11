@@ -127,11 +127,11 @@ export function scoreBadgeOptions(
   };
 }
 
-/** Build a neutral badge ("not yet scanned" by default, or a custom message). */
+/** Build a neutral badge ("no recent scans" by default, or a custom message). */
 export function neutralBadgeOptions(
   label: string,
   style?: "flat" | "flat-square",
-  message = "not yet scanned",
+  message = "no recent scans",
 ): BadgeOptions {
   return {
     label,

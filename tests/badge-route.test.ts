@@ -105,7 +105,7 @@ describe("Badge Routes", () => {
 
       expect(resp.status).toBe(200);
       const svg = await resp.text();
-      expect(svg).toContain("not yet scanned");
+      expect(svg).toContain("no recent scans");
     });
 
     it("sets long scored Cache-Control and CORS headers on a scored badge", async () => {
@@ -120,7 +120,7 @@ describe("Badge Routes", () => {
       expect(resp.headers.get("X-Yoke-Version")).toBeTruthy();
     });
 
-    it("sets short Cache-Control on a cold/neutral (not yet scanned) badge", async () => {
+    it("sets short Cache-Control on a cold/neutral (no recent scans) badge", async () => {
       const env = mockEnv();
       const resp = await worker.fetch(req("/badge/unknown.com.svg"), env);
 
@@ -188,7 +188,7 @@ describe("Badge Routes", () => {
 
       expect(resp.status).toBe(200);
       const data = await resp.json();
-      expect(data.message).toBe("not yet scanned");
+      expect(data.message).toBe("no recent scans");
       expect(data.color).toBe("lightgrey");
     });
 

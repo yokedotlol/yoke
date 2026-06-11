@@ -145,7 +145,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     return svgResponse(scoreBadgeOptions(label, score, tier, style), cached.analyzedAt);
   }
 
-  // Badge cache miss — try analysis cache before returning "not yet scanned"
+  // Badge cache miss — try analysis cache before returning "no recent scans"
   const fromAnalysis = await readAnalysisCacheScore(domain, env);
   if (fromAnalysis) {
     const now = Date.now();
@@ -174,7 +174,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   }
 
   // True cold start — no badge cache, no analysis cache. PURE READ:
-  // serve a neutral "not yet scanned" badge. Do NOT trigger analysis and do NOT
+  // serve a neutral "no recent scans" badge. Do NOT trigger analysis and do NOT
   // seed badge_domains — a crafted badge URL must not provoke an expensive scan.
   if (dotJson) {
     return shieldsJson(label, null, null, null);
@@ -201,7 +201,7 @@ function shieldsJson(
   score: number | null,
   tier: string | null,
   analyzedAt: string | null,
-  neutralMessage = "not yet scanned",
+  neutralMessage = "no recent scans",
 ): Response {
   const message = score != null && tier ? `${score} ${tier}` : neutralMessage;
   const color = tier ? TIER_SHIELD_COLORS[tier] || "lightgrey" : "lightgrey";
