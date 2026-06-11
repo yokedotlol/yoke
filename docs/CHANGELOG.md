@@ -4,6 +4,42 @@ All notable changes to Yoke are documented here.
 
 > **Scope:** This changelog tracks the **Service (Worker + Client)** version. The CLI and MCP Server version independently via their own release tags (`cli/vX.Y.Z` and `mcp/vX.Y.Z`).
 
+## [2.3.1] — 2026-06-11
+
+### Cost Model & Budget
+- **Global daily analysis budget** — new `AnalysisBudgetDO` Durable Object with atomic increment and 00:00-UTC reset; default ceiling 3,000/day (env-tunable via `GLOBAL_ANALYSIS_BUDGET`). Wired into the cache-miss path with per-source labels (`curl`/`analyze`/`compare`/`badge`/`other`). Fail-open on DO infra errors.
+- **Demand-gated badges** — cold-start badge requests are now pure reads: neutral "not yet scanned" with no background analysis trigger and no `badge_domains` seeding. Prevents crafted badge URLs from provoking expensive scans.
+- **Badge cron sweep removed** — the hourly `badgeSweep` that re-analyzed every tracked badge domain is gone. Badges now refresh lazily on-view, capped by the global budget. The sweep helper and its admin endpoint were fully retired.
+- **Stale-decay badges** — badges older than 30 days (env: `BADGE_STALE_DAYS`) render as neutral "stale — re-scan" instead of showing a misleading old score. Refresh-on-view triggers only for already-analyzed domains within the stale window.
+- **Cost & Budget dashboard** — new usage panel section: analyses today / budget ceiling (live from DO), per-path breakdown (curl/analyze/compare/badge), badge refreshes, WhoisFreaks and PageSpeed call counts, cache hit-rate.
+- **`endpoint_usage` moved off hot path** — per-request D1 UPSERT replaced with in-memory DO counters flushed hourly by the cron. Zero per-request D1 writes on the hot path.
+- **`request_meta` write-amp fixed** — was inserting 1 row/request with infinite retention. Retention pruning (default 90 days via `REQUEST_META_RETENTION_DAYS`) added.
+- **`tab_views` write-amp fixed** — switched from 1-INSERT-per-view to daily-aggregated `(tab, day)` UPSERT.
+
+### Badge Caching
+- **Smarter Cache-Control** — scored badges get `max-age=3600, stale-while-revalidate=86400`; cold/neutral badges get `max-age=60` so freshly-scanned domains flip fast.
+- **`trackBadgeDomain` de-amped** — switched from `INSERT … ON CONFLICT DO UPDATE` (D1 write on every hit) to `INSERT OR IGNORE` (first-seen only).
+- **`badge_domains` junk pruned** — `/api/cleanup` now removes badge_domains rows for domains that were never actually analyzed.
+- **Cert-expiry staleness trigger** — optional `certNotAfter` in badge cache; expired cert demotes to "stale — re-scan" and triggers a re-scan (never asserts "expired" as a verdict from stale data).
+
+### Rate Limiting
+- **Durable Object rate limiter** — new `RateLimiterDO` with feature-flagged activation; `checkRateLimitAuto` defaults to DO when bound, falls back to D1.
+- **curl/JSON API rate-limited** — `GET /{domain}` content-negotiation path now shares the `/api/analyze` per-IP bucket.
+
+### Bug Fixes
+- **AI analysis cache TTL mismatch** — AI endpoints used a hardcoded 1-hour TTL when reading the analysis cache (which lives for 24 hours). After 1 hour, the AI tab would show "Domain not yet analyzed" even though valid cached data existed. Now uses `getAnalysisCacheTtlMs(env)` consistently.
+- **NXDOMAIN empty state** — non-existent domains now show only the "Not Registered" banner with registration links, no tabs or panels.
+
+### Self-Hosting
+- **Docker DO rate limiter** — Durable Object rate limiter support added to Docker Compose setup.
+- **Migrations** — `0003_badge_domains.sql` (yoke-stats), `0004_drop_domain_cache.sql` (yoke-cache), `0005_daily_counters.sql` (yoke-stats), `0006_tab_views_daily.sql` (yoke-stats).
+
+### Other
+- **SPA-aware legal page detection** — sitemap + body-match heuristics for legal/privacy/terms pages.
+- **CLI `--fresh` flag** — force a fresh scan bypassing cache.
+- **MCP OIDC trusted publishing** — npm publish via GitHub Actions OIDC, no more `NPM_TOKEN` secret.
+- **704+ tests passing.**
+
 ## [2.3.0] — 2026-06-05
 
 ### Scoring
