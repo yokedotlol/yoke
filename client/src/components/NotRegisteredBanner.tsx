@@ -1,4 +1,5 @@
 import { SearchX } from "lucide-react";
+import { RegisterLinks } from "./RegisterLinks";
 
 /**
  * NXDOMAIN result view.
@@ -85,6 +86,26 @@ export function NotRegisteredBanner({ domain }: { domain?: string }) {
           <>DNS returned NXDOMAIN — no such domain exists. It may be available to register.</>
         )}
       </p>
+
+      {/* Register affordance — reuses the same neutral, theme-token-based links
+          from the Explore tab. These are otherwise unreachable for NXDOMAIN
+          because all tabs are hidden. Plain links, not affiliate. */}
+      {domain && (
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <span
+            style={{
+              color: "var(--dim)",
+              fontSize: "var(--text-xs)",
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}
+          >
+            Check availability
+          </span>
+          <RegisterLinks domain={domain} />
+        </div>
+      )}
     </div>
   );
 }
