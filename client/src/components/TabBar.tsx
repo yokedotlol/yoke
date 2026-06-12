@@ -1,28 +1,15 @@
-import {
-  Building2,
-  Compass,
-  Gauge,
-  Layers,
-  LayoutDashboard,
-  Mail,
-  Newspaper,
-  Server,
-  Shield,
-  Sparkles,
-} from "lucide-react";
+import { Award, Gauge, LayoutDashboard, Mail, Search, Server, Shield, Sparkles } from "lucide-react";
 import { type CSSProperties, type KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "foundations", label: "Foundations", icon: Server },
   { id: "security", label: "Security", icon: Shield },
-  { id: "tech", label: "Tech", icon: Layers },
+  { id: "foundations", label: "Foundations", icon: Server },
   { id: "speed", label: "Speed", icon: Gauge },
+  { id: "reputation", label: "Reputation", icon: Award },
+  { id: "discoverability", label: "Discoverability", icon: Search },
   { id: "email", label: "Email", icon: Mail },
-  { id: "business", label: "Business", icon: Building2 },
-  { id: "news", label: "News", icon: Newspaper },
-  { id: "explore", label: "Explore", icon: Compass },
-  { id: "ai", label: "AI", icon: Sparkles },
+  { id: "insights", label: "Insights", icon: Sparkles },
 ] as const;
 
 export type TabId = (typeof TABS)[number]["id"];

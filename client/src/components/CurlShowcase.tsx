@@ -33,15 +33,16 @@ function CopyBtn({ text }: { text: string }) {
 
 const TAB_FILTERS: Record<TabId, { label: string; filter: string } | null> = {
   overview: { label: "Overview", filter: "'{status, domain_score, hosting, tranco_rank}'" },
-  foundations: { label: "Foundations", filter: "'{dns, ip_info, ssl, rdap, shodan, redirects}'" },
-  security: { label: "Security", filter: "'{headers, email_auth, dnssec, blocklists, breaches}'" },
-  tech: { label: "Tech Stack", filter: "'{tech_stack, wordpress}'" },
+  security: { label: "Security", filter: "'{headers, ssl, dnssec, caa}'" },
+  foundations: {
+    label: "Foundations",
+    filter: "'{dns, ip_info, ssl, rdap, shodan, redirects, tech_stack, wordpress}'",
+  },
   speed: { label: "Speed", filter: "'{performance, compression, http_protocols}'" },
-  business: { label: "Business", filter: "'{rdap, tranco_rank, json_ld}'" },
-  news: { label: "News & Social", filter: "'{social_meta}'" },
+  reputation: { label: "Reputation", filter: "'{breaches, blocklists, rdap, tranco_rank, cookie_consent}'" },
+  discoverability: { label: "Discoverability", filter: "'{social_meta, json_ld, meta_tags, accessibility}'" },
   email: { label: "Email", filter: "'{email_auth}'" },
-  explore: null,
-  ai: null,
+  insights: null,
 };
 
 // ─── Results page: contextual curl bar for current domain ──────────

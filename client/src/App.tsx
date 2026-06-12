@@ -22,12 +22,10 @@ import type { AnalysisResult } from "./utils/types";
 const CompareView = lazy(() => import("./components/CompareView").then((m) => ({ default: m.CompareView })));
 const InfrastructureTab = lazy(() => import("./components/tabs/InfrastructureTab"));
 const SecurityTab = lazy(() => import("./components/tabs/SecurityTab"));
-const TechTab = lazy(() => import("./components/tabs/TechTab"));
 const PerformanceTab = lazy(() => import("./components/tabs/PerformanceTab"));
+const ReputationTab = lazy(() => import("./components/tabs/ReputationTab"));
+const DiscoverabilityTab = lazy(() => import("./components/tabs/DiscoverabilityTab"));
 const EmailTab = lazy(() => import("./components/tabs/EmailTab"));
-const BusinessTabWrapper = lazy(() => import("./components/tabs/BusinessTabWrapper"));
-const NewsTab = lazy(() => import("./components/NewsTab").then((m) => ({ default: m.NewsTab })));
-const ExploreTab = lazy(() => import("./components/ExploreTab").then((m) => ({ default: m.ExploreTab })));
 const AIAnalysisPanel = lazy(() =>
   import("./components/AIAnalysisPanel").then((m) => ({ default: m.AIAnalysisPanel })),
 );
@@ -501,19 +499,15 @@ function TabContent({ tab, data, streaming }: { tab: TabId; data: AnalysisResult
         return <InfrastructureTab data={data} />;
       case "security":
         return <SecurityTab data={data} />;
-      case "tech":
-        return <TechTab data={data} />;
       case "speed":
         return <PerformanceTab data={data} />;
+      case "reputation":
+        return <ReputationTab data={data} />;
+      case "discoverability":
+        return <DiscoverabilityTab data={data} />;
       case "email":
         return <EmailTab data={data} />;
-      case "business":
-        return <BusinessTabWrapper data={data} />;
-      case "news":
-        return <NewsTab domain={data.domain} />;
-      case "explore":
-        return <ExploreTab domain={data.domain} data={data} />;
-      case "ai":
+      case "insights":
         return <AIAnalysisPanel domain={data.domain} analysisData={data} streaming={streaming} />;
       default:
         return null;
@@ -1120,7 +1114,7 @@ export function App() {
                     Analysis complete for {analyze.data.domain}
                   </div>
                   {/* Curl API showcase bar — hidden on tabs without direct API mapping */}
-                  {activeTab !== "ai" && activeTab !== "explore" && (
+                  {activeTab !== "insights" && (
                     <div className="mb-3">
                       <CurlBar domain={analyze.data.domain} activeTab={activeTab} />
                     </div>

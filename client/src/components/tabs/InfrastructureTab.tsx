@@ -10,13 +10,15 @@ import { SectionHeader } from "../Panel";
 import { type PanelDef, PanelGrid } from "../PanelLayout";
 import { ShodanPanel } from "../ShodanPanel";
 import { SubdomainScanPanel } from "../SubdomainScanPanel";
-import { GreenHostingPanel } from "../Tier1Panels";
+import { TechStackPanel } from "../TechStackPanel";
+import { GreenHostingPanel, WellKnownPanel } from "../Tier1Panels";
+import { WordPressPanel } from "../WordPressPanel";
 
 export default function InfrastructureTab({ data }: { data: AnalysisResult }) {
   const domain = data.domain;
   const ip = data.ip_info?.ip;
 
-  const panels: PanelDef[] = [
+  const networkPanels: PanelDef[] = [
     { id: "ip-map", node: <IpMap data={data} />, fullWidth: true },
     { id: "dns", node: <DnsPanel data={data} /> },
     { id: "ip-info", node: <IpInfoPanel data={data} /> },
@@ -31,9 +33,18 @@ export default function InfrastructureTab({ data }: { data: AnalysisResult }) {
     { id: "redirects", node: <RedirectPanel data={data} /> },
   ];
 
+  const techStackPanels: PanelDef[] = [
+    { id: "tech-stack", node: <TechStackPanel data={data} /> },
+    { id: "wordpress", node: <WordPressPanel data={data} />, visible: !!data.wordpress },
+    { id: "well-known", node: <WellKnownPanel data={data} /> },
+  ];
+
   return (
     <div className="space-y-3">
-      <PanelGrid tabId="foundations" panels={panels} />
+      <SectionHeader title="Network & DNS" />
+      <PanelGrid tabId="foundations" panels={networkPanels} />
+      <SectionHeader title="Tech Stack" />
+      <PanelGrid tabId="foundations-tech" panels={techStackPanels} />
       {/* Contextual external links */}
       <div className="flex flex-wrap gap-2 px-1">
         {ip && (
@@ -85,6 +96,15 @@ export default function InfrastructureTab({ data }: { data: AnalysisResult }) {
         >
           who.is ↗
         </a>
+        <a
+          href={`https://builtwith.com/${domain}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="badge badge-info"
+          style={{ fontSize: "10px", textDecoration: "none", cursor: "pointer" }}
+        >
+          BuiltWith ↗
+        </a>
         {data.network_health?.ripe_routing?.asn && (
           <a
             href={`https://bgp.tools/as/${data.network_health.ripe_routing.asn}`}
@@ -130,7 +150,7 @@ export default function InfrastructureTab({ data }: { data: AnalysisResult }) {
       </div>
       <SectionHeader title="Raw Headers" />
       <PanelGrid
-        tabId="infrastructure-headers"
+        tabId="foundations-headers"
         panels={[{ id: "headers", node: <HeadersPanel data={data} /> }]}
         grid={false}
       />
