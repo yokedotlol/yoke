@@ -91,8 +91,7 @@ export default function PrivacyPage() {
       <Section title="Caching">
         <p>
           Analysis results are cached for up to 24 hours to improve performance. Cached data includes only publicly
-          available DNS, WHOIS, SSL, and HTTP header information about the domains you analyze. Cache hits do not count
-          against rate limits.
+          available DNS, WHOIS, SSL, and HTTP header information about the domains you analyze.
         </p>
       </Section>
 

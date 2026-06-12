@@ -42,7 +42,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return jsonError("Domain not yet analyzed. Run a standard analysis first.", "NOT_ANALYZED", 400);
     }
     const prompt = buildAIPrompt(analysisCache);
-    await rl.record();
     return addHeaders(json(prompt), rl.headers);
   }
 

@@ -244,7 +244,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     // Scan using the inline curated library scanner
     const results = scanForVulnerableLibraries(html);
 
-    await rl.record();
     _track("js-audit", 200);
     return addHeaders(
       json({
@@ -278,7 +277,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
         fix_desc_map: FIX_DESC_MAP,
         thresholds: ALL_THRESHOLDS,
         archetype_note:
-          "Budget-based deductive scoring: each axis starts at 100 and loses points for issues. Signal share = signal_weight / total_good_weight × 100. Severity multipliers: good=0, info=0, low=0.5×share, medium=0.75×share, high=1.0×share, critical=1.5×share. Absent canBeGood signals deduct 0.30×share. Composite = weighted arithmetic mean. Floor cap: any axis below 40 caps composite at 74 (Moderate). Cache hits do not count against rate limits. Categories: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12).",
+          "Budget-based deductive scoring: each axis starts at 100 and loses points for issues. Signal share = signal_weight / total_good_weight × 100. Severity multipliers: good=0, info=0, low=0.5×share, medium=0.75×share, high=1.0×share, critical=1.5×share. Absent canBeGood signals deduct 0.30×share. Composite = weighted arithmetic mean. Floor cap: any axis below 40 caps composite at 74 (Moderate). Categories: Security (0.24), Speed (0.18), Foundations (0.18), Reputation (0.15), Discoverability (0.13), Email (0.12).",
       },
       200,
     );

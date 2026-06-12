@@ -60,10 +60,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return rl.blocked;
     }
     const reportResponse = await handleReportDownload(request, env, reportDomain);
-    // Only consume rate-limit credit when a PDF was actually generated (200)
-    if (reportResponse.status === 200) {
-      await rl.record();
-    }
     trackRequest(env, request, {
       endpoint: "report",
       domain: reportDomain,

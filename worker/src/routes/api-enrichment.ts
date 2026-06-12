@@ -23,7 +23,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getCompanyInfo(env.REFERENCE_DATA!, domain, body.force, env.STATS_DB);
-    if (!result.cached) await rl.record();
     recordEndpointHit(env, "company");
     _track("company", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -41,7 +40,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getNews(env.REFERENCE_DATA!, domain, env.STATS_DB);
-    if (!result.cached) await rl.record();
     recordEndpointHit(env, "news");
     _track("news", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -59,7 +57,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getSocialAccounts(env.REFERENCE_DATA!, domain, env);
-    if (!result.cached) await rl.record();
     recordEndpointHit(env, "social");
     _track("social", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -82,7 +79,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return jsonError("Invalid IP address format", "INVALID_IP", 400);
     }
     const result = await getReverseIP(env.REFERENCE_DATA!, ip);
-    if (!result.cached) await rl.record();
     recordEndpointHit(env, "reverse-ip");
     _track("reverse-ip", 200);
     return addHeaders(json(result), rl.headers);
@@ -102,7 +98,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     // CF Workers expose request.cf with IncomingRequestCfProperties
     const cf = (request as Request & { cf?: { colo?: string; country?: string; city?: string } }).cf;
     const result = await checkGlobalAvailability(domain, { colo: cf?.colo, country: cf?.country, city: cf?.city }, env);
-    await rl.record();
     recordEndpointHit(env, "availability");
     _track("availability", 200, domain);
     return addHeaders(json(result), rl.headers);

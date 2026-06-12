@@ -43,8 +43,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     // Support SSE streaming when client requests it
     const wantsStream = request.headers.get("Accept") === "text/event-stream";
     if (wantsStream) {
-      // Streaming always does real work — record the rate limit hit
-      await rl.record();
       _track("analyze", 200, domain);
       return analyzeDomainStream(domain, env, request, skipCache, rl.headers);
     }
@@ -66,7 +64,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     }
 
     // Only consume rate-limit credit for non-cached results
-    if (coreResult.kind !== "cached") await rl.record();
+    // (hits are recorded eagerly on check — this comment retained for clarity)
 
     // Enrich result with share URLs, badge URLs, and percentiles
     const resultData = coreResult.data as Record<string, unknown>;
@@ -92,7 +90,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const d2 = cleanDomain(body.domain2);
     if (!d1 || !d2) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     recordEndpointHit(env, "compare");
-    await rl.record();
     const resp = await compareDomains({ domain1: d1, domain2: d2 }, env);
     _track("compare", resp.status, d1);
     return addHeaders(resp, rl.headers);
@@ -110,7 +107,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
-    if (!result.cached) await rl.record();
     recordEndpointHit(env, "subdomains");
     _track("subdomains", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -131,7 +127,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
         400,
       );
     const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
-    if (!result.cached) await rl.record();
     recordEndpointHit(env, "subdomains");
     _track("subdomains", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -149,7 +144,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const result = await scanSubdomains(env.REFERENCE_DATA!, domain);
-    if (!result.cached) await rl.record();
     recordEndpointHit(env, "subdomain-scan");
     _track("subdomain-scan", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -162,7 +156,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const body = await parseBody<{ domain?: string }>(request);
     if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const result = await getDomainSuggestions(body.domain, env);
-    await rl.record();
     recordEndpointHit(env, "suggestions");
     _track("suggestions", 200, body.domain);
     return addHeaders(json(result), rl.headers);

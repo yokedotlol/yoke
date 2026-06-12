@@ -141,8 +141,7 @@ function blockCacheSet(key: string, value: number): void {
 export interface RateLimitResult {
   blocked: Response | null;
   headers: Record<string, string>;
-  /** Call after the endpoint finishes to record the rate-limit hit.
-   *  Skip this call for cached results so cache hits don't burn credits. */
+  /** @deprecated Hits are now recorded eagerly on check. This is always a no-op. */
   record: () => Promise<void>;
 }
 
@@ -254,27 +253,25 @@ export async function checkRateLimit(
         record: rateLimitNoop,
       };
     }
-    // Defer recording — callers invoke record() after determining the result isn't cached
-    const recordHit = async () => {
-      try {
+    // Record the hit immediately — all requests count against the limit
+    try {
+      await db
+        .prepare("INSERT INTO endpoint_rate_limits (ip, endpoint, ts) VALUES (?, ?, ?)")
+        .bind(ip, endpoint, now)
+        .run();
+      // Probabilistic cleanup: 2% chance, delete entries older than 2 hours
+      if (Math.random() < 0.02) {
+        const old = now - 7200;
         await db
-          .prepare("INSERT INTO endpoint_rate_limits (ip, endpoint, ts) VALUES (?, ?, ?)")
-          .bind(ip, endpoint, now)
-          .run();
-        // Probabilistic cleanup: 2% chance, delete entries older than 2 hours
-        if (Math.random() < 0.02) {
-          const old = now - 7200;
-          await db
-            .prepare("DELETE FROM endpoint_rate_limits WHERE ts < ?")
-            .bind(old)
-            .run()
-            .catch(() => {});
-        }
-      } catch {
-        // Best-effort — don't fail the request if recording fails
+          .prepare("DELETE FROM endpoint_rate_limits WHERE ts < ?")
+          .bind(old)
+          .run()
+          .catch(() => {});
       }
-    };
-    const remaining = config.limit - count; // don't subtract 1 yet — record() hasn't been called
+    } catch {
+      // Best-effort — don't fail the request if recording fails
+    }
+    const remaining = config.limit - count - 1;
     return {
       blocked: null,
       headers: {
@@ -282,7 +279,7 @@ export async function checkRateLimit(
         "X-RateLimit-Remaining": String(Math.max(0, remaining)),
         "X-RateLimit-Reset": String(resetAt),
       },
-      record: recordHit,
+      record: rateLimitNoop,
     };
   } catch (err) {
     logError("rate limit DB error", { error: err instanceof Error ? err.message : String(err) });
@@ -355,7 +352,7 @@ export async function checkRateLimitDO(
     const doId = rateLimiter.idFromName(shardKey);
     const stub = rateLimiter.get(doId);
 
-    // Dry-run check first — we'll record only if the response isn't served from cache
+    // Record eagerly — no dry-run. Every check counts against the limit.
     const resp = await stub.fetch(
       new Request("https://do/check", {
         method: "POST",
@@ -365,7 +362,7 @@ export async function checkRateLimitDO(
           endpoint,
           limit: config.limit,
           windowSecs: config.windowSecs,
-          dryRun: true,
+          dryRun: false,
         }),
       }),
     );
@@ -414,27 +411,6 @@ export async function checkRateLimitDO(
       };
     }
 
-    // Allowed — return a record() callback that fires the real (non-dry-run) request
-    const recordHit = async () => {
-      try {
-        await stub.fetch(
-          new Request("https://do/check", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ip,
-              endpoint,
-              limit: config.limit,
-              windowSecs: config.windowSecs,
-              dryRun: false,
-            }),
-          }),
-        );
-      } catch {
-        // Best-effort — don't fail the request
-      }
-    };
-
     return {
       blocked: null,
       headers: {
@@ -442,7 +418,7 @@ export async function checkRateLimitDO(
         "X-RateLimit-Remaining": String(result.remaining),
         "X-RateLimit-Reset": String(result.resetAt),
       },
-      record: recordHit,
+      record: rateLimitNoop,
     };
   } catch (err) {
     logError("rate limit DO error", { error: err instanceof Error ? err.message : String(err) });
