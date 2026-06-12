@@ -298,7 +298,7 @@ export function EmailExtrasPanel({ data }: { data: AnalysisResult }) {
 
   return (
     <Panel
-      title="Email Security (Extended)"
+      title="Advanced Email"
       icon={<ShieldCheck size={14} />}
       badge={
         <div className="flex gap-1.5">

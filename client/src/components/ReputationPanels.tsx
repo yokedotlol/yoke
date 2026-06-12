@@ -257,7 +257,7 @@ export function EmailAuthPanel({ data }: { data: AnalysisResult }) {
       {/* Extended: BIMI / MTA-STS / TLS-RPT */}
       {(auth.bimi || auth.mta_sts || auth.tls_rpt) && (
         <>
-          <div className="sub-section">Extended Email Security</div>
+          <div className="sub-section">Advanced Email</div>
           <div className="px-4 py-3 flex flex-wrap gap-2">
             {auth.bimi && (
               <Tooltip text="BIMI (Brand Indicators for Message Identification) — displays your brand logo in supported email clients next to authenticated messages">
