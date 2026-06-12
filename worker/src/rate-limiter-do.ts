@@ -5,11 +5,14 @@
  * counters that live inside a Durable Object. Sharded by hashed-IP
  * prefix so no single DO becomes a bottleneck.
  *
- * State is ephemeral by design — if the DO is evicted, counters reset
- * and clients get a free window. This is acceptable for rate limiting.
+ * State is persisted to durable storage so counters survive DO eviction
+ * and redeployment. On wake, the DO hydrates from storage (one list()
+ * call), then serves entirely from RAM. Writes are fire-and-forget
+ * (storage.put without await in the hot path) — the in-memory map is
+ * authoritative for the lifetime of the DO instance.
  *
- * The DO stores nothing in durable storage; all state lives in RAM.
- * An alarm fires periodically to garbage-collect expired windows.
+ * An alarm fires periodically to garbage-collect expired windows
+ * from both RAM and storage.
  */
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -19,8 +22,6 @@ interface CheckRequest {
   endpoint: string;
   limit: number;
   windowSecs: number;
-  /** If true, just check — don't record. Used for cache-hit paths. */
-  dryRun?: boolean;
 }
 
 interface CheckResponse {
@@ -44,6 +45,9 @@ export function shardKeyFromIP(hashedIP: string): string {
   return `shard-${byte % RATE_LIMITER_SHARD_COUNT}`;
 }
 
+/** Storage key prefix for window entries. */
+const SK = "w:";
+
 export class RateLimiterDO {
   private state: DurableObjectState;
 
@@ -52,6 +56,9 @@ export class RateLimiterDO {
    * Key: `${hashedIP}:${endpoint}`, Value: sorted array of unix-second timestamps.
    */
   private windows = new Map<string, number[]>();
+
+  /** Whether we've hydrated from durable storage this wake cycle. */
+  private hydrated = false;
 
   /** GC alarm interval — every 60 seconds. */
   private static readonly GC_INTERVAL_MS = 60_000;
@@ -69,11 +76,22 @@ export class RateLimiterDO {
     });
   }
 
+  /** Hydrate in-memory windows from durable storage (once per DO wake). */
+  private async hydrate(): Promise<void> {
+    if (this.hydrated) return;
+    const entries = await this.state.storage.list<number[]>({ prefix: SK });
+    for (const [storageKey, timestamps] of entries) {
+      this.windows.set(storageKey.slice(SK.length), timestamps);
+    }
+    this.hydrated = true;
+  }
+
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/check" && request.method === "POST") {
       try {
+        await this.hydrate();
         const body = (await request.json()) as CheckRequest;
         const result = this.checkLimit(body);
         return new Response(JSON.stringify(result), {
@@ -89,6 +107,7 @@ export class RateLimiterDO {
     }
 
     if (url.pathname === "/stats" && request.method === "GET") {
+      await this.hydrate();
       return new Response(
         JSON.stringify({
           keys: this.windows.size,
@@ -102,6 +121,7 @@ export class RateLimiterDO {
   }
 
   async alarm(): Promise<void> {
+    await this.hydrate();
     this.gc();
     // Reschedule
     this.state.storage.setAlarm(Date.now() + RateLimiterDO.GC_INTERVAL_MS);
@@ -110,7 +130,7 @@ export class RateLimiterDO {
   // ─── Core Logic ─────────────────────────────────────────────────
 
   private checkLimit(req: CheckRequest): CheckResponse {
-    const { ip, endpoint, limit, windowSecs, dryRun } = req;
+    const { ip, endpoint, limit, windowSecs } = req;
     const key = `${ip}:${endpoint}`;
     const now = Math.floor(Date.now() / 1000);
     const cutoff = now - windowSecs;
@@ -124,6 +144,7 @@ export class RateLimiterDO {
         timestamps = timestamps.slice(idx);
         if (timestamps.length === 0) {
           this.windows.delete(key);
+          this.state.storage.delete(`${SK}${key}`);
         } else {
           this.windows.set(key, timestamps);
         }
@@ -138,17 +159,17 @@ export class RateLimiterDO {
       return { allowed: false, limit, remaining: 0, resetAt };
     }
 
-    if (!dryRun) {
-      // Record this request
-      if (!timestamps) {
-        this.windows.set(key, [now]);
-      } else {
-        timestamps.push(now);
-      }
-      this.maybeEvictColdKeys();
+    // Record this request
+    if (!timestamps) {
+      this.windows.set(key, [now]);
+    } else {
+      timestamps.push(now);
     }
+    // Persist to durable storage (fire-and-forget — RAM is authoritative)
+    this.state.storage.put(`${SK}${key}`, this.windows.get(key)!);
+    this.maybeEvictColdKeys();
 
-    const remaining = limit - count - (dryRun ? 0 : 1);
+    const remaining = limit - count - 1;
     return { allowed: true, limit, remaining: Math.max(0, remaining), resetAt };
   }
 
@@ -167,16 +188,19 @@ export class RateLimiterDO {
     return lo;
   }
 
-  /** Garbage-collect all fully-expired windows. */
+  /** Garbage-collect all fully-expired windows from RAM and storage. */
   private gc(): void {
     const now = Math.floor(Date.now() / 1000);
     // Most generous window is 3600s, but GC anything older than 2h to be safe
     const cutoff = now - 7200;
+    const toDelete: string[] = [];
+    const toUpdate: Record<string, number[]> = {};
 
     for (const [key, timestamps] of this.windows) {
       // If the newest timestamp is older than cutoff, the entire key is dead
       if (timestamps.length === 0 || timestamps[timestamps.length - 1] <= cutoff) {
         this.windows.delete(key);
+        toDelete.push(`${SK}${key}`);
         continue;
       }
       // Trim stale entries from the front
@@ -185,10 +209,20 @@ export class RateLimiterDO {
         const trimmed = timestamps.slice(idx);
         if (trimmed.length === 0) {
           this.windows.delete(key);
+          toDelete.push(`${SK}${key}`);
         } else {
           this.windows.set(key, trimmed);
+          toUpdate[`${SK}${key}`] = trimmed;
         }
       }
+    }
+
+    // Batch storage operations (fire-and-forget)
+    if (toDelete.length > 0) {
+      this.state.storage.delete(toDelete);
+    }
+    if (Object.keys(toUpdate).length > 0) {
+      this.state.storage.put(toUpdate);
     }
   }
 
@@ -209,8 +243,13 @@ export class RateLimiterDO {
 
     // Evict 10% of keys
     const toEvict = Math.ceil(entries.length * 0.1);
+    const storageDeletes: string[] = [];
     for (let i = 0; i < toEvict; i++) {
       this.windows.delete(entries[i][0]);
+      storageDeletes.push(`${SK}${entries[i][0]}`);
+    }
+    if (storageDeletes.length > 0) {
+      this.state.storage.delete(storageDeletes);
     }
   }
 }

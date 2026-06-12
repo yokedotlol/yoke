@@ -362,7 +362,6 @@ export async function checkRateLimitDO(
           endpoint,
           limit: config.limit,
           windowSecs: config.windowSecs,
-          dryRun: false,
         }),
       }),
     );

@@ -265,12 +265,13 @@ export async function flyProbeFetch(
   return resp;
 }
 
-/** SHA-256 hash of IP + daily salt — privacy-safe rate-limit key.
- *  Truncated to 16 hex chars: enough for uniqueness, not reversible. */
+/** SHA-256 hash of IP + static salt — privacy-safe rate-limit key.
+ *  Truncated to 16 hex chars: enough for uniqueness, not reversible.
+ *  Uses a static salt (no daily rotation) so rate-limit state is stable
+ *  across UTC day boundaries. */
 export async function hashIp(ip: string, env?: { IP_HASH_SALT?: string }): Promise<string> {
-  const day = new Date().toISOString().slice(0, 10);
   const salt = env?.IP_HASH_SALT || "yoke-default-salt";
-  const data = new TextEncoder().encode(`${ip}:${day}:${salt}`);
+  const data = new TextEncoder().encode(`${ip}:${salt}`);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, "0"))
