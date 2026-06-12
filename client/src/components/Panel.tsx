@@ -6,9 +6,11 @@ interface PanelProps {
   icon: ReactNode;
   children: ReactNode;
   badge?: ReactNode;
+  /** Brief inline summary shown in the header when the panel is collapsed */
+  collapsedSummary?: ReactNode;
 }
 
-export function Panel({ title, icon, children, badge }: PanelProps) {
+export function Panel({ title, icon, children, badge, collapsedSummary }: PanelProps) {
   const ctx = usePanelContext();
 
   // If not inside a PanelGrid, render normally (no collapse/drag)
@@ -28,7 +30,14 @@ export function Panel({ title, icon, children, badge }: PanelProps) {
   }
 
   return (
-    <CollapsiblePanel title={title} icon={icon} badge={badge} collapsed={ctx.collapsed} onToggle={ctx.toggle}>
+    <CollapsiblePanel
+      title={title}
+      icon={icon}
+      badge={badge}
+      collapsedSummary={collapsedSummary}
+      collapsed={ctx.collapsed}
+      onToggle={ctx.toggle}
+    >
       {children}
     </CollapsiblePanel>
   );
@@ -38,6 +47,7 @@ function CollapsiblePanel({
   title,
   icon,
   badge,
+  collapsedSummary,
   collapsed,
   onToggle,
   children,
@@ -113,6 +123,7 @@ function CollapsiblePanel({
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation container, not an interactive element */}
         {/* biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation container, not an interactive element */}
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          {collapsed && collapsedSummary}
           {!collapsed && badge}
           <span
             className="yoke-chevron"

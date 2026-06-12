@@ -14,12 +14,23 @@ const TABS = [
 
 export type TabId = (typeof TABS)[number]["id"];
 
+/** Worst severity level for a tab, used to render colored indicator dots */
+export type TabSeverity = "critical" | "high" | "medium" | null;
+
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: "var(--danger, #e53e3e)",
+  high: "var(--warning, #d69e2e)",
+  medium: "var(--info, #4299e1)",
+};
+
 interface TabBarProps {
   active: TabId;
   onChange: (tab: TabId) => void;
+  /** Optional severity dots per tab */
+  severities?: Partial<Record<TabId, TabSeverity>>;
 }
 
-export function TabBar({ active, onChange }: TabBarProps) {
+export function TabBar({ active, onChange, severities }: TabBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState<CSSProperties>({});
 
@@ -76,6 +87,7 @@ export function TabBar({ active, onChange }: TabBarProps) {
       {TABS.map((tab) => {
         const Icon = tab.icon;
         const isActive = active === tab.id;
+        const severity = severities?.[tab.id];
         return (
           <button
             key={tab.id}
@@ -88,13 +100,26 @@ export function TabBar({ active, onChange }: TabBarProps) {
             aria-controls={`tabpanel-${tab.id}`}
             id={`tab-${tab.id}`}
             tabIndex={isActive ? 0 : -1}
-            aria-label={tab.label}
+            aria-label={`${tab.label}${severity ? ` (${severity} severity findings)` : ""}`}
             title={isActive ? undefined : tab.label}
           >
             <Icon size={14} strokeWidth={isActive ? 2.2 : 1.8} aria-hidden="true" />
             <span className="yoke-tab-label" aria-hidden="true">
               {tab.label}
             </span>
+            {severity && (
+              <span
+                className="yoke-tab-severity-dot"
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: SEVERITY_COLORS[severity],
+                  flexShrink: 0,
+                }}
+                aria-hidden="true"
+              />
+            )}
           </button>
         );
       })}

@@ -1,5 +1,5 @@
 import type { AnalysisResult } from "../../utils/types";
-import { AxisScoreBadge } from "../DomainScore";
+import { AxisSummaryCard } from "../AxisSummaryCard";
 import { EmailExtrasPanel } from "../NewPanels";
 import { type PanelDef, PanelGrid } from "../PanelLayout";
 import { EmailAuthPanel } from "../ReputationPanels";
@@ -8,13 +8,13 @@ export default function EmailTab({ data }: { data: AnalysisResult }) {
   const domain = data.domain;
 
   const panels: PanelDef[] = [
-    { id: "email-score", node: <AxisScoreBadge data={data} axis="email" />, fullWidth: true },
     { id: "email-auth", node: <EmailAuthPanel data={data} /> },
     { id: "email-extras", node: <EmailExtrasPanel data={data} /> },
   ];
 
   return (
     <div className="space-y-3">
+      <AxisSummaryCard data={data} axis="email" />
       <PanelGrid tabId="email" panels={panels} />
       <div className="flex flex-wrap gap-2 px-1">
         <a

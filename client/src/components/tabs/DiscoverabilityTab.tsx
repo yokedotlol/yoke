@@ -1,6 +1,7 @@
 import type { AnalysisResult } from "../../utils/types";
 import { AccessibilityPanel } from "../AccessibilityPanel";
 import { AiReadinessPanel } from "../AiReadinessPanel";
+import { AxisSummaryCard } from "../AxisSummaryCard";
 import { LlmsTxtPanel, MetaPanel, RobotsDeepPanel } from "../MetaPanel";
 import { OgPreviewPanel } from "../OgPreviewPanel";
 import { SectionHeader } from "../Panel";
@@ -27,6 +28,7 @@ export default function DiscoverabilityTab({ data }: { data: AnalysisResult }) {
 
   return (
     <div className="space-y-3">
+      <AxisSummaryCard data={data} axis="discoverability" />
       <SectionHeader title="SEO & Social Meta" />
       <PanelGrid tabId="discoverability-seo" panels={seoPanels} />
       <SectionHeader title="Structured Data" />

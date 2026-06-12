@@ -2,6 +2,7 @@ import { ExternalLink, Lock, ShieldCheck } from "lucide-react";
 import type { AnalysisResult } from "../utils/types";
 import { CliButton, headersCliCommands, sslCliCommands } from "./CliModal";
 import { DataRow, ErrorState, GradeBadge, Panel, StatusBadge } from "./Panel";
+import { PanelStatusBadge } from "./PanelStatusBadge";
 import { Tooltip } from "./Tooltip";
 
 /** Links to MDN documentation for each security header. */
@@ -79,10 +80,29 @@ export function SslPanel({ data }: { data: AnalysisResult }) {
 
   const gradeTooltip = ssl.grade ? (SSL_GRADE_TOOLTIPS[ssl.grade] ?? `SSL grade: ${ssl.grade}`) : "";
 
+  // Collapsed summary
+  const sslStatus = ssl.grade
+    ? ssl.grade.startsWith("A")
+      ? "good"
+      : ssl.grade.startsWith("B")
+        ? "warning"
+        : "error"
+    : ssl.error
+      ? "error"
+      : "neutral";
+  const sslSummaryLabel = ssl.grade
+    ? `Grade ${ssl.grade}${ssl.issuer ? ` · ${ssl.issuer}` : ""}`
+    : ssl.error
+      ? "Error"
+      : "Checking…";
+
   return (
     <Panel
       title="SSL / TLS"
       icon={<Lock size={14} />}
+      collapsedSummary={
+        <PanelStatusBadge status={sslStatus as "good" | "warning" | "error" | "neutral"} label={sslSummaryLabel} />
+      }
       badge={
         <div className="flex items-center gap-1.5">
           <CliButton commands={sslCliCommands(data.domain)} domain={data.domain} />
@@ -258,10 +278,18 @@ export function SecurityHeadersPanel({ data }: { data: AnalysisResult }) {
   const passCount = headers.security_audit.filter((h) => h.status === "pass").length;
   const totalCount = headers.security_audit.length;
 
+  const headerStatus = passCount === totalCount ? "good" : passCount > totalCount / 2 ? "warning" : "error";
+
   return (
     <Panel
       title="Security Headers"
       icon={<ShieldCheck size={14} />}
+      collapsedSummary={
+        <PanelStatusBadge
+          status={headerStatus as "good" | "warning" | "error"}
+          label={`${passCount}/${totalCount} present`}
+        />
+      }
       badge={
         <div className="flex items-center gap-2">
           <CliButton commands={headersCliCommands(data.domain)} domain={data.domain} />

@@ -1,4 +1,5 @@
 import type { AnalysisResult } from "../../utils/types";
+import { AxisSummaryCard } from "../AxisSummaryCard";
 import { SectionHeader } from "../Panel";
 import { type PanelDef, PanelGrid } from "../PanelLayout";
 import { ProtectionTrustPanel } from "../ProtectionTrustPanel";
@@ -23,6 +24,7 @@ export default function SecurityTab({ data }: { data: AnalysisResult }) {
 
   return (
     <div className="space-y-3">
+      <AxisSummaryCard data={data} axis="security" />
       <SectionHeader title="Transport & Encryption" />
       <PanelGrid tabId="security-transport" panels={transportPanels} />
       <SectionHeader title="Headers & Protection" />

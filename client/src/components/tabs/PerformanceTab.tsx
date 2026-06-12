@@ -1,4 +1,5 @@
 import type { AnalysisResult } from "../../utils/types";
+import { AxisSummaryCard } from "../AxisSummaryCard";
 import { CachePanel } from "../CachePanel";
 import { CompressionPanel } from "../NewPanels";
 import { type PanelDef, PanelGrid } from "../PanelLayout";
@@ -18,6 +19,7 @@ export default function PerformanceTab({ data }: { data: AnalysisResult }) {
 
   return (
     <div className="space-y-3">
+      <AxisSummaryCard data={data} axis="speed" />
       <PanelGrid tabId="speed" panels={panels} />
       <div className="flex flex-wrap gap-2 px-1">
         <a

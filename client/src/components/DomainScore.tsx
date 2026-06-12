@@ -3,6 +3,7 @@ import type { AtRiskAxisData } from "../api";
 import { ordinal, percentileLabel } from "../utils/format";
 import { severityColor, severityIcon, tierColor } from "../utils/severity";
 import type { AnalysisResult, ArchetypeName, Axis, AxisScoreData, PercentileData } from "../utils/types";
+import type { TabId } from "./TabBar";
 import { Tooltip } from "./Tooltip";
 
 const AXIS_DISPLAY: Record<string, string> = {
@@ -12,6 +13,16 @@ const AXIS_DISPLAY: Record<string, string> = {
   reputation: "Reputation",
   discoverability: "Discoverability",
   email: "Email",
+};
+
+/** Maps each scoring axis to its corresponding tab ID */
+export const AXIS_TO_TAB: Record<Axis, TabId> = {
+  security: "security",
+  speed: "speed",
+  foundations: "foundations",
+  reputation: "reputation",
+  discoverability: "discoverability",
+  email: "email",
 };
 
 function CompositeModifier({
@@ -161,10 +172,12 @@ function AnimatedAxisBars({
   axes,
   animKey,
   percentiles,
+  onAxisClick,
 }: {
   axes: Record<Axis, AxisScoreData>;
   animKey: number;
   percentiles?: PercentileData | null;
+  onAxisClick?: (axis: Axis) => void;
 }) {
   const [progress, setProgress] = useState<number[]>(AXES.map(() => 0));
   const [showScores, setShowScores] = useState<boolean[]>(AXES.map(() => false));
@@ -225,15 +238,50 @@ function AnimatedAxisBars({
 
         return (
           // biome-ignore lint/a11y/useAriaPropsSupportedByRole: role conditionally set via nm flag
+          // biome-ignore lint/a11y/noStaticElementInteractions: clickable axis bars use mouse+keyboard for tab navigation
           <div
             key={axis}
             className="flex items-center gap-2"
-            style={{ fontSize: "11px", opacity: nm ? 0.5 : 1 }}
+            style={{
+              fontSize: "11px",
+              opacity: nm ? 0.5 : 1,
+              cursor: onAxisClick && !nm ? "pointer" : undefined,
+              borderRadius: "4px",
+              padding: "2px 4px",
+              margin: "-2px -4px",
+              transition: "background 0.15s",
+            }}
             role={nm ? undefined : "meter"}
             aria-valuenow={nm ? undefined : (a.score ?? 0)}
             aria-valuemin={nm ? undefined : 0}
             aria-valuemax={nm ? undefined : 100}
             aria-label={nm ? `${AXIS_LABELS[axis]}: Not Assessed` : `${AXIS_LABELS[axis]}: ${a.score} out of 100`}
+            onClick={onAxisClick && !nm ? () => onAxisClick(axis) : undefined}
+            onKeyDown={
+              onAxisClick && !nm
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onAxisClick(axis);
+                    }
+                  }
+                : undefined
+            }
+            tabIndex={onAxisClick && !nm ? 0 : undefined}
+            onMouseEnter={
+              onAxisClick && !nm
+                ? (e) => {
+                    e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 6%, transparent)";
+                  }
+                : undefined
+            }
+            onMouseLeave={
+              onAxisClick && !nm
+                ? (e) => {
+                    e.currentTarget.style.background = "transparent";
+                  }
+                : undefined
+            }
           >
             <span
               style={{
@@ -304,6 +352,21 @@ function AnimatedAxisBars({
                 {!nm && percentiles.axes[axis] != null
                   ? `${(percentiles.axes[axis] as number) >= 50 ? "▲" : "▼"} ${ordinal(percentiles.axes[axis] as number)}`
                   : "\u00A0"}
+              </span>
+            )}
+            {/* Navigation arrow — shown when axis bars are clickable */}
+            {onAxisClick && !nm && (
+              <span
+                style={{
+                  color: "var(--dim)",
+                  fontSize: "12px",
+                  opacity: scoreVisible ? 0.5 : 0,
+                  transition: "opacity 0.3s ease-out",
+                  flexShrink: 0,
+                }}
+                aria-hidden="true"
+              >
+                →
               </span>
             )}
           </div>
@@ -686,7 +749,7 @@ function scoreColor(score: number): string {
 
 // ─── Main DomainScore Component ──────────────────────────────────────
 
-export function DomainScore({ data }: { data: AnalysisResult }) {
+export function DomainScore({ data, onAxisClick }: { data: AnalysisResult; onAxisClick?: (axis: Axis) => void }) {
   const ds = data.domain_score;
   const [animKey, setAnimKey] = useState(0);
   const replay = useCallback(() => setAnimKey((k) => k + 1), []);
@@ -824,7 +887,12 @@ export function DomainScore({ data }: { data: AnalysisResult }) {
             </p>
 
             {/* Animated axis breakdown bars */}
-            <AnimatedAxisBars axes={ds.axes} animKey={animKey} percentiles={data.percentiles} />
+            <AnimatedAxisBars
+              axes={ds.axes}
+              animKey={animKey}
+              percentiles={data.percentiles}
+              onAxisClick={onAxisClick}
+            />
 
             {/* Replay button */}
             <div style={{ display: "flex", justifyContent: "center", marginTop: "0.75rem" }}>

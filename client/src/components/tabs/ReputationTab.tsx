@@ -1,4 +1,5 @@
 import type { AnalysisResult } from "../../utils/types";
+import { AxisSummaryCard } from "../AxisSummaryCard";
 import { BreachPanel } from "../BreachPanel";
 import { BusinessTab } from "../BusinessTab";
 import { CookieConsentPanel } from "../CookieConsentPanel";
@@ -35,6 +36,7 @@ export default function ReputationTab({ data }: { data: AnalysisResult }) {
 
   return (
     <div className="space-y-3">
+      <AxisSummaryCard data={data} axis="reputation" />
       <SectionHeader title="Trust & Threat Intelligence" />
       <PanelGrid tabId="reputation-trust" panels={trustPanels} />
       <SectionHeader title="Compliance" />

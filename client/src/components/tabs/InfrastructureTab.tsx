@@ -1,5 +1,6 @@
 import type { AnalysisResult } from "../../utils/types";
 import { AvailabilityPanel } from "../AvailabilityPanel";
+import { AxisSummaryCard } from "../AxisSummaryCard";
 import { DnsPanel } from "../DnsPanel";
 import { HeadersPanel, RedirectPanel } from "../HttpPanel";
 import { IpMap } from "../IpMap";
@@ -41,6 +42,7 @@ export default function InfrastructureTab({ data }: { data: AnalysisResult }) {
 
   return (
     <div className="space-y-3">
+      <AxisSummaryCard data={data} axis="foundations" />
       <SectionHeader title="Network & DNS" />
       <PanelGrid tabId="foundations" panels={networkPanels} />
       <SectionHeader title="Tech Stack" />

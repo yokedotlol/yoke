@@ -2,7 +2,7 @@ import { ArrowLeftRight, CheckCircle2, Circle, Loader2, RotateCcw, Search, XCirc
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { analyzeStream, type RateLimitInfo, type StreamEvent } from "./api";
 import { ApiTeaser, CurlBar } from "./components/CurlShowcase";
-import { DomainScore } from "./components/DomainScore";
+import { AXIS_TO_TAB, DomainScore } from "./components/DomainScore";
 import { DomainSignals, ExternalTools } from "./components/DomainSignals";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { NotRegisteredBanner } from "./components/NotRegisteredBanner";
@@ -12,7 +12,7 @@ import { RecentLookups } from "./components/RecentLookups";
 import { ScreenshotPanel, TrancoPanel } from "./components/ReputationPanels";
 import { ShareBar } from "./components/ShareBar";
 // Eagerly loaded components (needed for Overview tab and landing page)
-import { TabBar, type TabId } from "./components/TabBar";
+import { TabBar, type TabId, type TabSeverity } from "./components/TabBar";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { VitalsStrip } from "./components/VitalsStrip";
 import { getConfig } from "./config";
@@ -34,6 +34,31 @@ const AIAnalysisPanel = lazy(() =>
 // on pages that merely *mention* those names (e.g. Stripe lists them as integrations).
 // Filter client-side for now; the server fingerprints will also be tightened.
 const FP_ECOMMERCE_NAMES = new Set(["WooCommerce", "Magento"]);
+
+/** Compute worst severity per tab from axis findings */
+function computeTabSeverities(data: AnalysisResult): Partial<Record<TabId, TabSeverity>> {
+  const ds = data.domain_score;
+  if (!ds) return {};
+  const severityRank: Record<string, number> = { critical: 3, high: 2, medium: 1 };
+  const result: Partial<Record<TabId, TabSeverity>> = {};
+
+  for (const [axis, tabId] of Object.entries(AXIS_TO_TAB) as [string, TabId][]) {
+    const axisData = ds.axes[axis as keyof typeof ds.axes];
+    if (!axisData?.findings) continue;
+    let worst = 0;
+    let worstLevel: TabSeverity = null;
+    for (const f of axisData.findings) {
+      const rank = severityRank[f.severity] ?? 0;
+      if (rank > worst) {
+        worst = rank;
+        worstLevel = f.severity as TabSeverity;
+      }
+    }
+    if (worstLevel) result[tabId] = worstLevel;
+  }
+  return result;
+}
+
 function cleanTechStack(data: AnalysisResult): AnalysisResult {
   if (!data.tech_stack) return data;
   const hasEcommerceHeader = !!(data.headers?.raw?.["x-magento-vary"] || data.headers?.raw?.["x-woo-version"]);
@@ -387,7 +412,15 @@ function DegradedBanner({ providers }: { providers: string[] }) {
 
 // ─── Tab Content Components ────────────────────────────────────
 
-function OverviewTab({ data, streaming }: { data: AnalysisResult; streaming?: boolean }) {
+function OverviewTab({
+  data,
+  streaming,
+  onNavigateTab,
+}: {
+  data: AnalysisResult;
+  streaming?: boolean;
+  onNavigateTab?: (tab: TabId) => void;
+}) {
   // Quick tech stack badges
   const techBadges = (data.tech_stack ?? []).slice(0, 8);
 
@@ -399,7 +432,7 @@ function OverviewTab({ data, streaming }: { data: AnalysisResult; streaming?: bo
   return (
     <div className="space-y-3">
       {/* Domain Score — the headline */}
-      <DomainScore data={data} />
+      <DomainScore data={data} onAxisClick={onNavigateTab ? (axis) => onNavigateTab(AXIS_TO_TAB[axis]) : undefined} />
 
       {/* Circuit breaker: degraded upstream notice */}
       {data._meta?.degraded && data._meta.degraded.length > 0 && <DegradedBanner providers={data._meta.degraded} />}
@@ -488,9 +521,19 @@ function TabLoadingFallback() {
   );
 }
 
-function TabContent({ tab, data, streaming }: { tab: TabId; data: AnalysisResult; streaming?: boolean }) {
+function TabContent({
+  tab,
+  data,
+  streaming,
+  onNavigateTab,
+}: {
+  tab: TabId;
+  data: AnalysisResult;
+  streaming?: boolean;
+  onNavigateTab?: (tab: TabId) => void;
+}) {
   // Overview is eagerly loaded — no Suspense needed
-  if (tab === "overview") return <OverviewTab data={data} streaming={streaming} />;
+  if (tab === "overview") return <OverviewTab data={data} streaming={streaming} onNavigateTab={onNavigateTab} />;
 
   // All other tabs are lazy-loaded
   const lazyContent = (() => {
@@ -989,7 +1032,11 @@ export function App() {
             {(analyze.data || analyze.isPending) && !analyze.data?.not_registered && (
               <div className="mt-3 mb-3 sticky top-0 z-10" style={{ background: "var(--bg)" }}>
                 <nav aria-label="Analysis tabs">
-                  <TabBar active={activeTab} onChange={handleTabChange} />
+                  <TabBar
+                    active={activeTab}
+                    onChange={handleTabChange}
+                    severities={analyze.data ? computeTabSeverities(analyze.data) : undefined}
+                  />
                 </nav>
               </div>
             )}
@@ -1043,6 +1090,7 @@ export function App() {
                           tab={activeTab}
                           data={cleanTechStack(analyze.partialData as AnalysisResult)}
                           streaming
+                          onNavigateTab={handleTabChange}
                         />
                       </ErrorBoundary>
                     </div>
@@ -1128,7 +1176,7 @@ export function App() {
                     pdfUrl={analyze.data._meta?.pdf_url}
                   />
                   <ErrorBoundary fallbackLabel="This tab encountered an error" key={activeTab}>
-                    <TabContent tab={activeTab} data={cleanTechStack(analyze.data)} />
+                    <TabContent tab={activeTab} data={cleanTechStack(analyze.data)} onNavigateTab={handleTabChange} />
                   </ErrorBoundary>
                 </div>
               ))}
