@@ -1213,114 +1213,52 @@ export function App() {
                     marginBottom: "1.5rem",
                   }}
                 >
-                  Enter any domain to analyze DNS records, SSL certificates, WHOIS data, security headers, tech stack,
-                  performance, data breaches, and more — across 9 intelligence tabs.
+                  Enter any domain to get a comprehensive score across security, speed, foundations, reputation,
+                  discoverability, and email — with actionable findings and a free JSON API.
                 </p>
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(2, 1fr)",
-                    gap: "0.75rem",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: "0.5rem",
                     width: "100%",
                     maxWidth: "700px",
                     marginBottom: "1.5rem",
                   }}
                 >
-                  <div className="panel" style={{ padding: "0.75rem 1rem" }}>
-                    <h3
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "var(--accent)",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      🔍 Deep Analysis
-                    </h3>
-                    <p
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "11px",
-                        color: "var(--dim)",
-                        lineHeight: "16px",
-                      }}
-                    >
-                      DNS, SSL, WHOIS, security headers, email auth, DNSSEC, and certificate transparency
-                    </p>
-                  </div>
-                  <div className="panel" style={{ padding: "0.75rem 1rem" }}>
-                    <h3
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "var(--accent)",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      🛡️ Security &amp; Breaches
-                    </h3>
-                    <p
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "11px",
-                        color: "var(--dim)",
-                        lineHeight: "16px",
-                      }}
-                    >
-                      HIBP breach detection, Shodan/GreyNoise intel, cookie audit
-                    </p>
-                  </div>
-                  <div className="panel" style={{ padding: "0.75rem 1rem" }}>
-                    <h3
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "var(--accent)",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      ⚙️ Tech Stack
-                    </h3>
-                    <p
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "11px",
-                        color: "var(--dim)",
-                        lineHeight: "16px",
-                      }}
-                    >
-                      Framework, CMS, CDN, WAF detection. Deep WordPress fingerprinting with plugins and themes
-                    </p>
-                  </div>
-                  <div className="panel" style={{ padding: "0.75rem 1rem" }}>
-                    <h3
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "var(--accent)",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
-                      🤖 AI &amp; API
-                    </h3>
-                    <p
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: "11px",
-                        color: "var(--dim)",
-                        lineHeight: "16px",
-                      }}
-                    >
-                      AI-powered analysis with expert personas. Free JSON API:{" "}
-                      <code style={{ fontSize: "10px", color: "var(--text)" }}>
-                        curl -s https://{window.location.host}/stripe.com
-                      </code>
-                    </p>
-                  </div>
+                  {[
+                    { icon: "🛡️", label: "Security", desc: "SSL, headers, CAA, cert transparency" },
+                    { icon: "⚡", label: "Speed", desc: "Core Web Vitals, caching, compression" },
+                    { icon: "🏗️", label: "Foundations", desc: "DNS, hosting, tech stack, DNSSEC" },
+                    { icon: "⭐", label: "Reputation", desc: "Breaches, WHOIS, blocklists, compliance" },
+                    { icon: "🔍", label: "Discoverability", desc: "SEO, structured data, accessibility" },
+                    { icon: "✉️", label: "Email", desc: "SPF, DKIM, DMARC, MX configuration" },
+                  ].map((item) => (
+                    <div key={item.label} className="panel" style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>
+                      <div style={{ fontSize: "16px", marginBottom: "0.2rem" }}>{item.icon}</div>
+                      <h3
+                        style={{
+                          fontFamily: "var(--font-ui)",
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: "var(--accent)",
+                          marginBottom: "0.15rem",
+                        }}
+                      >
+                        {item.label}
+                      </h3>
+                      <p
+                        style={{
+                          fontFamily: "var(--font-ui)",
+                          fontSize: "10px",
+                          color: "var(--dim)",
+                          lineHeight: "14px",
+                        }}
+                      >
+                        {item.desc}
+                      </p>
+                    </div>
+                  ))}
                 </div>
                 <RecentLookups onSelect={handleNavigate} />
                 <ApiTeaser />
