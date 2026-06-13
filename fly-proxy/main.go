@@ -597,6 +597,19 @@ type CipherInfo struct {
 	Strength string `json:"strength"` // "strong", "acceptable", "weak", "insecure"
 }
 
+type ChainCert struct {
+	Subject   string   `json:"subject"`
+	Issuer    string   `json:"issuer"`
+	ValidFrom string   `json:"valid_from"`
+	ValidTo   string   `json:"valid_to"`
+	KeyAlg    string   `json:"key_alg"`
+	KeySize   int      `json:"key_size"`
+	Serial    string   `json:"serial"`
+	SANs      []string `json:"sans,omitempty"`
+	IsSelfSigned bool  `json:"is_self_signed"`
+	SignatureAlg string `json:"signature_alg"`
+}
+
 type SSLResult struct {
 	Grade          string       `json:"grade"`
 	Issuer         string       `json:"issuer"`
@@ -608,6 +621,7 @@ type SSLResult struct {
 	Protocols      []string     `json:"protocols"`
 	ChainDepth     int          `json:"chain_depth"`
 	ChainValid     bool         `json:"chain_valid"`
+	ChainCerts     []ChainCert  `json:"chain_certs,omitempty"`
 	SANs           []string     `json:"sans"`
 	Serial         string       `json:"serial"`
 	Fingerprint    string       `json:"fingerprint"`
@@ -759,6 +773,57 @@ func probeSSL(domain string) SSLResult {
 	// Cipher enumeration (runs in parallel-ish, ~3s per cipher)
 	ciphers := enumerateCiphers(domain)
 
+	// Extract full certificate chain
+	chainCerts := make([]ChainCert, 0, len(connState.PeerCertificates))
+	for _, cert := range connState.PeerCertificates {
+		certKeyAlg := ""
+		certKeySize := 0
+		switch pub := cert.PublicKey.(type) {
+		case interface{ Size() int }:
+			certKeySize = pub.Size() * 8
+		}
+		switch cert.PublicKeyAlgorithm {
+		case x509.RSA:
+			certKeyAlg = "RSA"
+		case x509.ECDSA:
+			certKeyAlg = "ECDSA"
+		case x509.Ed25519:
+			certKeyAlg = "Ed25519"
+		default:
+			certKeyAlg = cert.PublicKeyAlgorithm.String()
+		}
+
+		certSerial := ""
+		if cert.SerialNumber != nil {
+			certSerial = fmt.Sprintf("%X", cert.SerialNumber)
+		}
+
+		// SANs only for leaf
+		var certSANs []string
+		if cert == leaf {
+			certSANs = cert.DNSNames
+			if len(certSANs) > 20 {
+				certSANs = certSANs[:20]
+			}
+		}
+
+		isSelfSigned := cert.Issuer.String() == cert.Subject.String()
+
+		cc := ChainCert{
+			Subject:      cert.Subject.String(),
+			Issuer:       cert.Issuer.String(),
+			ValidFrom:    cert.NotBefore.UTC().Format(time.RFC3339),
+			ValidTo:      cert.NotAfter.UTC().Format(time.RFC3339),
+			KeyAlg:       certKeyAlg,
+			KeySize:      certKeySize,
+			Serial:       certSerial,
+			SANs:         certSANs,
+			IsSelfSigned: isSelfSigned,
+			SignatureAlg: cert.SignatureAlgorithm.String(),
+		}
+		chainCerts = append(chainCerts, cc)
+	}
+
 	return SSLResult{
 		Grade:          grade,
 		Issuer:         leaf.Issuer.String(),
@@ -770,6 +835,7 @@ func probeSSL(domain string) SSLResult {
 		Protocols:      protocols,
 		ChainDepth:     len(connState.PeerCertificates),
 		ChainValid:     chainValid,
+		ChainCerts:     chainCerts,
 		SANs:           sans,
 		Serial:         serial,
 		ProbeMs:        int(time.Since(start).Milliseconds()),
