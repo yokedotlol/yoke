@@ -914,7 +914,7 @@ func classifyCipher(cs *tls.CipherSuite) string {
 	if strings.Contains(name, "3DES") || strings.Contains(name, "DES_EDE") {
 		return "weak"
 	}
-	if strings.Contains(name, "CBC") {
+	if strings.Contains(name, "CBC") && !strings.Contains(name, "ECDHE") {
 		return "weak"
 	}
 	if strings.HasPrefix(name, "TLS_RSA_WITH_") {
