@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/subtle"
 	"crypto/tls"
@@ -719,8 +720,25 @@ func probeSSL(domain string) SSLResult {
 	keyAlg := ""
 	keySize := 0
 	switch pub := leaf.PublicKey.(type) {
+	case *rsa.PublicKey:
+		keySize = pub.N.BitLen()
 	case *ecdsa.PublicKey:
-		keySize = pub.Curve.Params().BitSize
+		if pub.Curve != nil {
+			if params := pub.Curve.Params(); params != nil && params.BitSize > 0 {
+				keySize = params.BitSize
+			}
+		}
+		if keySize == 0 && pub.X != nil {
+			// Fallback: infer key size from X coordinate byte length
+			switch byteLen := len(pub.X.Bytes()); {
+			case byteLen <= 32:
+				keySize = 256 // P-256
+			case byteLen <= 48:
+				keySize = 384 // P-384
+			default:
+				keySize = 521 // P-521
+			}
+		}
 	case *ed25519.PublicKey:
 		keySize = 256
 	case interface{ Size() int }:
@@ -870,29 +888,39 @@ func classifyCipher(cs *tls.CipherSuite) string {
 	if cs == nil {
 		return "unknown"
 	}
-	// Insecure ciphers are in tls.InsecureCipherSuites()
-	for _, ic := range tls.InsecureCipherSuites() {
-		if ic.ID == cs.ID {
-			return "insecure"
-		}
-	}
 	name := cs.Name
-	// Weak: CBC mode ciphers (vulnerable to padding oracles), non-ECDHE, 3DES
-	if strings.Contains(name, "3DES") {
-		return "weak"
+
+	// Truly insecure: RC4, NULL encryption, export-grade, anonymous key exchange, single DES
+	if strings.Contains(name, "RC4") ||
+		strings.Contains(name, "NULL") ||
+		strings.Contains(name, "EXPORT") ||
+		strings.Contains(name, "anon") {
+		return "insecure"
 	}
-	if strings.Contains(name, "CBC") && !strings.Contains(name, "ECDHE") {
-		return "weak"
-	}
-	// Strong: TLS 1.3 suites or ECDHE+AESGCM/CHACHA
+
+	// Strong: TLS 1.3 suites are always strong
 	for _, v := range cs.SupportedVersions {
 		if v == tls.VersionTLS13 {
 			return "strong"
 		}
 	}
+
+	// Strong: ECDHE + AEAD (GCM or ChaCha20-Poly1305) = forward secrecy + authenticated encryption
 	if strings.Contains(name, "ECDHE") && (strings.Contains(name, "GCM") || strings.Contains(name, "CHACHA")) {
 		return "strong"
 	}
+
+	// Weak: 3DES (Sweet32 attack), CBC mode (padding oracle attacks), RSA key exchange (no forward secrecy)
+	if strings.Contains(name, "3DES") || strings.Contains(name, "DES_EDE") {
+		return "weak"
+	}
+	if strings.Contains(name, "CBC") {
+		return "weak"
+	}
+	if strings.HasPrefix(name, "TLS_RSA_WITH_") {
+		return "weak"
+	}
+
 	return "acceptable"
 }
 
