@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/sha256"
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
@@ -716,6 +719,10 @@ func probeSSL(domain string) SSLResult {
 	keyAlg := ""
 	keySize := 0
 	switch pub := leaf.PublicKey.(type) {
+	case *ecdsa.PublicKey:
+		keySize = pub.Curve.Params().BitSize
+	case *ed25519.PublicKey:
+		keySize = 256
 	case interface{ Size() int }:
 		keySize = pub.Size() * 8
 	}
@@ -729,6 +736,10 @@ func probeSSL(domain string) SSLResult {
 	default:
 		keyAlg = leaf.PublicKeyAlgorithm.String()
 	}
+
+	// SHA-256 fingerprint of the leaf certificate
+	fpRaw := sha256.Sum256(leaf.Raw)
+	fingerprint := fmt.Sprintf("%X", fpRaw[:])
 
 	// Validate chain
 	chainValid := true
@@ -779,6 +790,10 @@ func probeSSL(domain string) SSLResult {
 		certKeyAlg := ""
 		certKeySize := 0
 		switch pub := cert.PublicKey.(type) {
+		case *ecdsa.PublicKey:
+			certKeySize = pub.Curve.Params().BitSize
+		case *ed25519.PublicKey:
+			certKeySize = 256
 		case interface{ Size() int }:
 			certKeySize = pub.Size() * 8
 		}
@@ -832,6 +847,7 @@ func probeSSL(domain string) SSLResult {
 		ValidTo:        leaf.NotAfter.UTC().Format(time.RFC3339),
 		KeyAlg:         keyAlg,
 		KeySize:        keySize,
+		Fingerprint:    fingerprint,
 		Protocols:      protocols,
 		ChainDepth:     len(connState.PeerCertificates),
 		ChainValid:     chainValid,
