@@ -43,9 +43,10 @@ jobs:
 
       - name: Deploy (blue-green)
         working-directory: fly-proxy
-        run: flyctl deploy --remote-only --strategy bluegreen
+        run: flyctl deploy --remote-only --strategy bluegreen --build-arg "MAXMIND_LICENSE_KEY=$MAXMIND_LICENSE_KEY"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          MAXMIND_LICENSE_KEY: ${{ secrets.MAXMIND_LICENSE_KEY }}
 
   smoke-test:
     needs: deploy
