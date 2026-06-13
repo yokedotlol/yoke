@@ -958,13 +958,24 @@ export function calculateDomainScore(opts: {
 
   // SSL expansion signals: cipher suites, OCSP, forward secrecy, SCTs
   if (opts.ssl?.ciphers && opts.ssl.ciphers.length > 0) {
-    const weakCiphers = opts.ssl.ciphers.filter((c) => c.strength === "weak" || c.strength === "insecure");
+    const insecureCiphers = opts.ssl.ciphers.filter((c) => c.strength === "insecure");
+    const weakCiphers = opts.ssl.ciphers.filter((c) => c.strength === "weak");
+    if (insecureCiphers.length > 0) {
+      findings.push({
+        signal: "ssl_insecure_ciphers",
+        axis: "security",
+        severity: contextualSeverity("high", arch, { commerce: "critical", institutional: "critical" }),
+        label: `${insecureCiphers.length} insecure cipher suite${insecureCiphers.length > 1 ? "s" : ""} offered (RC4, NULL, EXPORT, or anonymous)`,
+        tradeoff: null,
+        weight: 3,
+      });
+    }
     if (weakCiphers.length > 0) {
       findings.push({
         signal: "ssl_weak_ciphers",
         axis: "security",
         severity: contextualSeverity("medium", arch, { commerce: "high", institutional: "high" }),
-        label: `${weakCiphers.length} weak/insecure cipher suite${weakCiphers.length > 1 ? "s" : ""} offered`,
+        label: `${weakCiphers.length} weak cipher suite${weakCiphers.length > 1 ? "s" : ""} offered (3DES, CBC without forward secrecy, or RSA key exchange)`,
         tradeoff: "Disabling weak ciphers may drop support for very old clients (IE 10, Android 4.x).",
         weight: 2,
       });

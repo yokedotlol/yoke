@@ -145,6 +145,18 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
       commerce: "No SSL on e-commerce means payment data transmitted in plaintext — PCI-DSS violation.",
     },
   },
+  ssl_insecure_ciphers: {
+    axis: "security",
+    label: "Insecure Cipher Suites Offered",
+    actionable: true,
+    canBeNonGood: true,
+    canBeGood: false,
+    effort: "~15 min — server cipher configuration",
+    fixDescription: "Remove insecure cipher suites (RC4, NULL, EXPORT, anonymous)",
+    weightRange: [3, 3],
+    promptGuidance:
+      "Insecure cipher suites (RC4, NULL, EXPORT, anonymous) have known exploits and offer no meaningful security. Remove them immediately.",
+  },
   ssl_weak_ciphers: {
     axis: "security",
     label: "Weak Cipher Suites Offered",
@@ -152,10 +164,10 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeNonGood: true,
     canBeGood: false,
     effort: "~15 min — server cipher configuration",
-    fixDescription: "Disable weak/insecure cipher suites",
+    fixDescription: "Disable weak cipher suites (3DES, CBC without forward secrecy, RSA key exchange)",
     weightRange: [2, 2],
     promptGuidance:
-      "Weak or insecure cipher suites (3DES, RC4, CBC without ECDHE) allow potential downgrade attacks. Disable them in server TLS config.",
+      "Weak cipher suites (3DES, CBC without ECDHE, RSA key exchange) are vulnerable to downgrade attacks. Disable them in server TLS config.",
   },
   ssl_ocsp_stapling: {
     axis: "security",

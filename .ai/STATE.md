@@ -20,7 +20,7 @@
 |--------|-------|
 | Scoring model | Deductive (budget-based, start at 100) |
 | Axes | 6: Security, Speed, Foundations, Reputation, Discoverability, Email |
-| Signal count | 156 |
+| Signal count | 157 |
 | Composite method | Weighted arithmetic mean + outlier floor cap |
 | Tier labels | Excellent, Strong, Moderate, Weak, Critical |
 | Absent penalty | 0.30 × (1 + goodPrevalence) per signal (IDF-influenced) |
