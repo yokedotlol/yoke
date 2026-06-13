@@ -188,6 +188,18 @@ func safeTransport() *http.Transport {
 func safeTLSDial(domain string, timeout time.Duration, tlsConfig *tls.Config) (*tls.Conn, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+
+	// If target is an IP, connect directly (skip DNS)
+	if parsed := net.ParseIP(domain); parsed != nil {
+		if isPrivateIP(parsed) {
+			return nil, fmt.Errorf("connection to private/reserved IP %s blocked (SSRF protection)", parsed)
+		}
+		dialer := &net.Dialer{Timeout: timeout}
+		addr := net.JoinHostPort(parsed.String(), "443")
+		conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
+		return conn, err
+	}
+
 	ips, err := net.DefaultResolver.LookupIPAddr(ctx, domain)
 	if err != nil {
 		return nil, err
@@ -344,12 +356,33 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// SSL/TLS probe — direct TLS handshake for instant cert info
 	if r.URL.Path == "/probe-ssl" {
 		domain := r.URL.Query().Get("domain")
-		if domain == "" || !domainRe.MatchString(domain) {
+		ip := r.URL.Query().Get("ip")
+		if domain == "" && ip == "" {
 			w.Header().Set("Content-Type", "application/json")
-			http.Error(w, `{"error":"invalid or missing domain parameter"}`, 400)
+			http.Error(w, `{"error":"invalid or missing domain/ip parameter"}`, 400)
 			return
 		}
-		result := probeSSL(domain)
+		target := domain
+		if target == "" {
+			// Validate IP
+			parsed := net.ParseIP(ip)
+			if parsed == nil {
+				w.Header().Set("Content-Type", "application/json")
+				http.Error(w, `{"error":"invalid ip parameter"}`, 400)
+				return
+			}
+			if isPrivateIP(parsed) {
+				w.Header().Set("Content-Type", "application/json")
+				http.Error(w, `{"error":"connection to private/reserved IP blocked"}`, 400)
+				return
+			}
+			target = ip
+		} else if !domainRe.MatchString(domain) {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, `{"error":"invalid domain parameter"}`, 400)
+			return
+		}
+		result := probeSSL(target)
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-cache")
 		json.NewEncoder(w).Encode(result)
