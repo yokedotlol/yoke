@@ -90,38 +90,48 @@ export async function analyzeStream(
 
   const decoder = new TextDecoder();
   let buffer = "";
+  let receivedDone = false;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
+      buffer += decoder.decode(value, { stream: true });
 
-    // Parse SSE events from buffer
-    const parts = buffer.split("\n\n");
-    // Keep the last part as it may be incomplete
-    buffer = parts.pop() ?? "";
+      // Parse SSE events from buffer
+      const parts = buffer.split("\n\n");
+      // Keep the last part as it may be incomplete
+      buffer = parts.pop() ?? "";
 
-    for (const part of parts) {
-      if (!part.trim()) continue;
-      let eventType = "message";
-      let eventData = "";
-      for (const line of part.split("\n")) {
-        if (line.startsWith("event: ")) {
-          eventType = line.slice(7).trim();
-        } else if (line.startsWith("data: ")) {
-          eventData = line.slice(6);
+      for (const part of parts) {
+        if (!part.trim()) continue;
+        let eventType = "message";
+        let eventData = "";
+        for (const line of part.split("\n")) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            eventData = line.slice(6);
+          }
         }
-      }
-      if (eventData) {
-        try {
-          const parsed = JSON.parse(eventData);
-          onEvent({ type: eventType as StreamEvent["type"], data: parsed });
-        } catch {
-          /* skip malformed */
+        if (eventData) {
+          try {
+            const parsed = JSON.parse(eventData);
+            if (eventType === "done") receivedDone = true;
+            onEvent({ type: eventType as StreamEvent["type"], data: parsed });
+          } catch {
+            /* skip malformed */
+          }
         }
       }
     }
+  } catch {
+    // Stream died mid-analysis (Worker CPU limit, network drop, etc.)
+    // If we already received the "done" event, the analysis completed — ignore the error.
+    if (receivedDone) return;
+    // Otherwise surface a user-friendly error instead of raw "TypeError: Load failed"
+    throw new Error("Analysis stream interrupted — the server may have timed out on this domain. Try again.");
   }
 }
 

@@ -756,7 +756,7 @@ export const fingerprints: Fingerprint[] = [
     category: "Analytics",
     patterns: {
       scriptUrls: [/google-analytics\.com\/analytics\.js/i, /googletagmanager\.com\/gtag/i, /ga\.js/i],
-      htmlPatterns: [/gtag\(/i, /UA-\d+-\d/i, /['"]G-[A-Z0-9]{10,}['"]/],
+      htmlPatterns: [/gtag\(\s*['"]config['"]/i, /UA-\d+-\d/i, /['"]G-[A-Z0-9]{10,}['"]/],
     },
   },
   {
