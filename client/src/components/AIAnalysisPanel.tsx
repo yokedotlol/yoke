@@ -1312,7 +1312,7 @@ export function AIAnalysisPanel({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       {/* Advanced Settings */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "-8px" }}>
         <AdvancedSettings domain={domain} onKeyChange={handleKeyChange} onModelChange={handleModelChange} />
       </div>
 

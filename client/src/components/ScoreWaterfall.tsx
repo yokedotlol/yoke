@@ -1258,6 +1258,12 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
     return ad && !ad.not_measured && ad.score === 100;
   });
 
+  // Not-measured axes (imputed at 35)
+  const notMeasuredAxes = (Object.keys(AXIS_WEIGHTS) as Axis[]).filter((a) => {
+    const ad = score.axes[a];
+    return !ad || ad.not_measured || ad.score == null;
+  });
+
   // Empty state
   if (waterfallAxes.length === 0 && perfectAxes.length > 0) {
     return (
@@ -1666,6 +1672,21 @@ export function ScoreWaterfall({ data }: { data: AnalysisResult }) {
           }}
         >
           {perfectAxes.map((a) => AXIS_LABELS[a] || a).join(", ")} — no deductions
+        </div>
+      )}
+
+      {/* Not-measured axes */}
+      {notMeasuredAxes.length > 0 && (
+        <div
+          style={{
+            fontSize: "10px",
+            color: "var(--dim)",
+            marginTop: "8px",
+            paddingLeft: "8px",
+            fontStyle: "italic",
+          }}
+        >
+          {notMeasuredAxes.map((a) => AXIS_LABELS[a] || a).join(", ")} — not assessed (imputed at 35 for composite)
         </div>
       )}
 
