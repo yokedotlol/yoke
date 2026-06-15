@@ -30,7 +30,7 @@ export function handle(rc: RouteContext): Response | Promise<Response> | null {
   // security.txt — vulnerability disclosure contact
   if (method === "GET" && (path === "/.well-known/security.txt" || path === "/security.txt")) {
     return new Response(
-      `Contact: mailto:hello@${host}\nExpires: 2027-06-01T00:00:00.000Z\nPreferred-Languages: en\nCanonical: ${baseUrl}/.well-known/security.txt`,
+      `Contact: https://github.com/yokedotlol/yoke/issues\nExpires: 2027-06-01T00:00:00.000Z\nPreferred-Languages: en\nCanonical: ${baseUrl}/.well-known/security.txt`,
       {
         headers: {
           "Content-Type": "text/plain;charset=UTF-8",
