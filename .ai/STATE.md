@@ -1,9 +1,8 @@
 # Yoke — Current State
 
 > Volatile snapshot of the project. Updated after significant sessions.
-> Run `.ai/staleness-check.sh` to detect drift.
 
-**Last updated:** 2026-06-05
+**Last updated:** 2026-06-16
 
 ## Versions
 
@@ -20,7 +19,7 @@
 |--------|-------|
 | Scoring model | Deductive (budget-based, start at 100) |
 | Axes | 6: Security, Speed, Foundations, Reputation, Discoverability, Email |
-| Signal count | 157 |
+| Signal count | 153 |
 | Composite method | Weighted arithmetic mean + outlier floor cap |
 | Tier labels | Excellent, Strong, Moderate, Weak, Critical |
 | Absent penalty | 0.30 × (1 + goodPrevalence) per signal (IDF-influenced) |
@@ -110,6 +109,7 @@ Worker-side: `flyProbeFetch()` helper in `helpers.ts` handles auth + 429 retry (
 
 | Hash | Description |
 |------|-------------|
+| `76ec724` | Bump dotai submodule (canonical tokens, click-to-copy, word toggle) |
 | `0d13237` | Remove old og-banner-v3 asset |
 | `5f943e2` | Badge fallback to analysis cache, embed UI in ShareBar, OG banner v4 |
 | `609f597` | Time-budgeted sweep, hourly cron, badge dogfooding |

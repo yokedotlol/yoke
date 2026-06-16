@@ -124,4 +124,4 @@ These files are maintained by AI agents **with human approval**:
 
 **Update cadence:** After significant sessions (~10 commits or a major decision), the agent should propose: _"About to update `.ai/` with: [changes]. Approve?"_ — then wait for confirmation before writing.
 
-Run `.ai/staleness-check.sh` periodically to detect drift between these docs and the actual codebase.
+Review `.ai/STATE.md` periodically to detect drift between these docs and the actual codebase.

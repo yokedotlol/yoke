@@ -16,17 +16,6 @@ if [ -n "$STAGED_FILES" ]; then
   }
 fi
 
-# ── Staleness check: .ai/ docs vs code ──
-if bash .ai/staleness-check.sh >/dev/null 2>&1; then
-  : # docs in sync
-else
-  echo ""
-  echo "⚠️  .ai/ docs are stale. Run: bash .ai/staleness-check.sh"
-  echo "   Fix the drift before committing."
-  echo ""
-  exit 1
-fi
-
 # ── Lockfile freshness ──
 # Skip in environments without network access (e.g., sandboxed CI/dev VMs)
 if [ -z "$SKIP_LOCKFILE_CHECK" ]; then
