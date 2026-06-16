@@ -1,13 +1,13 @@
-import { ArrowLeftRight, CheckCircle2, Circle, Loader2, RotateCcw, Search, XCircle, Zap } from "lucide-react";
+import { ArrowLeftRight, CheckCircle2, Circle, Loader2, RotateCcw, XCircle, Zap } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { analyzeStream, type RateLimitInfo, type StreamEvent } from "./api";
-import { ApiTeaser, CurlBar } from "./components/CurlShowcase";
+import { CurlBar } from "./components/CurlShowcase";
 import { AXIS_TO_TAB, DomainScore } from "./components/DomainScore";
 import { DomainSignals, ExternalTools } from "./components/DomainSignals";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { NotRegisteredBanner } from "./components/NotRegisteredBanner";
 import { SkeletonPanel } from "./components/Panel";
-import { type PanelDef, PanelGrid, ResetLayoutButton } from "./components/PanelLayout";
+import { type PanelDef, PanelGrid } from "./components/PanelLayout";
 import { RecentLookups } from "./components/RecentLookups";
 import { ScreenshotPanel, TrancoPanel } from "./components/ReputationPanels";
 import { ShareBar } from "./components/ShareBar";
@@ -892,34 +892,37 @@ export function App() {
                 window.history.pushState({}, "", "/");
                 document.title = "Yoke";
               }}
-              style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none", cursor: "pointer" }}
+              style={{ display: "flex", alignItems: "center", gap: "2px", textDecoration: "none", cursor: "pointer" }}
             >
-              <img
-                src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGYktHRAAAAAAAAPlDu38AAAAHdElNRQfqBgcBIANk00ByAAAEaUlEQVRo3uWaW4hVVRjHf0cdL1gjZpZWUo6jWJKXJIsiSupBIiLopZ566K0Iid4KInqvDCKi5yCCrvQkDZl2MUtH0QwvaQpaSmk5mTS38+thrcPZHveZc87ae2aM/rA5e6+91rf+/3X71rf2gf84KmUaU2s2p8Vranw1CozEy0qlvGqTLGWIzgYWAIuBHuBG4Drg6vhueiwyCJwHzgC/AseBn4BjwGng71RhbZWIhAFmRpJrgbuAVZH8PGBGBw1iFPU78DOwB9gO7IriBgHaEdQ0R4Z0F9AL3A9sANYA11IfHmVhFDgF9AObgc8JvTQ8lphLUjPE5wPrgUeBeyLpKSWTbtp+Ucw24H1gC2H4jd0rau1ap36tDjn5GFK3qqtr/FoJmKV+Otmsc/CeOr1RQN6QmAMsm6Ch0gmWA1c2JuYJqFCyfygJuZwmalKOG1IEjBJWibJhtD3uAg4TnE/ZOJJiN0WAwIvAd0C1BOKjwDfASyT0bIqA3vj7EPAssJuEro9ldgEbgYcJW5GeQk0R/cBC9VCLNblfXRrzL1A3qgfaXM+r6n71GfWaaOMWdW+LcnvVebbhyNoRoPqFusK6916iblLPjlHmjPqKujhTbqXB67dC6QJUd6irMmSmqQ9EcY2t3qeuj3lq+dfG3mwH4yJAdad6a4YUao+6L5Pne/WGhjy3qbs7qCdXQBmObC3wNhdvP44CH2eePwJOZJ5XAG8Bq4tWnidglM5XlTuB14GFmbTPCFHYn0BfJn0R8AZwe4d1VMlZZvMEDAEXEhpjA/AC9TDyR4JjOgwcjGkzCev9fQn2/yJGaq0EDAIDCRUAPBGFAJyNIvYB52LaI8DjibbPE6OzVgKGCwi4AniasO2tAj8A++O7ucBTwKxE2+cIpxotBYwQw7dE3E2YEwAHqA+fe4F1Bez+Rs7WpdkqdLJARbOpD6MjhKMTgAcJ24VUnMhLnJZ9qFQqtZjzaIGKIBy5dMeGqBLOie4oYK9aa4jGoL5ZDxwizPpU9AI3ESbyH9QPvVJxjnDEcgmaCThKky5rE3MJjm2E4FNuJvRIKo5RH4ptCThN2KOnYiqwJPO8lGJx9jaaLCzNBFQJ7j/FodWwKHN/fQE7A1y8LRlbQGaSbCWciKVifrTfFe9TsRn4toFbcwEZnAdeI90ndBNWuS5yznPaxClgE/BPswy5AjJKtxA2Ximx72zCXOiK951iJJLf3sCptYBMgSphl/lBAoGrCJN3WbzvFO8Cb1Lkg0gm+FisftlB8KE6op5Uf4n3naAvGwAVQkbEqg4jqFTsUJeXQj5HxDpbnx4UwU7bOUYvQcSecWr58SGfI2K1+lWJ5Psse9i0IaJH/VAdLUB8WH3HsiZsgoh56qvqhQTyA+rLaveEEW8iZIb6pHq8A/KH1ceMh1yTCi+e3Jsde80fVj8xc5p3WaBhSD1vcGCNOK4+p84pk/x4/FdiCrCS8H15DSGg6SdsR/ZzOfxXok0hEDZy0OJr+/8a/wLbgeqeGFQuqQAAAABJRU5ErkJggg=="
-                alt="Yoke"
-                className="site-logo"
-                style={{ width: "24px", height: "24px", flexShrink: 0 }}
-              />
-              <h1
+              <span
                 style={{
                   fontFamily: "var(--font-ui)",
-                  fontSize: "20px",
-                  fontWeight: 700,
+                  fontSize: "22px",
+                  fontWeight: 800,
                   color: "var(--text)",
-                  letterSpacing: "-0.02em",
-                  whiteSpace: "nowrap",
-                  margin: 0,
+                  letterSpacing: "-0.04em",
                 }}
               >
-                Yoke
-              </h1>
+                yoke
+              </span>
+              <span
+                style={{
+                  fontFamily: "var(--font-ui)",
+                  fontSize: "22px",
+                  fontWeight: 800,
+                  color: "var(--accent)",
+                  letterSpacing: "-0.04em",
+                }}
+              >
+                .lol
+              </span>
             </a>
             <div className="h-4 w-px hidden sm:block" style={{ background: "var(--border)" }} />
             <span
               className="hidden sm:inline"
-              style={{ fontFamily: "var(--font-ui)", fontSize: "13px", color: "var(--dim)", whiteSpace: "nowrap" }}
+              style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--dim)", whiteSpace: "nowrap" }}
             >
-              Domain Intelligence
+              fast, API-first domain intelligence
             </span>
             <div className="flex-1" />
             <ThemeToggle />
@@ -930,13 +933,20 @@ export function App() {
         <div className="mb-0">
           <div className="flex items-center gap-2">
             {!compareMode && (
-              <div
-                className="search-glow flex items-center rounded-lg flex-1 min-w-0"
-                style={{ background: "var(--surface)" }}
-              >
-                <div className="pl-4" style={{ color: "var(--dim)" }}>
-                  <Search size={16} />
-                </div>
+              <div className="search-glow flex items-center flex-1 min-w-0" style={{ background: "transparent" }}>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "14px",
+                    color: "var(--accent)",
+                    whiteSpace: "nowrap",
+                    userSelect: "none",
+                    paddingLeft: "4px",
+                  }}
+                  aria-hidden="true"
+                >
+                  $ yoke ▸
+                </span>
                 <input
                   type="text"
                   value={domain}
@@ -950,34 +960,20 @@ export function App() {
                       doAnalyze();
                     }
                   }}
-                  placeholder="Enter domain name (e.g. example.com)"
+                  placeholder="example.com"
                   className="flex-1 bg-transparent px-3 py-3 outline-none min-w-0"
-                  style={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "var(--text)" }}
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "14px",
+                    color: "var(--text)",
+                    caretColor: "var(--accent)",
+                  }}
                   aria-label="Domain name"
                   disabled={analyze.isPending}
                 />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (compareMode) setCompareMode(false);
-                    doAnalyze();
-                  }}
-                  disabled={analyze.isPending || !domain.trim()}
-                  className="flex items-center gap-2 px-5 py-2 mr-1.5 rounded-md transition-all disabled:opacity-30"
-                  style={{
-                    background: "var(--accent)",
-                    color: "var(--accent-fg)",
-                    fontFamily: "var(--font-ui)",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    cursor: analyze.isPending || !domain.trim() ? "default" : "pointer",
-                    border: "none",
-                  }}
-                  aria-label="Analyze domain"
-                >
-                  {analyze.isPending ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                  {analyze.isPending ? "Analyzing…" : "Analyze"}
-                </button>
+                {analyze.isPending && (
+                  <Loader2 size={14} className="animate-spin mr-2" style={{ color: "var(--accent)", flexShrink: 0 }} />
+                )}
               </div>
             )}
             <RateLimitPill rateLimit={analyze.rateLimit} sessionCount={analyze.sessionCount} />
@@ -1181,87 +1177,42 @@ export function App() {
                 </div>
               ))}
 
-            {/* Empty state — SEO-friendly landing content */}
+            {/* Empty state — minimal landing */}
             {!analyze.data && !analyze.isPending && !analyze.error && (
               <div className="flex flex-col items-center justify-center py-16">
+                {/* Curl hint */}
                 <div
-                  className="w-16 h-16 rounded-xl flex items-center justify-center mb-5"
-                  style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-                >
-                  <Search size={28} style={{ color: "var(--accent)", opacity: 0.4 }} />
-                </div>
-                <h2
                   style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    color: "var(--text)",
-                    textAlign: "center",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  Free Domain Intelligence &amp; OSINT Tool
-                </h2>
-                <p
-                  style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: "14px",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "12px",
                     color: "var(--dim)",
+                    marginBottom: "2rem",
                     textAlign: "center",
-                    maxWidth: "520px",
-                    lineHeight: "22px",
-                    marginBottom: "1.5rem",
                   }}
                 >
-                  Enter any domain to get a comprehensive score across security, speed, foundations, reputation,
-                  discoverability, and email — with actionable findings and a free JSON API.
-                </p>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "0.5rem",
-                    width: "100%",
-                    maxWidth: "700px",
-                    marginBottom: "1.5rem",
-                  }}
-                >
-                  {[
-                    { icon: "🛡️", label: "Security", desc: "SSL, headers, CAA, cert transparency" },
-                    { icon: "⚡", label: "Speed", desc: "Core Web Vitals, caching, compression" },
-                    { icon: "🏗️", label: "Foundations", desc: "DNS, hosting, tech stack, DNSSEC" },
-                    { icon: "⭐", label: "Reputation", desc: "Breaches, WHOIS, blocklists, compliance" },
-                    { icon: "🔍", label: "Discoverability", desc: "SEO, structured data, accessibility" },
-                    { icon: "✉️", label: "Email", desc: "SPF, DKIM, DMARC, MX configuration" },
-                  ].map((item) => (
-                    <div key={item.label} className="panel" style={{ padding: "0.6rem 0.75rem", textAlign: "center" }}>
-                      <div style={{ fontSize: "16px", marginBottom: "0.2rem" }}>{item.icon}</div>
-                      <h3
-                        style={{
-                          fontFamily: "var(--font-ui)",
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          color: "var(--accent)",
-                          marginBottom: "0.15rem",
-                        }}
-                      >
-                        {item.label}
-                      </h3>
-                      <p
-                        style={{
-                          fontFamily: "var(--font-ui)",
-                          fontSize: "10px",
-                          color: "var(--dim)",
-                          lineHeight: "14px",
-                        }}
-                      >
-                        {item.desc}
-                      </p>
-                    </div>
+                  curl -s https://{window.location.host}/stripe.com
+                </div>
+
+                {/* Example domain pills */}
+                <RecentLookups onSelect={handleNavigate} />
+
+                {/* Axis labels */}
+                <div className="flex flex-wrap justify-center gap-3 mt-6" style={{ maxWidth: "600px" }}>
+                  {["security", "speed", "foundations", "reputation", "discoverability", "email"].map((axis) => (
+                    <span
+                      key={axis}
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "11px",
+                        color: "var(--dim)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                      }}
+                    >
+                      {axis}
+                    </span>
                   ))}
                 </div>
-                <RecentLookups onSelect={handleNavigate} />
-                <ApiTeaser />
               </div>
             )}
           </>
@@ -1269,125 +1220,40 @@ export function App() {
       </div>
 
       {/* Footer */}
-      <footer
-        style={{
-          borderTop: "1px solid var(--border)",
-          padding: "1rem 1rem",
-          marginTop: "3rem",
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "0.5rem 1.25rem",
-          fontFamily: "var(--font-ui)",
-          fontSize: "12px",
-          color: "var(--dim)",
-        }}
-      >
-        <nav aria-label="Site links" style={{ display: "contents" }}>
-          {(() => {
-            const linkStyle = { color: "var(--dim)", textDecoration: "none" as const, transition: "color 0.15s" };
-            const enter = (e: React.MouseEvent<HTMLAnchorElement>) => {
-              e.currentTarget.style.color = "var(--text)";
-            };
-            const leave = (e: React.MouseEvent<HTMLAnchorElement>) => {
-              e.currentTarget.style.color = "var(--dim)";
-            };
-            const dot = (
-              <span style={{ color: "var(--border)" }} aria-hidden="true">
-                ·
-              </span>
-            );
-            const items: React.ReactNode[] = [];
-            if (!cfg.hideGithub) {
-              items.push(
-                <a
-                  key="gh"
-                  href={cfg.repoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ ...linkStyle, display: "flex", alignItems: "center", gap: "0.35rem" }}
-                  onMouseEnter={enter}
-                  onMouseLeave={leave}
-                >
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
-                  </svg>
-                  GitHub ⭐
-                </a>,
-              );
-            }
-            items.push(
-              <a
-                key="fb"
-                href={cfg.feedbackUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={linkStyle}
-                onMouseEnter={enter}
-                onMouseLeave={leave}
-              >
-                Feedback
-              </a>,
-              <a key="api" href="/api/docs" style={linkStyle} onMouseEnter={enter} onMouseLeave={leave}>
-                API
-              </a>,
-              <a key="docs" href="/docs" style={linkStyle} onMouseEnter={enter} onMouseLeave={leave}>
-                Docs
-              </a>,
-              <a key="status" href="/status" style={linkStyle} onMouseEnter={enter} onMouseLeave={leave}>
-                Status
-              </a>,
-              <a key="privacy" href="/privacy" style={linkStyle} onMouseEnter={enter} onMouseLeave={leave}>
-                Privacy
-              </a>,
-              <a key="terms" href="/terms" style={linkStyle} onMouseEnter={enter} onMouseLeave={leave}>
-                Terms
-              </a>,
-              <a key="about" href="/about" style={linkStyle} onMouseEnter={enter} onMouseLeave={leave}>
-                About
-              </a>,
-            );
-            if (!cfg.hideExtension) {
-              items.push(
-                <a
-                  key="ext"
-                  href={cfg.extensionUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={linkStyle}
-                  onMouseEnter={enter}
-                  onMouseLeave={leave}
-                >
-                  Chrome Extension
-                </a>,
-              );
-            }
-            if (!cfg.hideCli) {
-              items.push(
-                <a key="cli" href="/cli" style={linkStyle} onMouseEnter={enter} onMouseLeave={leave}>
-                  CLI
-                </a>,
-              );
-            }
-            return items.flatMap((item, i) =>
-              i < items.length - 1 ? [item, <span key={`d${i}`}>{dot}</span>] : [item],
-            );
-          })()}
-          <span style={{ color: "var(--border)" }} aria-hidden="true">
-            ·
-          </span>
-          <ResetLayoutButton />
+      <footer className="footer">
+        <nav aria-label="Site links" className="footer-links">
+          {!cfg.hideCli && (
+            <>
+              <a href="/cli">cli</a>
+              <span className="dot"> · </span>
+            </>
+          )}
+          <a href="/docs">docs</a>
+          <span className="dot"> · </span>
+          {!cfg.hideGithub && (
+            <>
+              <a href={cfg.repoUrl} target="_blank" rel="noopener noreferrer">
+                github
+              </a>
+              <span className="dot"> · </span>
+            </>
+          )}
+          <a href="/privacy">privacy</a>
+          <span className="dot"> · </span>
+          <a href="/terms">terms</a>
         </nav>
+        <div className="footer-family">
+          <a href="https://certs.lol" target="_blank" rel="noopener noreferrer">
+            certs
+          </a>
+          <span className="dot"> · </span>
+          <a href="https://ns.lol" target="_blank" rel="noopener noreferrer">
+            ns
+          </a>
+        </div>
         <a
           href={`/${window.location.hostname}`}
-          style={{ display: "inline-block", opacity: 0.7, transition: "opacity 0.15s" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = "1";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = "0.7";
-          }}
+          className="yoke-badge"
           title={`Yoke score for ${window.location.hostname}`}
         >
           <img

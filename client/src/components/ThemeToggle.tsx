@@ -14,19 +14,19 @@ type Theme =
   | "rose"
   | "high-contrast";
 
-const THEMES: { id: Theme; label: string; emoji: string }[] = [
-  { id: "dark", label: "Midnight", emoji: "🌙" },
-  { id: "light", label: "Clean", emoji: "☀️" },
-  { id: "arcade", label: "Arcade", emoji: "🕹️" },
-  { id: "deep-blue", label: "Deep Blue", emoji: "🌊" },
-  { id: "enterprise", label: "Enterprise", emoji: "💼" },
-  { id: "newsprint", label: "Newsprint", emoji: "📰" },
-  { id: "lcars", label: "LCARS", emoji: "🖖" },
-  { id: "synthwave", label: "Synthwave", emoji: "🌅" },
-  { id: "botanical", label: "Botanical", emoji: "🌿" },
-  { id: "slate", label: "Slate", emoji: "🪨" },
-  { id: "rose", label: "Rosé", emoji: "🌸" },
-  { id: "high-contrast", label: "High Contrast", emoji: "♿" },
+const THEMES: { id: Theme; label: string }[] = [
+  { id: "dark", label: "Dark" },
+  { id: "light", label: "Light" },
+  { id: "arcade", label: "Arcade" },
+  { id: "deep-blue", label: "Deep Blue" },
+  { id: "enterprise", label: "Enterprise" },
+  { id: "newsprint", label: "Newsprint" },
+  { id: "lcars", label: "LCARS" },
+  { id: "synthwave", label: "Synthwave" },
+  { id: "botanical", label: "Botanical" },
+  { id: "slate", label: "Slate" },
+  { id: "rose", label: "Rosé" },
+  { id: "high-contrast", label: "High Contrast" },
 ];
 
 const VALID_THEMES = new Set<string>(THEMES.map((t) => t.id));
@@ -167,9 +167,7 @@ export function ThemeToggle() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span style={{ fontSize: "14px", lineHeight: 1 }} aria-hidden="true">
-          {current.emoji}
-        </span>
+        {current.label}
       </button>
 
       {open && (
@@ -223,9 +221,6 @@ export function ThemeToggle() {
                 e.currentTarget.style.background = t.id === theme ? "var(--accent-subtle)" : "transparent";
               }}
             >
-              <span style={{ fontSize: "14px" }} aria-hidden="true">
-                {t.emoji}
-              </span>
               <span>{t.label}</span>
             </button>
           ))}
