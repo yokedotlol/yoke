@@ -1387,42 +1387,20 @@ main {
 /* ─── Collapsible & Draggable Panel Layout ─────────────────────── */
 
 .yoke-grid-masonry {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  column-count: 2;
+  column-gap: 0.75rem;
 }
-.yoke-grid-cols {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.yoke-grid-masonry > * {
+  break-inside: avoid;
+  margin-bottom: 0.75rem;
 }
-.yoke-grid-col {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.yoke-grid-masonry > .full-width {
+  column-span: all;
+  margin-bottom: 0.75rem;
 }
-@media (min-width: 768px) {
-  .yoke-grid-cols {
-    flex-direction: row;
-    align-items: flex-start;
-  }
-  .yoke-grid-col {
-    flex: 1;
-    min-width: 0;
-  }
-}
-
-.yoke-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-}
-@media (min-width: 768px) {
-  .yoke-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .yoke-grid .full-width {
-    grid-column: 1 / -1;
+@media (max-width: 767px) {
+  .yoke-grid-masonry {
+    column-count: 1;
   }
 }
 
