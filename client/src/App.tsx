@@ -594,28 +594,28 @@ function RateLimitPill({
 
   return (
     <div
-      style={{ position: "relative", display: "inline-flex" }}
+      style={{ position: "fixed", bottom: "16px", right: "16px", zIndex: 100 }}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
       role="status"
     >
       <button
         type="button"
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+        className="flex items-center gap-1.5 rounded-full"
         onClick={() => setExpanded((e) => !e)}
         style={{
           background: "var(--surface-raised, var(--card-bg, #1c2028))",
           border: `1px solid ${isOut ? "var(--danger)" : "var(--border, #30363d)"}`,
-          fontFamily: "var(--font-ui)",
+          fontFamily: "var(--font-mono)",
           fontSize: "11px",
+          padding: "6px 14px",
           color,
           opacity: isLow ? 1 : 0.7,
-          transition: "opacity 0.3s, border-color 0.3s",
+          transition: "opacity 0.3s, color 0.3s, border-color 0.3s",
           whiteSpace: "nowrap",
           cursor: "pointer",
         }}
       >
-        <Zap size={11} />
         {isOut ? (
           <span>Opens in {minsLeft}m</span>
         ) : (
@@ -628,18 +628,18 @@ function RateLimitPill({
         <div
           style={{
             position: "absolute",
-            top: "calc(100% + 6px)",
+            bottom: "calc(100% + 6px)",
             right: 0,
             background: "var(--surface-raised, var(--card-bg, #1c2028))",
             border: "1px solid var(--border, #30363d)",
             borderRadius: "8px",
             padding: "10px 14px",
             minWidth: "220px",
-            fontFamily: "var(--font-ui)",
+            fontFamily: "var(--font-mono)",
             fontSize: "12px",
             color: "var(--text)",
             lineHeight: 1.6,
-            zIndex: 100,
+            zIndex: 101,
             boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
           }}
         >
