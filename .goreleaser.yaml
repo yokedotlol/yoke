@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 
 project_name: yoke
@@ -12,12 +13,15 @@ builds:
     main: .
     binary: yoke
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}}
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
     env:
       - CGO_ENABLED=0
     goos:
       - linux
       - darwin
+      - windows
     goarch:
       - amd64
       - arm64
@@ -25,7 +29,10 @@ builds:
 archives:
   - id: default
     format: tar.gz
-    name_template: "yoke_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
 
 checksum:
   name_template: checksums.txt
@@ -39,6 +46,7 @@ release:
     name: yoke
   draft: false
   prerelease: auto
+  name_template: "v{{.Version}}"
 
 # NB: GoReleaser v2.10+ deprecated `brews` in favor of `homebrew_casks`, but
 # casks are macOS-only. We build for Linux too, so we keep `brews` (still works,

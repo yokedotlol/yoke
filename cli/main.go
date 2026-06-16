@@ -22,7 +22,6 @@ import (
 var (
 	version = "dev"
 	commit  = "none"
-	date    = "unknown"
 )
 
 var apiBase string
@@ -1065,10 +1064,7 @@ func main() {
 	if commit != "none" {
 		versionTmpl += " (" + commit + ")"
 	}
-	if date != "unknown" {
-		versionTmpl += " built " + date
-	}
-	versionTmpl += "\n"
+	versionTmpl += "\nhttps://yoke.lol\n"
 	root.SetVersionTemplate(versionTmpl)
 
 	if err := root.Execute(); err != nil {
@@ -1079,7 +1075,7 @@ func main() {
 func runAnalyze(cmd *cobra.Command, args []string) error {
 	domain := normalizeDomain(args[0])
 
-	if jsonOutput {
+	if jsonOutput || !isTTY {
 		return printRawJSON(domain, freshScan)
 	}
 
@@ -1094,7 +1090,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 func runScore(cmd *cobra.Command, args []string) error {
 	domain := normalizeDomain(args[0])
 
-	if jsonOutput {
+	if jsonOutput || !isTTY {
 		// Fetch full analysis but output only minimal score JSON
 		result, err := fetchAnalysisStream(domain, freshScan)
 		if err != nil {
@@ -1133,7 +1129,7 @@ func runCompare(cmd *cobra.Command, args []string) error {
 	d1 := normalizeDomain(args[0])
 	d2 := normalizeDomain(args[1])
 
-	if jsonOutput {
+	if jsonOutput || !isTTY {
 		// JSON mode: plain request, no progress
 		return runCompareJSON(d1, d2)
 	}
@@ -1359,7 +1355,7 @@ func runAI(cmd *cobra.Command, args []string) error {
 
 	// Phase 1: Ensure domain is analyzed (progress bar for fresh, instant for cached)
 	// This populates the server cache so the AI endpoint can read signals without re-analyzing.
-	if !jsonOutput {
+	if !jsonOutput && isTTY {
 		printedLines := 0
 		_, _ = fetchAnalysisStreamWithProgress(domain, func(checks []sseCheck, completed, total int) {
 			clearProgress(printedLines)
@@ -1400,7 +1396,7 @@ func runAI(cmd *cobra.Command, args []string) error {
 	req.Header.Set("User-Agent", "yoke-cli/"+version)
 	req.Header.Set("X-OpenRouter-Key", cfg.OpenRouterKey)
 
-	if jsonOutput {
+	if jsonOutput || !isTTY {
 		resp, err := client.Do(req)
 		if err != nil {
 			return fmt.Errorf("request failed: %w", err)

@@ -20,14 +20,13 @@ LATEST=$(curl -sfL "https://api.github.com/repos/$REPO/releases/latest" | grep '
 if [ -z "$LATEST" ]; then
   echo "error: could not determine latest release" >&2; exit 1
 fi
-VERSION="${LATEST#v}"
 
 echo "  Version: $LATEST ($OS/$ARCH)"
 
 # Build download URL
 EXT="tar.gz"
 [ "$OS" = "windows" ] && EXT="zip"
-URL="https://github.com/$REPO/releases/download/$LATEST/yoke_${VERSION}_${OS}_${ARCH}.${EXT}"
+URL="https://github.com/$REPO/releases/download/$LATEST/yoke_${OS}_${ARCH}.${EXT}"
 
 # Pick install dir
 if [ -w /usr/local/bin ]; then
