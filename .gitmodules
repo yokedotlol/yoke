@@ -1,0 +1,3 @@
+[submodule ".ai/base"]
+	path = .ai/base
+	url = https://github.com/yokedotlol/dotai.git
