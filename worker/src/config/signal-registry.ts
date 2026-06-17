@@ -99,6 +99,13 @@ export interface SignalDef {
    */
   requiresHttpAccess?: boolean;
   /**
+   * When true, this signal only applies to domains that receive inbound email.
+   * Domains with null MX (RFC 7505, "0 .") explicitly reject all inbound mail,
+   * so these signals are excluded from scoring and the absent-signal pool.
+   * E.g. MTA-STS, TLS-RPT, BIMI, DKIM — all meaningless when mail can't arrive.
+   */
+  requiresInboundEmail?: boolean;
+  /**
    * Observed prevalence of this signal firing as "good" across the domain corpus.
    * Range 0–1. Used by the IDF-influenced absent penalty:
    *   absent_penalty = ABSENT_DEDUCTION_FACTOR × (1 + goodPrevalence)
@@ -743,6 +750,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     fixDescription: "Configure MTA-STS policy",
     weightRange: [2, 2],
     goodPrevalence: 0.018,
+    requiresInboundEmail: true,
     promptGuidance:
       "MTA-STS enforces TLS for email transport. mode=enforce is strong. mode=testing is a good step. Bonus-only.",
   },
@@ -1606,6 +1614,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     dependsOn: "dmarc_reject",
     weightRange: [2, 2],
     goodPrevalence: 0.142,
+    requiresInboundEmail: true,
     promptGuidance:
       "Requires DMARC enforcement. Indicates advanced email maturity. VMC (Verified Mark Certificate) is even stronger. Absence is neutral — reward-only.",
   },
@@ -1698,6 +1707,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     canBeGood: true,
     weightRange: [1, 1],
     goodPrevalence: 0.04,
+    requiresInboundEmail: true,
     promptGuidance:
       "TLS Reporting (RFC 8460) enables reports on TLS delivery failures. Companion to MTA-STS. Adoption <1%. Bonus-only — advanced signal.",
   },
@@ -2176,6 +2186,8 @@ export interface ScoringContext {
   wordpress?: boolean;
   /** True when the HTTP probe was blocked (403/etc.), meaning header/content-based signals couldn't be assessed */
   httpBlocked?: boolean;
+  /** True when the domain has a null MX record (RFC 7505, "0 ."), meaning it explicitly rejects all inbound email */
+  nullMx?: boolean;
 }
 
 /** Precomputed max achievable good-bonus per axis (all contexts assumed present).
@@ -2204,6 +2216,8 @@ export function computeEffectiveMaxGoodWeight(ctx?: ScoringContext): Record<Axis
     if (def.requiresContext && !ctx[def.requiresContext]) continue;
     // Skip HTTP-dependent signals when the HTTP probe was blocked
     if (def.requiresHttpAccess && ctx.httpBlocked) continue;
+    // Skip inbound-email signals when domain has null MX (RFC 7505)
+    if (def.requiresInboundEmail && ctx.nullMx) continue;
     const axis = def.axis;
     result[axis] = (result[axis] ?? 0) + def.weightRange[1];
   }

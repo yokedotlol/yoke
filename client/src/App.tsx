@@ -962,6 +962,11 @@ export function App() {
                   }}
                   placeholder="example.com"
                   className="flex-1 bg-transparent px-3 py-3 outline-none min-w-0"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  inputMode="url"
                   style={{
                     fontFamily: "var(--font-mono)",
                     fontSize: "14px",
@@ -1230,6 +1235,8 @@ export function App() {
           )}
           <a href="/docs">docs</a>
           <span className="dot"> · </span>
+          <a href="/tools">tools</a>
+          <span className="dot"> · </span>
           {!cfg.hideGithub && (
             <>
               <a href={cfg.repoUrl} target="_blank" rel="noopener noreferrer">
@@ -1249,6 +1256,10 @@ export function App() {
           <span className="dot"> · </span>
           <a href="https://ns.lol" target="_blank" rel="noopener noreferrer">
             ns
+          </a>
+          <span className="dot"> · </span>
+          <a href="https://xhttp.lol" target="_blank" rel="noopener noreferrer">
+            xhttp
           </a>
         </div>
         <a

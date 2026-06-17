@@ -7,6 +7,7 @@ import CliPage from "./components/CliPage";
 import DocsPage from "./components/DocsPage";
 import PrivacyPage from "./components/PrivacyPage";
 import TermsPage from "./components/TermsPage";
+import ToolsPage from "./components/ToolsPage";
 import "./theme.css";
 
 // Apply saved theme before first paint to avoid flash
@@ -57,6 +58,7 @@ function Router() {
   if (path === "/docs") return <DocsPage />;
   if (path === "/privacy") return <PrivacyPage />;
   if (path === "/terms") return <TermsPage />;
+  if (path === "/tools") return <ToolsPage />;
   return <App />;
 }
 

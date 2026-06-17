@@ -259,6 +259,8 @@ export function computeAxisScore(findings: Finding[], axis?: Axis, scoringCtx?: 
     if (suppressedFromAbsent.has(id)) continue;
     if (def.requiresContext && scoringCtx && !scoringCtx[def.requiresContext as keyof typeof scoringCtx]) continue;
     if (def.requiresHttpAccess && scoringCtx?.httpBlocked) continue;
+    // Skip inbound-email signals when domain has null MX (RFC 7505)
+    if (def.requiresInboundEmail && scoringCtx?.nullMx) continue;
     // Skip child if parent is also absent — prevents double-counting correlated signals
     if (def.dependsOn && !firedSignalIds.has(def.dependsOn)) continue;
     const w = def.weightRange[1];
@@ -333,6 +335,8 @@ export function computeAxisScoreWithDeductions(
       if (suppressedFromAbsent.has(id)) continue;
       if (def.requiresContext && scoringCtx && !scoringCtx[def.requiresContext as keyof typeof scoringCtx]) continue;
       if (def.requiresHttpAccess && scoringCtx?.httpBlocked) continue;
+      // Skip inbound-email signals when domain has null MX (RFC 7505)
+      if (def.requiresInboundEmail && scoringCtx?.nullMx) continue;
       // Skip child if parent is also absent — prevents double-counting correlated signals
       if (def.dependsOn && !firedSignals.has(def.dependsOn)) continue;
       const w = def.weightRange[1];
@@ -4475,10 +4479,15 @@ export function calculateDomainScore(opts: {
       f.signal === "site_unreachable_visibility",
   );
 
+  // Detect null MX (RFC 7505) — domain explicitly rejects all inbound email.
+  // Null MX is a single MX record with priority 0 and target "." (the root).
+  const nullMx = opts.dnsRecords.some((r) => r.type === "MX" && /^0\s+\.\s*$/.test(r.data));
+
   const scoringCtx: ScoringContext = {
     cookies: !!(opts.cookieSecurity && opts.cookieSecurity.cookies.length > 0),
     wordpress: !!opts.wordpress,
     httpBlocked,
+    nullMx,
   };
 
   for (const axis of axes) {

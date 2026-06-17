@@ -1128,6 +1128,11 @@ export function CompareView({ initialDomain }: { initialDomain?: string }) {
             }}
             placeholder="domain1.com"
             className="flex-1 bg-transparent px-3 py-2 rounded-md outline-none"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            inputMode="url"
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: "13px",
@@ -1163,6 +1168,11 @@ export function CompareView({ initialDomain }: { initialDomain?: string }) {
             }}
             placeholder="domain2.com"
             className="flex-1 bg-transparent px-3 py-2 rounded-md outline-none"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            inputMode="url"
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: "13px",
