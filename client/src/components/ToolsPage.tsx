@@ -9,7 +9,7 @@ interface Tool {
   tagline: string;
   description: string;
   website: string;
-  cli: string;
+  cli?: string;
   docs: string;
   github: string;
   isHub?: boolean;
@@ -24,7 +24,7 @@ const tools: Tool[] = [
     accent: "#58a6ff",
     tagline: "Free Domain Intelligence & OSINT",
     description:
-      "Comprehensive domain analysis — runs 545 checks across 6 axes (security, speed, foundations, reputation, discoverability, email). The hub that ties everything together.",
+      "Comprehensive domain analysis — 157 scoring signals across 6 axes (security, speed, foundations, reputation, discoverability, email). The hub that ties everything together.",
     website: "https://yoke.lol",
     cli: "brew install yokedotlol/tap/yoke",
     docs: "https://yoke.lol/docs",
@@ -66,6 +66,17 @@ const tools: Tool[] = [
     cli: "brew install yokedotlol/tap/xhttp",
     docs: "https://xhttp.lol/api/docs",
     github: "https://github.com/yokedotlol/xhttp",
+  },
+  {
+    name: "vrfy",
+    domain: "vrfy.lol",
+    accent: "#f97316",
+    tagline: "fast, API-first email validation",
+    description:
+      "Know everything DNS can tell you about an email address. MX, SPF, DKIM, DMARC, disposable provider detection — no SMTP probes, no accounts.",
+    website: "https://vrfy.lol",
+    docs: "https://vrfy.lol/api/docs",
+    github: "https://github.com/yokedotlol/vrfy-lol",
   },
 ];
 
@@ -219,21 +230,23 @@ function ToolCard({ tool }: { tool: Tool }) {
       </div>
 
       {/* CLI install */}
-      <div
-        style={{
-          background: "var(--bg)",
-          border: "1px solid var(--border)",
-          borderRadius: 6,
-          padding: "8px 12px",
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          color: "var(--dim)",
-          overflowX: "auto",
-        }}
-      >
-        <span style={{ color: "var(--muted)", userSelect: "none" }}>$ </span>
-        {tool.cli}
-      </div>
+      {tool.cli && (
+        <div
+          style={{
+            background: "var(--bg)",
+            border: "1px solid var(--border)",
+            borderRadius: 6,
+            padding: "8px 12px",
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            color: "var(--dim)",
+            overflowX: "auto",
+          }}
+        >
+          <span style={{ color: "var(--muted)", userSelect: "none" }}>$ </span>
+          {tool.cli}
+        </div>
+      )}
     </div>
   );
 }
@@ -306,9 +319,10 @@ export default function ToolsPage() {
         />
         <P style={{ margin: 0 }}>
           <strong style={{ color: "var(--text)" }}>yoke.lol</strong> is the hub — comprehensive domain intelligence
-          across 545 checks. The satellite tools (<strong style={{ color: "var(--text)" }}>certs</strong>,{" "}
-          <strong style={{ color: "var(--text)" }}>ns</strong>, <strong style={{ color: "var(--text)" }}>xhttp</strong>)
-          go deeper on TLS, DNS, and HTTP respectively. Scan on yoke, then drill down.
+          across 157 scoring signals. The satellite tools (<strong style={{ color: "var(--text)" }}>certs</strong>,{" "}
+          <strong style={{ color: "var(--text)" }}>ns</strong>, <strong style={{ color: "var(--text)" }}>xhttp</strong>,{" "}
+          <strong style={{ color: "var(--text)" }}>vrfy</strong>) go deeper on TLS, DNS, HTTP, and email respectively.
+          Scan on yoke, then drill down.
         </P>
       </div>
 
@@ -428,24 +442,32 @@ export default function ToolsPage() {
         >
           {[
             {
-              label: "API-first",
-              detail: "Every tool is curl-friendly. JSON by default for programmatic clients, HTML for browsers.",
+              label: "No PII logged",
+              detail:
+                "Emails and sensitive inputs are POST-only — never in URLs, server logs, or CDN analytics. Privacy by architecture.",
             },
             {
               label: "No accounts",
-              detail: "No signups, no API keys, no auth. Rate-limited per IP — just use it.",
+              detail: "No signups, no API keys, no newsletter, no login. Rate-limited per IP — just use it.",
             },
             {
-              label: "POST-only for PII",
-              detail: "Domains never appear in URLs, server logs, or CDN analytics. Privacy by architecture.",
+              label: "No cookies · No ads",
+              detail:
+                "Zero tracking. No analytics cookies, no ad networks, no third-party pixels. Nothing phones home.",
             },
             {
-              label: "Dark-mode-first",
-              detail: "Inter + JetBrains Mono, terminal-aesthetic input, dark by default. Multiple themes on yoke.",
+              label: "No premium tier",
+              detail:
+                'Everything is free. No upsells, no "upgrade to unlock", no gated features. Same tool for everyone.',
             },
             {
-              label: "$5/mo budget",
-              detail: "Each tool runs on Cloudflare Workers at ~$5/month. No paid tiers (yet).",
+              label: "Abuse-resistant",
+              detail:
+                "Per-IP rate limiting, proof-of-work challenges, SSRF protection. Designed to prevent weaponization.",
+            },
+            {
+              label: "API-first",
+              detail: "Every tool is curl-friendly. JSON by default for programmatic clients, HTML for browsers.",
             },
             {
               label: "MIT licensed",
