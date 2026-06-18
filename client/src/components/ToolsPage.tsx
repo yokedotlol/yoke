@@ -80,8 +80,6 @@ const tools: Tool[] = [
   },
 ];
 
-const accentColors = tools.map((t) => ({ name: t.name, domain: t.domain, hex: t.accent }));
-
 /* ── Shared styles ──────────────────────────────────────────────────── */
 
 const P = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
@@ -349,72 +347,6 @@ export default function ToolsPage() {
         >
           {tools.map((tool) => (
             <ToolCard key={tool.domain} tool={tool} />
-          ))}
-        </div>
-      </div>
-
-      {/* Accent color system (C2) */}
-      <div style={{ marginBottom: 40 }}>
-        <h2
-          style={{
-            fontFamily: "var(--font-ui)",
-            fontSize: 16,
-            fontWeight: 700,
-            color: "var(--text)",
-            marginBottom: 14,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Accent colors
-        </h2>
-        <P>Each tool has its own accent color to maintain identity across the family.</P>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
-          {accentColors.map((c) => (
-            <div
-              key={c.name}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                padding: "10px 14px",
-                minWidth: 160,
-              }}
-            >
-              <div
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 4,
-                  background: c.hex,
-                  flexShrink: 0,
-                }}
-              />
-              <div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--text)",
-                  }}
-                >
-                  {c.name}
-                </div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 10,
-                    color: "var(--dim)",
-                    marginTop: 1,
-                  }}
-                >
-                  {c.hex}
-                </div>
-              </div>
-            </div>
           ))}
         </div>
       </div>
