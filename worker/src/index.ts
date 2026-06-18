@@ -9,6 +9,7 @@ import * as apiAi from "./routes/api-ai";
 import * as apiBadge from "./routes/api-badge";
 import * as apiCore from "./routes/api-core";
 import * as apiEnrichment from "./routes/api-enrichment";
+import * as apiInternal from "./routes/api-internal";
 import * as pages from "./routes/pages";
 import type { RouteContext } from "./routes/shared";
 import { jsonError } from "./routes/shared";
@@ -110,6 +111,10 @@ export default {
         // AI endpoints
         const aiResp = await apiAi.handle(rc);
         if (aiResp) return aiResp;
+
+        // Internal endpoints (service bindings from .lol family tools)
+        const internalResp = await apiInternal.handle(rc);
+        if (internalResp) return internalResp;
 
         // Admin, utility, and docs endpoints (also handles /usage)
         const adminResp = await apiAdmin.handle(rc);

@@ -14,6 +14,8 @@ export interface Env {
   GOOGLE_PAGESPEED_API_KEY?: string;
   WHOISFREAKS_API_KEY?: string;
   ADMIN_KEY?: string;
+  /** Shared key for .lol family service bindings */
+  SERVICE_KEY?: string;
   BASE_URL?: string;
   FLY_PROBE_URL?: string;
   FLY_AUTH_SECRET?: string;
