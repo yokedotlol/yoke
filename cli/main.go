@@ -982,6 +982,7 @@ func wrapText(text string, width int) []string {
 
 var jsonOutput bool
 var freshScan bool
+var rawOutput bool
 
 func main() {
 	// Initialize API base URL from config/env (supports self-hosting)
@@ -998,6 +999,9 @@ func main() {
 		Version: version,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
+				if isStdinPipe() {
+					return nil // batch mode via stdin
+				}
 				cmd.Help()
 				os.Exit(0)
 			}
@@ -1006,12 +1010,18 @@ func main() {
 		RunE:    runAnalyze,
 		SilenceUsage: true,
 		Example: `  yoke stripe.com                        # full analysis
-  yoke stripe.com --fresh                  # bypass cache, force fresh scan
+  yoke stripe.com --fresh                # bypass cache, force fresh scan
   yoke stripe.com --json                 # raw JSON output
   yoke stripe.com --json | jq .ssl       # extract specific fields
+  yoke fast stripe.com                   # quick lightweight scan
   yoke score google.com                  # quick score check
+  yoke dns stripe.com                    # DNS records via ns.lol
+  yoke headers stripe.com               # security headers via xhttp.lol
+  yoke tls stripe.com                    # TLS/cert details via certs.lol
+  yoke check stripe.com --min-grade B    # CI gate (exit 1 if below B)
   yoke compare github.com gitlab.com     # side-by-side comparison
-  yoke ai stripe.com                     # AI-powered analysis`,
+  yoke ai stripe.com                     # AI-powered analysis
+  cat domains.txt | yoke fast --json     # batch processing via stdin`,
 	}
 	// Show help instead of bare error when no args provided
 	root.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
@@ -1020,11 +1030,13 @@ func main() {
 	})
 	root.PersistentFlags().BoolVar(&jsonOutput, "json", false, "raw JSON output")
 	root.PersistentFlags().BoolVar(&freshScan, "fresh", false, "bypass cache and force a fresh scan")
+	root.PersistentFlags().BoolVar(&rawOutput, "raw", false, "minimal pipe-friendly output (score number, grade letter, etc.)")
+	root.MarkFlagsMutuallyExclusive("json", "raw")
 
 	score := &cobra.Command{
 		Use:   "score <domain>",
 		Short: "Quick score and rating",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE:  runScore,
 	}
 
@@ -1058,8 +1070,12 @@ func main() {
 	configCmd.Flags().Bool("suppress-ai-hint", false, "hide the AI hint from analyze output")
 	configCmd.Flags().Bool("show-ai-hint", false, "re-enable the AI hint")
 
-	root.AddCommand(score, compare, ai, configCmd)
-	root.CompletionOptions.DisableDefaultCmd = true
+	root.AddCommand(score, compare, ai, configCmd,
+		newFastCmd(), newDNSCmd(), newHeadersCmd(), newTLSCmd(), newCheckCmd())
+
+	// Enable shell completion subcommand (bash, zsh, fish, powershell)
+	// Usage: yoke completion bash > /etc/bash_completion.d/yoke
+	//        yoke completion zsh > "${fpath[1]}/_yoke"
 	versionTmpl := "yoke {{.Version}}"
 	if commit != "none" {
 		versionTmpl += " (" + commit + ")"
@@ -1073,7 +1089,27 @@ func main() {
 }
 
 func runAnalyze(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		// Check for piped stdin
+		if isStdinPipe() {
+			return runBatch(cmd, args, runSingleAnalyze)
+		}
+		cmd.Help()
+		os.Exit(0)
+	}
 	domain := normalizeDomain(args[0])
+
+	if rawOutput {
+		result, err := fetchFastResult(domain)
+		if err != nil {
+			return err
+		}
+		if result.Score == nil {
+			return fmt.Errorf("no score data for %s", domain)
+		}
+		fmt.Println(result.Score.Composite)
+		return nil
+	}
 
 	if jsonOutput || !isTTY {
 		return printRawJSON(domain, freshScan)
@@ -1088,41 +1124,14 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 }
 
 func runScore(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		if isStdinPipe() {
+			return runBatch(cmd, args, runSingleScore)
+		}
+		return fmt.Errorf("domain required: yoke score <domain>\n\nOr pipe domains via stdin: cat domains.txt | yoke score")
+	}
 	domain := normalizeDomain(args[0])
-
-	if jsonOutput || !isTTY {
-		// Fetch full analysis but output only minimal score JSON
-		result, err := fetchAnalysisStream(domain, freshScan)
-		if err != nil {
-			return err
-		}
-		if result.Score == nil {
-			return fmt.Errorf("no score data for %s", domain)
-		}
-		minimal := struct {
-			Domain    string `json:"domain"`
-			Score     int    `json:"score"`
-			Tier      string `json:"tier"`
-		}{
-			Domain:    result.Domain,
-			Score:     result.Score.Composite,
-			Tier:      result.Score.Tier,
-		}
-		out, _ := json.MarshalIndent(minimal, "", "  ")
-		fmt.Println(string(out))
-		return nil
-	}
-
-	result, err := fetchAnalysisStream(domain, freshScan)
-	if err != nil {
-		return err
-	}
-	if result.Score == nil {
-		return fmt.Errorf("no score data for %s", domain)
-	}
-	tier := tierStyle(result.Score.Tier).Bold(true).Render(result.Score.Tier)
-	fmt.Printf("%s  %d/100  %s\n", title.Render(domain), result.Score.Composite, tier)
-	return nil
+	return runSingleScore(domain)
 }
 
 func runCompare(cmd *cobra.Command, args []string) error {

@@ -209,9 +209,9 @@ func TestSortedAxesEmpty(t *testing.T) {
 }
 
 func TestSortedAxesPartial(t *testing.T) {
-	axes := map[string]AxisVal{"performance": {}, "trust": {}}
+	axes := map[string]AxisVal{"speed": {}, "email": {}}
 	got := sortedAxes(axes)
-	want := []string{"performance", "trust"}
+	want := []string{"speed", "email"}
 	if len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
 		t.Errorf("got %#v, want %#v", got, want)
 	}
@@ -294,8 +294,9 @@ func buildRoot() *cobra.Command {
 		RunE:    runAnalyze,
 	}
 	root.PersistentFlags().BoolVar(&jsonOutput, "json", false, "raw JSON output")
+	root.PersistentFlags().BoolVar(&rawOutput, "raw", false, "minimal output")
 
-	score := &cobra.Command{Use: "score <domain>", Args: cobra.ExactArgs(1), RunE: runScore}
+	score := &cobra.Command{Use: "score <domain>", Args: cobra.MaximumNArgs(1), RunE: runScore}
 	compare := &cobra.Command{Use: "compare <domain1> <domain2>", Args: cobra.ExactArgs(2), RunE: runCompare}
 	ai := &cobra.Command{Use: "ai <domain>", Args: cobra.MaximumNArgs(1), RunE: runAI}
 	ai.Flags().Bool("setup", false, "")
@@ -305,15 +306,21 @@ func buildRoot() *cobra.Command {
 	configCmd.Flags().Bool("suppress-ai-hint", false, "")
 	configCmd.Flags().Bool("show-ai-hint", false, "")
 
-	root.AddCommand(score, compare, ai, configCmd)
+	root.AddCommand(score, compare, ai, configCmd,
+		newFastCmd(), newDNSCmd(), newHeadersCmd(), newTLSCmd(), newCheckCmd())
 	return root
 }
 
 func TestRootHasSubcommands(t *testing.T) {
 	root := buildRoot()
-	want := map[string]bool{"score": false, "compare": false, "ai": false, "config": false}
+	want := map[string]bool{
+		"score": false, "compare": false, "ai": false, "config": false,
+		"fast": false, "dns": false, "headers": false, "tls": false, "check": false,
+	}
 	for _, c := range root.Commands() {
-		want[c.Name()] = true
+		if _, ok := want[c.Name()]; ok {
+			want[c.Name()] = true
+		}
 	}
 	for name, found := range want {
 		if !found {
@@ -352,6 +359,13 @@ func TestJSONFlagExists(t *testing.T) {
 	root := buildRoot()
 	if root.PersistentFlags().Lookup("json") == nil {
 		t.Error("--json persistent flag not found")
+	}
+}
+
+func TestRawFlagExists(t *testing.T) {
+	root := buildRoot()
+	if root.PersistentFlags().Lookup("raw") == nil {
+		t.Error("--raw persistent flag not found")
 	}
 }
 
