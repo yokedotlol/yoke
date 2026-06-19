@@ -373,3 +373,40 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **Rejected:** Removing rate limiting from track-tab entirely → still useful as a safety valve even for cheap endpoints. Keeping old limits and accepting overage → overage is cheap ($0.15/M) but unnecessary risk for a pre-launch project.
 
 **Directive:** Rate limit defaults are set for the $5/mo Workers Paid plan's included DO tier. Env var overrides (`RATE_LIMIT_*`) let self-hosters or future plan upgrades adjust without code changes. The 4 configurable limits (analyze, compare, subdomain, availability) are the only ones exposed as env vars — the rest are hardcoded in `shared.ts`.
+
+
+---
+
+### 2026-06-17 — Null MX scoring: requiresInboundEmail flag
+
+**What changed:** Added `requiresInboundEmail` flag to the signal registry. Signals tagged `requiresInboundEmail: true` (`mta_sts`, `tls_rpt`, `bimi_record`) are excluded from both the absent pool and the effective max weight denominator when a domain has null MX (RFC 7505 — intentional no-mail declaration).
+**Why:** Null MX domains don't receive inbound email, so penalizing them for missing MTA-STS/TLS-RPT/BIMI is architecturally wrong. These signals only matter for domains that accept mail.
+**DKIM excluded from the flag:** DKIM is about signing outbound email, not receiving. A null MX domain might still send email and should still have DKIM.
+**Detection:** Null MX detected via regex matching `0 .` in MX records.
+**Rejected:** Skipping the entire email axis for null MX domains → email axis applies to ALL domains (see 2026-06-03 decision). SPF/DMARC/DKIM remain scored.
+**Directive:** Signals with `requiresInboundEmail: true` are excluded from scoring when null MX is detected. The flag is per-signal, not per-axis.
+
+---
+
+### 2026-06-17 — "Level-Up Plan" renamed to "Score Breakdown" / "Score Waterfall"
+
+**What changed:** Renamed the "Level-Up Plan" feature to "Score Breakdown" (UI label) and "Score Waterfall" (internal/technical name). The feature shows per-signal deductions and opportunities for each axis.
+**Why:** "Level-Up" implied gamification that didn't match the tool's professional positioning. "Score Breakdown" is descriptive and neutral. "Waterfall" describes the visual pattern (start at 100, each deduction cascades down).
+**Directive:** Use "Score Breakdown" in user-facing UI/docs. Use "waterfall" in code identifiers and technical docs. Historical DECISIONS entries referencing "Level-Up" are append-only and preserved as-is.
+
+---
+
+### 2026-06-18 — Service binding architecture: production yes, self-hosting A/B/C framework
+
+**What changed:** Clarified service binding strategy across two independent dimensions:
+
+1. **Production service bindings (yoke → satellites via CF Service Bindings):** YES. Yoke calls satellite workers (certs, ns, xhttp, vrfy) directly via CF bindings — perf win, no egress, no public HTTP round-trip. vrfy binding already exists (email auth cache, clean fallback). Other satellites to follow.
+
+2. **Self-hosting architecture — three options identified:**
+   - **A) Yoke-only self-host (ship now):** Satellites are OSS, best-effort docs. Yoke is the supported self-host target.
+   - **B) Full white-label stack (north star):** Dedicated domain (e.g. yoke-test.lol), subdomains per tool (ns.yoke-test.lol, certs.yoke-test.lol, etc.), fully self-hostable and white-labelable.
+   - **C) Separate codebase versions for self-hosting:** Rejected — "gross, yuck, boo hiss, bad."
+
+**Constraint:** Nothing deployed now can be fundamentally incompatible with B. Satellite integrations must be modular — binding vs HTTP call vs localhost swappable by config, not by code change. B should be additive, not a rewrite.
+
+**Directive:** Ship A now. Build toward B. Every satellite integration must be behind an interface where the backing implementation is swappable by config. Production CF bindings are internal to the deployment and invisible to self-hosters.

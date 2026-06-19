@@ -59,8 +59,8 @@
 - [ ] **"tier" not "grade"** in all API responses, UI, and documentation.
   - _Verify:_ `grep -ri "grade" --include="*.ts" --include="*.tsx" worker/src/ client/src/` — should find only legacy D1 column names and comments, never user-facing strings.
 
-- [ ] **"Level-Up" not "Grade-Up"** everywhere.
-  - _Verify:_ `grep -ri "grade.up\|gradeup\|grade_up" --include="*.ts" --include="*.tsx"` — should return zero results.
+- [ ] **"Score Breakdown" not "Level-Up" or "Grade-Up"** everywhere. (Formerly "Level-Up Plan", renamed to "Score Breakdown" / "Score Waterfall" in June 2026.)
+  - _Verify:_ `grep -ri "grade.up\|gradeup\|grade_up\|level.up" --include="*.ts" --include="*.tsx"` — should return zero results in user-facing strings.
 
 ## Security & Operations
 

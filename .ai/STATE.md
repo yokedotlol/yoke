@@ -2,16 +2,16 @@
 
 > Volatile snapshot of the project. Updated after significant sessions.
 
-**Last updated:** 2026-06-16
+**Last updated:** 2026-06-18
 
 ## Versions
 
 | Component | Version | Source |
 |-----------|---------|--------|
 | Worker (service) | 2.4.0 | `YOKE_VERSION` in `worker/src/helpers.ts` |
-| CLI | 1.5.0 | `cli/` GoReleaser tag `cli/v1.5.0` |
+| CLI | 2.2.0 | `cli/` GoReleaser tag `cli/v2.2.0` |
 | MCP Server | 1.0.0 | `mcp/package.json` |
-| Chrome Extension | 1.5.0 | `extension/manifest.json` (submitted + live on CWS) |
+| Chrome Extension | 2.0.0 | `extension/manifest.json` (code committed; CWS publish blocked — OAuth expired, older version ~1.5.x still live on CWS) |
 
 ## Scoring
 

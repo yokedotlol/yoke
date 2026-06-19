@@ -108,7 +108,7 @@ Docker Compose is the maintained path. Key patterns:
 ## Testing
 
 ```bash
-npx vitest run        # 505 tests, all should pass
+npx vitest run        # 438 tests, all should pass
 cd fly-proxy && go test -v   # Go proxy unit tests
 ```
 
