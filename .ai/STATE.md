@@ -19,7 +19,7 @@
 |--------|-------|
 | Scoring model | Deductive (budget-based, start at 100) |
 | Axes | 6: Security, Speed, Foundations, Reputation, Discoverability, Email |
-| Signal count | 153 |
+| Signal count | 158 |
 | Composite method | Weighted arithmetic mean + outlier floor cap |
 | Tier labels | Excellent, Strong, Moderate, Weak, Critical |
 | Absent penalty | 0.30 × (1 + goodPrevalence) per signal (IDF-influenced) |
@@ -31,10 +31,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Total tests | 372 |
+| Total tests | 438 |
 | Test files | 25 |
 | Calibration tests | 33 (in `scoring-calibration.test.ts`) |
-| Total expect() calls | 713 |
+| Total expect() calls | 869 |
 
 ## Infrastructure
 
