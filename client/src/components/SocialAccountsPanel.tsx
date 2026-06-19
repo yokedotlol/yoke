@@ -24,8 +24,7 @@ export function SocialAccountsPanel({ data }: { data: AnalysisResult }) {
     >
       <div className="p-3 flex flex-wrap gap-2">
         {accounts.map((acc) => {
-          const trust =
-            acc.found_via === "rel-me" ? "verified" : acc.found_via === "homepage" ? "linked" : "probable";
+          const trust = acc.found_via === "rel-me" ? "verified" : acc.found_via === "homepage" ? "linked" : "probable";
           const tooltipText =
             trust === "verified"
               ? 'Verified via rel="me" — the site explicitly claims ownership of this social profile'

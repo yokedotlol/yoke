@@ -22,7 +22,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
-    const result = await getCompanyInfo(env.REFERENCE_DATA!, domain, body.force, env.STATS_DB);
+    const result = await getCompanyInfo(env.REFERENCE_DATA, domain, body.force, env.STATS_DB);
     recordEndpointHit(env, "company");
     _track("company", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -39,7 +39,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
-    const result = await getNews(env.REFERENCE_DATA!, domain, env.STATS_DB);
+    const result = await getNews(env.REFERENCE_DATA, domain, env.STATS_DB);
     recordEndpointHit(env, "news");
     _track("news", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -56,7 +56,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
-    const result = await getSocialAccounts(env.REFERENCE_DATA!, domain, env);
+    const result = await getSocialAccounts(env.REFERENCE_DATA, domain, env);
     recordEndpointHit(env, "social");
     _track("social", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -78,7 +78,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     if (!ipv4Re.test(ip) && !ipv6Re.test(ip)) {
       return jsonError("Invalid IP address format", "INVALID_IP", 400);
     }
-    const result = await getReverseIP(env.REFERENCE_DATA!, ip);
+    const result = await getReverseIP(env.REFERENCE_DATA, ip);
     recordEndpointHit(env, "reverse-ip");
     _track("reverse-ip", 200);
     return addHeaders(json(result), rl.headers);
