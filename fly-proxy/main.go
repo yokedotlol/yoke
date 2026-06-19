@@ -943,6 +943,12 @@ func classifyCipher(cs *tls.CipherSuite) string {
 		return "strong"
 	}
 
+	// Everything below is "weak"; anything that survives all checks falls through to "acceptable".
+	// This catches DHE+AEAD and ECDHE+CBC — both provide forward secrecy but have caveats:
+	//   DHE: LogJam risk with <2048-bit groups, slower than ECDHE, dropped from Mozilla Modern config.
+	//   ECDHE+CBC: forward secrecy present but CBC mode has padding oracle concerns (POODLE/Lucky13).
+	// "Acceptable" = not a vulnerability, but not what you'd deploy today. ECDHE+AEAD is the standard.
+
 	// Weak: 3DES (Sweet32 attack), CBC mode (padding oracle attacks), RSA key exchange (no forward secrecy)
 	if strings.Contains(name, "3DES") || strings.Contains(name, "DES_EDE") {
 		return "weak"

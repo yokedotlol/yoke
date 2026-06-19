@@ -149,8 +149,8 @@ const html = `<!DOCTYPE html>
       ],
       "author": {
         "@type": "Person",
-        "name": "Kurt Payne",
-        "url": "https://github.com/kurtpayne"
+        "name": "yokedotlol",
+        "url": "https://github.com/yokedotlol"
       }
     }
     </script>

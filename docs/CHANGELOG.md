@@ -182,7 +182,7 @@ All notable changes to Yoke are documented here.
 - **Client weight sync** — DomainScore.tsx fallback weights and summary text now match fixed weights
 - **Stale archetype note** — `/api/scoring` endpoint text updated for fixed weights
 - **www. prefix** — stripped during domain normalization (worker + CLI)
-- **Path in URL** — `/github.com/kurtpayne` now 301-redirects to `/github.com`
+- **Path in URL** — `/github.com/user` now 301-redirects to `/github.com`
 - **/cli route** — browsers get SPA shell instead of 400 JSON error
 - **Duplicate /install.sh** — removed dead route from index.ts
 - **Title reset** — document title resets on logo click / home navigation

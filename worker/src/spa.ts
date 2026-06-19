@@ -272,7 +272,7 @@ export async function handleSPARoute(request: Request, env: Env, path: string): 
     return htmlResponse(ogHtml, { "Cache-Control": "public, max-age=3600", Vary: "Accept" }, baseUrl);
   }
 
-  // ── Domain with trailing path: /github.com/kurtpayne → redirect to /github.com ──
+  // ── Domain with trailing path: /github.com/user → redirect to /github.com ──
   const domainWithPathMatch = matchDomainWithPath(path);
   if (domainWithPathMatch && method === "GET") {
     return new Response(null, {

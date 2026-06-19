@@ -86,7 +86,7 @@ Status: new | recurring
 
 Severities: 🔴 CRITICAL (docs actively mislead), 🟠 HIGH (significant gap), 🟡 MEDIUM (incomplete/stale), 🔵 LOW (polish), ⚪ NOTE, ✅ STRENGTH
 
-End with **Questions for Kurt** — documentation decisions that depend on product direction (e.g., "Should the scoring methodology be fully public or keep some proprietary?").
+End with **Questions for the maintainer** — documentation decisions that depend on product direction (e.g., "Should the scoring methodology be fully public or keep some proprietary?").
 
 ## Key Files
 - `README.md`

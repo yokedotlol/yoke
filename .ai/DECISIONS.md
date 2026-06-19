@@ -316,7 +316,7 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 ### 2026-06-04 — Fly health endpoint requires auth
 
 **What changed:** `/health` on the Fly proxy now requires `Authorization: Bearer <FLY_AUTH_SECRET>`. Returns 401 without it. Exposes health tier (green/yellow/red) but no raw metrics.
-**Why:** Kurt's directive: "Nobody touches the proxy. It's an abstraction not an entry point." Health data (even coarse tiers) reveals operational state — no reason to expose it publicly.
+**Why:** The maintainer's directive: "Nobody touches the proxy. It's an abstraction not an entry point." Health data (even coarse tiers) reveals operational state — no reason to expose it publicly.
 **Rejected:** Public health endpoint with sanitized output → still reveals operational state, no benefit for a non-user-facing service.
 **Directive:** All Fly proxy endpoints require `FLY_AUTH_SECRET` auth. No public endpoints on the proxy.
 
