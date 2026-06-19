@@ -550,7 +550,7 @@ async function runAnalysisCore(
   const circuitStates = new Map<string, boolean>();
   if (env.REFERENCE_DATA) {
     const circuitChecks = registry.map(async (check) => {
-      const open = await isCircuitOpen(env.REFERENCE_DATA!, check.key);
+      const open = await isCircuitOpen(env.REFERENCE_DATA, check.key);
       circuitStates.set(check.key, open);
       if (open) degradedProviders.push(check.key);
     });
@@ -628,7 +628,7 @@ async function runAnalysisCore(
 
         // Record success with circuit breaker (only when we actually called the upstream)
         if (!skipped && env.REFERENCE_DATA) {
-          backgroundWork(env, recordSuccess(env.REFERENCE_DATA!, key));
+          backgroundWork(env, recordSuccess(env.REFERENCE_DATA, key));
         }
 
         const sendPromise = onResult(key, value, completed, totalWithPostChecks, label, skipped ? true : undefined);
@@ -682,7 +682,7 @@ async function runAnalysisCore(
         });
         // Record failure with circuit breaker
         if (env.REFERENCE_DATA) {
-          backgroundWork(env, recordFailure(env.REFERENCE_DATA!, key));
+          backgroundWork(env, recordFailure(env.REFERENCE_DATA, key));
         }
         return onResult(key, defaultValue, completed, totalWithPostChecks, label, true);
       },

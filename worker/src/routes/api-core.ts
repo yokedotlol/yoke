@@ -106,7 +106,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
-    const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
+    const result = await getSubdomains(env.REFERENCE_DATA, domain, env.STATS_DB);
     recordEndpointHit(env, "subdomains");
     _track("subdomains", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -126,7 +126,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
         "MISSING_DOMAIN",
         400,
       );
-    const result = await getSubdomains(env.REFERENCE_DATA!, domain, env.STATS_DB);
+    const result = await getSubdomains(env.REFERENCE_DATA, domain, env.STATS_DB);
     recordEndpointHit(env, "subdomains");
     _track("subdomains", 200, domain);
     return addHeaders(json(result), rl.headers);
@@ -143,7 +143,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     if (!body.domain) return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
-    const result = await scanSubdomains(env.REFERENCE_DATA!, domain);
+    const result = await scanSubdomains(env.REFERENCE_DATA, domain);
     recordEndpointHit(env, "subdomain-scan");
     _track("subdomain-scan", 200, domain);
     return addHeaders(json(result), rl.headers);

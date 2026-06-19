@@ -33,7 +33,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
     const normalized = domain.toLowerCase();
     const analysisCache = (await getFromCache(
-      env.REFERENCE_DATA!,
+      env.REFERENCE_DATA,
       normalized,
       "analysis",
       getAnalysisCacheTtlMs(env),
