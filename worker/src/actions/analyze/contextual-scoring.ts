@@ -609,11 +609,6 @@ export function buildCompositeLabel(
 // triple-penalized findings. The breach grade cap below (in calculateDomainScore)
 // is retained as a separate, specific mechanism for catastrophic data breaches.
 
-/** @deprecated Hard caps removed. Kept as pass-through for API compatibility. */
-export function applyHardCaps(composite: number, _allFindings: Finding[], _axisScores: Record<Axis, number>): number {
-  return composite;
-}
-
 export function contextualSeverity(
   baseSeverity: Severity,
   archetype: ArchetypeName,
@@ -4555,10 +4550,7 @@ export function calculateDomainScore(opts: {
     }
   }
 
-  // ─── Hard Caps ───────────────────────────────────────────────────
-  // Apply hard caps to the composite SCORE, then derive tier from capped score.
-  // This eliminates score/tier paradoxes.
-  const composite = applyHardCaps(rawComposite, findings, rawAxisScores);
+  const composite = rawComposite;
 
   let tier = tierFromComposite(composite);
 

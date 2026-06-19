@@ -68,8 +68,8 @@ export default function PrivacyPage() {
         <p>Yoke collects anonymous, aggregated request metadata to operate the service:</p>
         <ul style={{ paddingLeft: "1.5rem", margin: "0.75rem 0" }}>
           <li>
-            <strong>Visitor hash</strong> — the same secret-salted, daily-rotating SHA-256 hash used for rate limiting,
-            for unique visitor counting
+            <strong>Visitor hash</strong> — a secret-salted, daily-rotating SHA-256 hash of your IP address, for unique
+            visitor counting
           </li>
           <li>
             <strong>Country code</strong> — derived from Cloudflare's{" "}
@@ -163,7 +163,7 @@ export default function PrivacyPage() {
 
       <Section title="Data Retention">
         <p>
-          Rate-limit hashes are cleaned up automatically within hours. Analytics data is retained indefinitely in
+          Rate-limit hashes are cleaned up automatically within hours. Analytics data is retained for 90 days in
           aggregate form but contains no personal identifiers. Domain analysis results are cached for up to 24 hours.
           Domain scores and scan history are retained to power percentile rankings.
         </p>

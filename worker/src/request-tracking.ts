@@ -1,6 +1,6 @@
 // Rich request-level telemetry for the admin dashboard
 // Stores anonymized per-request metadata — NO raw IPs, NO PII
-// Uses daily-salted SHA-256 hash for unique visitor counting
+// Uses secret-salted, daily-rotating SHA-256 hash for unique visitor counting
 
 import { backgroundWork, type Env } from "./helpers";
 
@@ -32,9 +32,10 @@ export function detectClientType(request: Request): string {
   return "web";
 }
 
-/** SHA-256 hash truncated to 16 hex chars — enough for unique counting, not reversible */
-async function hashVisitor(ip: string, day: string): Promise<string> {
-  const data = new TextEncoder().encode(`${ip}:${day}`);
+/** SHA-256 hash with secret salt + daily rotation, truncated to 16 hex chars — not reversible */
+async function hashVisitor(ip: string, day: string, env?: { IP_HASH_SALT?: string }): Promise<string> {
+  const salt = env?.IP_HASH_SALT || "yoke-default-salt";
+  const data = new TextEncoder().encode(`${ip}:${day}:${salt}`);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -95,7 +96,7 @@ export function trackRequest(env: Env, request: Request, meta: RequestMeta): voi
     env,
     (async () => {
       try {
-        const visitorHash = await hashVisitor(ip, day);
+        const visitorHash = await hashVisitor(ip, day, env);
         await ensureTable(env.STATS_DB);
         await env.STATS_DB.prepare(
           `INSERT INTO request_meta (ts, day, hour, endpoint, domain, client_type, country, status_code, latency_ms, visitor_hash)
@@ -120,7 +121,7 @@ export function trackRequest(env: Env, request: Request, meta: RequestMeta): voi
           await env.STATS_DB.prepare(CREATE_SQL).run();
           for (const idx of INDEXES) await env.STATS_DB.prepare(idx).run();
           tableReady = true;
-          const visitorHash = await hashVisitor(ip, day);
+          const visitorHash = await hashVisitor(ip, day, env);
           await env.STATS_DB.prepare(
             `INSERT INTO request_meta (ts, day, hour, endpoint, domain, client_type, country, status_code, latency_ms, visitor_hash)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

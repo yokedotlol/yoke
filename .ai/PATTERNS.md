@@ -65,13 +65,13 @@ log('error', 'KV write failed', { domain, error: String(e) });
 
 ## CORS
 
-CORS headers are applied by the `json()` helper in `helpers.ts` for public endpoints. Admin endpoints (`/api/cleanup`, `/api/cache`, `/usage`) use `adminJson()` which does NOT include CORS. Don't add `Access-Control-Allow-Origin: *` to admin responses.
+CORS headers are applied by the `json()` helper in `helpers.ts` for public endpoints. Admin endpoints (`/api/cleanup`, `/api/cache`, `/usage`) use `adminJson()` which includes CORS headers (needed for the dashboard UI) but requires authentication via `X-Admin-Key`. The admin CORS is safe because authentication gates access, not origin restrictions.
 
 ## Rate Limiting
 
-- Endpoint rate limits: D1-backed (`STATS_DB`), per-hashed-IP, checked via `checkRateLimit()`. IPs are hashed via `hashIp()` from `helpers.ts` (SHA-256 + daily salt) before being passed to the rate limiter — raw IPs never touch D1.
+- Endpoint rate limits: D1-backed (`STATS_DB`), per-hashed-IP, checked via `checkRateLimit()`. IPs are hashed via `hashIp()` from `helpers.ts` (SHA-256 + static salt) before being passed to the rate limiter — raw IPs never touch D1.
 - AI analysis: separate rate limit table in `STATS_DB`, same hashed-IP approach, slot reserved before API call, refunded on failure using the specific row ID (not `ORDER BY id DESC LIMIT 1` — that's racy).
-- Anonymous analytics: `request-tracking.ts` uses its own `hashVisitor()` (functionally equivalent to `hashIp()`). Writes to `request_meta` table with visitor_hash, country, client_type, endpoint, status, latency.
+- Anonymous analytics: `request-tracking.ts` uses its own `hashVisitor()` with a secret salt + daily-rotating component. Writes to `request_meta` table with visitor_hash, country, client_type, endpoint, status, latency. Callers skip the rate-limit check for cache hits (see `api-core.ts`).
 
 ## Anti-Patterns — Don't Do These
 
@@ -82,7 +82,7 @@ CORS headers are applied by the `json()` helper in `helpers.ts` for public endpo
 - **No `io.Copy` without `io.LimitReader`** in the Go proxy — cap at 1MB
 - **No raw error messages to clients** in the Go proxy — log details server-side, return generic errors
 - **No `__HTML__` / `__ROBOTS_TXT__` build-time globals** — use `env.ASSETS.fetch()`
-- **No CORS on admin endpoints** — use `adminJson()` not `json()`
+- **Admin endpoints require authentication** — `adminJson()` includes CORS (for dashboard) but gates access via `X-Admin-Key`
 - **No editing `client/index.html` for the HTML shell** — edit the template in `client/build.ts`
 - **No inline `<script>` for config injection** — CSP blocks inline; use external `/assets/config.js`
 - **No hardcoded mail provider MX hosts** — use `MTA_STS_MX_*` env vars

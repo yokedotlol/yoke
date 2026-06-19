@@ -220,10 +220,10 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 
 ---
 
-### 2026-06-04 — User IPs hashed with daily-rotating salt (GDPR compliance)
+### 2026-06-04 — User IPs hashed with secret salt (GDPR compliance)
 
-**What changed:** All user IP addresses from `cf-connecting-ip` are SHA-256 hashed with a daily-rotating salt before being stored in D1 rate-limit tables (`endpoint_rate_limits`, `ai_rate_limits`). Shared `hashIp()` helper in `helpers.ts`.
-**Why:** Raw IP addresses are personal data under GDPR (Breyer v. Germany, EU Court of Justice). Rate limiting only needs "same requester = same key" within a window — a daily hash achieves this without storing reversible identifiers. The `request_meta` analytics table already used this approach via `hashVisitor()`.
+**What changed:** All user IP addresses from `cf-connecting-ip` are SHA-256 hashed with a secret salt (`IP_HASH_SALT`) before being stored in D1 rate-limit tables (`endpoint_rate_limits`, `ai_rate_limits`). Shared `hashIp()` helper in `helpers.ts` uses a static salt for rate-limit key stability across day boundaries. The `hashVisitor()` function in `request-tracking.ts` uses the same secret salt plus a daily-rotating component for analytics visitor counting.
+**Why:** Raw IP addresses are personal data under GDPR (Breyer v. Germany, EU Court of Justice). Rate limiting only needs "same requester = same key" within a window — a salted hash achieves this without storing reversible identifiers.
 **Rejected:** Moving rate limiting entirely to KV with auto-expiring TTL keys → cleaner but bigger refactor, not needed since hashing solves the legal issue. Storing IPs with consent → no accounts, no consent mechanism, unnecessary complexity.
 **Directive:** No raw user IP addresses may be stored in any database table. Use `hashIp()` from `helpers.ts` for any IP-keyed storage. Server IPs from DNS lookups (analyzed domain infrastructure) are public data and don't require hashing.
 

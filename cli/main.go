@@ -1084,7 +1084,7 @@ func main() {
 	root.SetVersionTemplate(versionTmpl)
 
 	if err := root.Execute(); err != nil {
-		os.Exit(1)
+		os.Exit(2) // exit 2 = operational error; exit 1 is reserved for gate failures (check command)
 	}
 }
 

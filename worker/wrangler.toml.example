@@ -30,8 +30,8 @@ binding = "REFERENCE_DATA"
 # pattern = "yourdomain.com/*"
 # zone_name = "yourdomain.com"
 
-# Badge pre-warm cron — refreshes badge cache for tracked domains every hour
-# Self-hosters can also use POST /api/admin/badge-sweep instead
+# Badge cache maintenance — prunes stale badge cache entries hourly
+# Badges are generated lazily on first request; this cron only cleans up
 [triggers]
 crons = ["0 */1 * * *"]
 

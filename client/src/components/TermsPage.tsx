@@ -41,7 +41,7 @@ export default function TermsPage() {
         <Scale size={24} /> Terms of Service
       </h1>
       <p style={{ color: "var(--dim)", fontSize: "0.85rem", marginBottom: "2rem" }}>
-        <strong>Last updated:</strong> May 2026
+        <strong>Last updated:</strong> June 2026
       </p>
 
       <Section title="Service">
@@ -53,8 +53,9 @@ export default function TermsPage() {
 
       <Section title="Use">
         <p>
-          You may use Yoke for lawful purposes. Do not abuse the service with excessive automated requests. Rate limits
-          are applied per IP to ensure fair access.
+          You may use Yoke for lawful purposes only. You must be authorized to analyze any domain you submit. Do not use
+          this service for unauthorized reconnaissance, harassment, or any activity that violates applicable law. Do not
+          abuse the service with excessive automated requests. Rate limits are applied per IP to ensure fair access.
         </p>
       </Section>
 

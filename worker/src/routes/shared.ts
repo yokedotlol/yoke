@@ -147,6 +147,11 @@ export interface RateLimitResult {
 
 export const rateLimitNoop = async () => {};
 
+/**
+ * D1-backed rate limiter. Records the hit eagerly on check — there is no
+ * separate record() step. Callers are responsible for skipping the check
+ * on cache hits (see api-core.ts) so cached responses are free.
+ */
 export async function checkRateLimit(
   db: D1Database | undefined,
   ip: string,
@@ -253,7 +258,7 @@ export async function checkRateLimit(
         record: rateLimitNoop,
       };
     }
-    // Record the hit immediately — all requests count against the limit
+    // Record the hit — callers skip this function for cache hits (see api-core.ts)
     try {
       await db
         .prepare("INSERT INTO endpoint_rate_limits (ip, endpoint, ts) VALUES (?, ?, ?)")
@@ -352,7 +357,7 @@ export async function checkRateLimitDO(
     const doId = rateLimiter.idFromName(shardKey);
     const stub = rateLimiter.get(doId);
 
-    // Record eagerly — no dry-run. Every check counts against the limit.
+    // Record eagerly — callers skip this function for cache hits (see api-core.ts)
     const resp = await stub.fetch(
       new Request("https://do/check", {
         method: "POST",

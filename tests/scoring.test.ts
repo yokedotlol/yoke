@@ -2,7 +2,6 @@ import {
   type ArchetypeName,
   AXIS_WEIGHTS,
   type AxisScore,
-  applyHardCaps,
   buildSignalDetails,
   computeAxisScore,
   computeAxisScoreWithDeductions,
@@ -356,39 +355,6 @@ describe("Managed Platform Detection", () => {
 });
 
 // ─── Absence Penalties ───────────────────────────────────────────────
-
-// ─── Hard Caps (removed — now pass-through) ─────────────────────────
-
-describe("Hard Caps (pass-through)", () => {
-  const allAxesHigh = { security: 90, speed: 85, foundations: 80, reputation: 75, discoverability: 70, email: 65 };
-
-  it("should pass through composite unchanged (caps removed)", () => {
-    const findings: Finding[] = [
-      { signal: "ssl_grade", axis: "security", severity: "critical", label: "SSL F", tradeoff: null, weight: 5 },
-    ];
-    const result = applyHardCaps(95, findings, allAxesHigh);
-    expect(result).toBe(95);
-  });
-
-  it("should pass through with high finding (caps removed)", () => {
-    const findings: Finding[] = [
-      { signal: "hsts_missing", axis: "security", severity: "high", label: "No HSTS", tradeoff: null, weight: 3 },
-    ];
-    const result = applyHardCaps(90, findings, allAxesHigh);
-    expect(result).toBe(90);
-  });
-
-  it("should pass through with low category scores (caps removed)", () => {
-    const scores = { ...allAxesHigh, email: 25 };
-    const result = applyHardCaps(95, [], scores);
-    expect(result).toBe(95);
-  });
-
-  it("should pass through unchanged regardless of inputs", () => {
-    const result = applyHardCaps(60, [], allAxesHigh);
-    expect(result).toBe(60);
-  });
-});
 
 // ─── Not Assessed Threshold ─────────────────────────────────────────
 

@@ -138,7 +138,7 @@ Embed a live domain score badge in your README, docs, or website. Badges are aut
 | `label` | `?label=My+Site` | Override badge label |
 | `style` | `?style=flat-square` | Sharp corners |
 
-Self-hosters: badges work out of the box. See [Self-Hosting docs](docs/SELF-HOSTING.md) for pre-warm cron setup.
+Self-hosters: badges work out of the box with lazy refresh. See [Self-Hosting docs](docs/SELF-HOSTING.md) for cache maintenance setup.
 
 ## Architecture
 

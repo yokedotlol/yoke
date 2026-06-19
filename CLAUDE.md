@@ -15,7 +15,7 @@ Project context for AI coding assistants (Claude Code, Cursor, Copilot, Codex, H
 | `.ai/DECISIONS.md` | Before modifying scoring, signals, or architecture | Why things are the way they are |
 | `.ai/GOTCHAS.md` | Before modifying scoring, signals, or client code | Mistakes we've made and how to avoid them |
 
-Run `bash .ai/staleness-check.sh` to verify docs match the codebase.
+Run `bash .ai/base/audit.sh yoke --live` to verify invariants and live deployment state.
 
 ## What This Is
 

@@ -353,8 +353,12 @@ export function isBlockedUrl(urlStr: string): boolean {
     const host = u.hostname.replace(/^\[|\]$/g, ""); // strip IPv6 brackets
     // Block localhost variants
     if (host === "localhost" || host === "::1" || host === "0.0.0.0") return true;
-    // Block IPv6 private
-    if (host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80") || host.startsWith("ff")) return true;
+    // Block IPv6 private/link-local/multicast — only actual IPv6 literals (contain colons)
+    if (
+      host.includes(":") &&
+      (host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80") || host.startsWith("ff"))
+    )
+      return true;
     // Block IPv4 private
     for (const pat of PRIVATE_IP_PATTERNS) {
       if (pat.test(host)) return true;
