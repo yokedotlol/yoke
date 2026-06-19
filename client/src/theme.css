@@ -1583,3 +1583,25 @@ input.outline-none:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* Skip-nav — visible only on keyboard focus */
+.skip-nav {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 0.5rem 1.25rem;
+  background: var(--accent, #3b82f6);
+  color: #fff;
+  border-radius: 0 0 0.5rem 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-nav:focus {
+  top: 0;
+  outline: 2px solid var(--accent, #3b82f6);
+  outline-offset: 2px;
+}

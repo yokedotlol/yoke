@@ -877,6 +877,9 @@ export function App() {
 
   return (
     <main id="main-content" className="min-h-screen pb-12" style={{ background: "var(--bg)" }}>
+      <a href="#search-input" className="skip-nav">
+        Skip to search
+      </a>
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 pt-6">
         {/* Header */}
         <header>
@@ -948,6 +951,7 @@ export function App() {
                   $ yoke ▸
                 </span>
                 <input
+                  id="search-input"
                   type="text"
                   value={domain}
                   onChange={(e) => setDomain(e.target.value)}
@@ -1260,6 +1264,10 @@ export function App() {
           <span className="dot"> · </span>
           <a href="https://xhttp.lol" target="_blank" rel="noopener noreferrer">
             xhttp
+          </a>
+          <span className="dot"> · </span>
+          <a href="https://vrfy.lol" target="_blank" rel="noopener noreferrer">
+            vrfy
           </a>
         </div>
         <a

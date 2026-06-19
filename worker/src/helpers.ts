@@ -228,6 +228,8 @@ export const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Headers": "Content-Type, X-OpenRouter-Key, Authorization",
   "Access-Control-Expose-Headers": "X-Yoke-Version, X-Yoke-Min-Client",
   "X-Content-Type-Options": "nosniff",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
   "Content-Security-Policy": "frame-ancestors 'self' https://*.chromiumapp.org chrome-extension://*",
   "X-Yoke-Version": YOKE_VERSION,
   "X-Yoke-Min-Client": MIN_CLIENT_VERSION,
