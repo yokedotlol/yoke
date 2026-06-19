@@ -209,6 +209,26 @@ export interface NetworkHealthData {
   outage_links: OutageLinksData | null;
 }
 
+export interface SocialAccount {
+  platform: string;
+  url: string;
+  username: string | null;
+  found_via: string;
+}
+
+export interface SocialAccountData {
+  accounts: SocialAccount[];
+}
+
+export interface ResourceHintsData {
+  preload: string[];
+  preconnect: string[];
+  prefetch: string[];
+  dns_prefetch: string[];
+  modulepreload: string[];
+  total: number;
+}
+
 export interface AnalysisResult {
   domain: string;
   cached: boolean;
@@ -371,6 +391,12 @@ export interface AnalysisResult {
 
   // Network health
   network_health: NetworkHealthData | null;
+
+  // Social accounts discovered on the site
+  social_accounts: SocialAccountData | null;
+
+  // Resource hints (preload, preconnect, etc.)
+  resource_hints: ResourceHintsData | null;
 
   // Injected metadata (share URL, PDF URL, etc.)
   _meta?: {

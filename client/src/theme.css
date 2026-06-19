@@ -1387,20 +1387,30 @@ main {
 /* ─── Collapsible & Draggable Panel Layout ─────────────────────── */
 
 .yoke-grid-masonry {
-  column-count: 2;
-  column-gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  align-items: stretch;
 }
 .yoke-grid-masonry > * {
-  break-inside: avoid;
-  margin-bottom: 0.75rem;
+  min-width: 0;
 }
 .yoke-grid-masonry > .full-width {
-  column-span: all;
-  margin-bottom: 0.75rem;
+  grid-column: 1 / -1;
+}
+/* Collapsed panels should not stretch to fill the row */
+.yoke-grid-masonry > .slot-collapsed {
+  align-self: start;
+}
+/* Panel cards fill their grid cell height */
+.yoke-grid-masonry > .yoke-slot:not(.slot-collapsed) > .panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 @media (max-width: 767px) {
   .yoke-grid-masonry {
-    column-count: 1;
+    grid-template-columns: 1fr;
   }
 }
 

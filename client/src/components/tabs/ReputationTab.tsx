@@ -5,9 +5,11 @@ import { BusinessTab } from "../BusinessTab";
 import { CookieConsentPanel } from "../CookieConsentPanel";
 import { LegalPanel } from "../LegalPanel";
 import { BlocklistPanel } from "../NetworkPanel";
+import { GoogleNewsPanel, HackerNewsPanel } from "../NewsMentionsPanel";
 import { SectionHeader } from "../Panel";
 import { type PanelDef, PanelGrid } from "../PanelLayout";
 import { WaybackPanel } from "../ReputationPanels";
+import { SocialAccountsPanel } from "../SocialAccountsPanel";
 import { GreynoisePanel } from "../Tier1Panels";
 import { DomainExpiryPanel, WhoisPanel } from "../WhoisPanel";
 
@@ -25,7 +27,12 @@ export default function ReputationTab({ data }: { data: AnalysisResult }) {
     { id: "legal", node: <LegalPanel data={data} /> },
   ];
 
-  const identityPanels: PanelDef[] = [{ id: "business-info", node: <BusinessTab domain={domain} />, fullWidth: true }];
+  const identityPanels: PanelDef[] = [
+    { id: "business-info", node: <BusinessTab domain={domain} />, fullWidth: true },
+    { id: "social-accounts", node: <SocialAccountsPanel data={data} /> },
+    { id: "google-news", node: <GoogleNewsPanel domain={domain} /> },
+    { id: "hacker-news", node: <HackerNewsPanel domain={domain} /> },
+  ];
 
   const registrationPanels: PanelDef[] = [
     { id: "whois", node: <WhoisPanel data={data} /> },
@@ -41,8 +48,8 @@ export default function ReputationTab({ data }: { data: AnalysisResult }) {
       <PanelGrid tabId="reputation-trust" panels={trustPanels} />
       <SectionHeader title="Compliance" />
       <PanelGrid tabId="reputation-compliance" panels={compliancePanels} />
-      <SectionHeader title="Organization" />
-      <PanelGrid tabId="reputation-identity" panels={identityPanels} grid={false} />
+      <SectionHeader title="Business & Identity" />
+      <PanelGrid tabId="reputation-identity" panels={identityPanels} />
       <SectionHeader title="Registration" />
       <PanelGrid tabId="reputation-registration" panels={registrationPanels} />
       <SectionHeader title="History" />

@@ -1,5 +1,6 @@
 import type { AnalysisResult } from "../../utils/types";
 import { AxisSummaryCard } from "../AxisSummaryCard";
+import { CookieSecurityPanel } from "../NewPanels";
 import { SectionHeader } from "../Panel";
 import { type PanelDef, PanelGrid } from "../PanelLayout";
 import { ProtectionTrustPanel } from "../ProtectionTrustPanel";
@@ -18,6 +19,7 @@ export default function SecurityTab({ data }: { data: AnalysisResult }) {
   const headersPanels: PanelDef[] = [
     { id: "security-headers", node: <SecurityHeadersPanel data={data} /> },
     { id: "protection-trust", node: <ProtectionTrustPanel data={data} /> },
+    { id: "cookie-security", node: <CookieSecurityPanel data={data} /> },
   ];
 
   const disclosurePanels: PanelDef[] = [{ id: "security-txt", node: <SecurityTxtPanel data={data} /> }];

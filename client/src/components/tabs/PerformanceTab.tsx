@@ -4,6 +4,7 @@ import { CachePanel } from "../CachePanel";
 import { CompressionPanel } from "../NewPanels";
 import { type PanelDef, PanelGrid } from "../PanelLayout";
 import { CarbonPanel, PerformancePanel } from "../PerformancePanel";
+import { ResourceHintsPanel } from "../ResourceHintsPanel";
 import { ThirdPartyScriptsPanel } from "../ThirdPartyScriptsPanel";
 
 export default function PerformanceTab({ data }: { data: AnalysisResult }) {
@@ -12,6 +13,7 @@ export default function PerformanceTab({ data }: { data: AnalysisResult }) {
   const panels: PanelDef[] = [
     { id: "pagespeed", node: <PerformancePanel data={data} /> },
     { id: "third-party-scripts", node: <ThirdPartyScriptsPanel data={data} /> },
+    { id: "resource-hints", node: <ResourceHintsPanel data={data} /> },
     { id: "compression", node: <CompressionPanel data={data} /> },
     { id: "cache", node: <CachePanel data={data} /> },
     { id: "carbon", node: <CarbonPanel data={data} /> },

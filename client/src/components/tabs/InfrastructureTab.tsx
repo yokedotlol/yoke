@@ -9,6 +9,7 @@ import { HttpProtocolsPanel, IpInfoPanel } from "../NetworkPanel";
 import { DnssecPanel, HostingPanel } from "../NewPanels";
 import { SectionHeader } from "../Panel";
 import { type PanelDef, PanelGrid } from "../PanelLayout";
+import { ReverseIPPanel } from "../ReverseIPPanel";
 import { ShodanPanel } from "../ShodanPanel";
 import { SubdomainScanPanel } from "../SubdomainScanPanel";
 import { TechStackPanel } from "../TechStackPanel";
@@ -31,6 +32,7 @@ export default function InfrastructureTab({ data }: { data: AnalysisResult }) {
     { id: "availability", node: <AvailabilityPanel domain={domain} /> },
     { id: "shodan", node: <ShodanPanel data={data} /> },
     { id: "subdomain-scan", node: <SubdomainScanPanel domain={domain} /> },
+    { id: "reverse-ip", node: <ReverseIPPanel ip={ip ?? ""} />, visible: !!ip },
     { id: "redirects", node: <RedirectPanel data={data} /> },
   ];
 
