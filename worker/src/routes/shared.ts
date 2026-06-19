@@ -90,7 +90,7 @@ export function checkAdminAuth(request: Request, adminKey: string | undefined): 
 
 function getRateLimits(env: Env): Record<string, { limit: number; windowSecs: number }> {
   return {
-    "/api/analyze": { limit: parseInt(env.RATE_LIMIT_ANALYZE || "20", 10), windowSecs: 3600 },
+    "/api/analyze": { limit: parseInt(env.RATE_LIMIT_ANALYZE || "50", 10), windowSecs: 3600 },
     "/api/compare": { limit: parseInt(env.RATE_LIMIT_COMPARE || "20", 10), windowSecs: 3600 },
     "/api/subdomain-scan": { limit: parseInt(env.RATE_LIMIT_SUBDOMAIN || "15", 10), windowSecs: 3600 },
     "/api/subdomains": { limit: 30, windowSecs: 3600 },
