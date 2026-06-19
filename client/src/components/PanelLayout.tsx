@@ -254,7 +254,9 @@ export function PanelGrid({ tabId, panels, grid = true }: { tabId: string; panel
     <div className="yoke-masonry-wrap">
       {segments.map((seg, si) =>
         seg.kind === "full" ? (
-          <div key={`fw-${si}`} className="yoke-masonry-full">{seg.item}</div>
+          <div key={`fw-${si}`} className="yoke-masonry-full">
+            {seg.item}
+          </div>
         ) : (
           <div key={`seg-${si}`} className="yoke-masonry-segment">
             <div className="yoke-masonry-col">{seg.left}</div>

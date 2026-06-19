@@ -837,7 +837,7 @@ export async function getAIAnalysis(
 
   // ─── Streaming path ────────────────────────────────────────────────
   if (wantStream) {
-    const { stream, fullContent } = streamOpenRouter(apiKey!, analysisCache, env.BASE_URL, model);
+    const { stream, fullContent } = streamOpenRouter(apiKey as string, analysisCache, env.BASE_URL, model);
 
     // Cache the assembled result after stream completes (fire-and-forget)
     const cachePromise = fullContent
@@ -888,7 +888,7 @@ export async function getAIAnalysis(
 
   // ─── Non-streaming path (fallback) ─────────────────────────────────
   try {
-    const result = await callOpenRouter(apiKey!, analysisCache, env.BASE_URL, model);
+    const result = await callOpenRouter(apiKey as string, analysisCache, env.BASE_URL, model);
 
     const responseData: CachedAIResult = {
       result,

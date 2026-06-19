@@ -376,6 +376,7 @@ export async function checkGlobalAvailability(
   edge_colo: string | null;
 }> {
   // Run DNS checks and check-host.net probes in parallel
+  // biome-ignore lint/style/noNonNullAssertion: env is always defined in this code path
   const [dnsResults, checkHostResult] = await Promise.all([checkDnsResolvers(domain), checkHostProbes(domain, env!)]);
 
   let httpResults: AvailabilityResult[];

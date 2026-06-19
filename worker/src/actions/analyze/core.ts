@@ -615,6 +615,7 @@ async function runAnalysisCore(
     const p = new Promise<void>((r) => {
       resolve = r;
     });
+        // biome-ignore lint/style/noNonNullAssertion: resolve is assigned in Promise constructor above
     keyResolvers.set(check.key, resolve!);
     keyPromises.set(check.key, p);
   }
