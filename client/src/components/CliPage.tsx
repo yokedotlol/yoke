@@ -196,32 +196,33 @@ export default function CliPage() {
         <CopyBlock code="yoke stripe.com" />
         <div style={{ marginTop: 8 }}>
           <OutputBlock
-            text={`╭─────────────────────────────────────────────────────────────╮
-│ stripe.com  89/100 A                                        │
-│ application                                                 │
-│                                                             │
-│ SECURITY       ███████████████████░ 98                      │
-│ PERFORMANCE    █████████████░░░░░░░ 69                      │
-│ INFRASTRUCTURE ██████████████████░░ 90                      │
-│ TRUST          ████████████████████ 100                     │
-│ VISIBILITY     ███████████████████░ 97                      │
-│                                                             │
-│ SSL A+ · HTTP/2 · Stripe · LCP 5.6s                         │
-│                                                             │
-│ Findings                                                    │
-│ ~ 1 privacy concern(s) from third-party scripts             │
-│ ! Low performance score 44/100                              │
-│ ! LCP: 5.6s                                                 │
-│ ! 71 third-party scripts — significant performance overhead │
-│ ℹ DNSSEC not enabled                                        │
-│ ✓ SSL grade A+                                              │
-│ ✓ HSTS enabled                                              │
-│ ✓ Content Security Policy present                           │
-│ ✓ Full email auth (SPF+DKIM+DMARC reject)                   │
-│ ✓ CAA records restrict certificate issuance                 │
-│ ✓ Established domain (30+ years)                            │
-│ +10 more passing                                            │
-╰─────────────────────────────────────────────────────────────╯`}
+            text={`╭──────────────────────────────────────────────────────────────╮
+│ stripe.com  89/100 Strong                                    │
+│ application                                                  │
+│                                                              │
+│ SECURITY       ███████████████████░ 98                       │
+│ SPEED          █████████████░░░░░░░ 69                       │
+│ FOUNDATIONS    ██████████████████░░ 90                       │
+│ REPUTATION     ████████████████████ 100                      │
+│ DISCOVERABILITY███████████████████░ 97                       │
+│ EMAIL          ████████████████████ 100                      │
+│                                                              │
+│ SSL A+ · HTTP/3 · Stripe · LCP 5.6s                          │
+│                                                              │
+│ Findings                                                     │
+│ ~ 1 privacy concern(s) from third-party scripts              │
+│ ! Low performance score 44/100                               │
+│ ! LCP: 5.6s                                                  │
+│ ! 71 third-party scripts — significant performance overhead  │
+│ ℹ DNSSEC not enabled                                         │
+│ ✓ SSL grade A+                                               │
+│ ✓ HSTS enabled                                               │
+│ ✓ Content Security Policy present                            │
+│ ✓ Full email auth (SPF+DKIM+DMARC reject)                    │
+│ ✓ CAA records restrict certificate issuance                  │
+│ ✓ Established domain (30+ years)                             │
+│ +10 more passing                                             │
+╰──────────────────────────────────────────────────────────────╯`}
           />
         </div>
       </Section>
@@ -249,10 +250,11 @@ export default function CliPage() {
             <div style={{ marginTop: 6 }}>
               <OutputBlock
                 text={`"security: 98"
-"performance: 69"
-"infrastructure: 90"
-"trust: 100"
-"visibility: 97"`}
+"speed: 69"
+"foundations: 90"
+"reputation: 100"
+"discoverability: 97"
+"email: 100"`}
               />
             </div>
           </div>
@@ -264,14 +266,15 @@ export default function CliPage() {
             <CopyBlock code="yoke compare stripe.com google.com" />
             <div style={{ marginTop: 6 }}>
               <OutputBlock
-                text={`  stripe.com                      89/100 A
-  google.com                      92/100 A
+                text={`  stripe.com                      89/100 Strong
+  google.com                      92/100 Excellent
 
   SECURITY         98 vs 96   +2
-  PERFORMANCE      69 vs 73   -4
-  INFRASTRUCTURE   90 vs 94   -4
-  TRUST           100 vs 100  +0
-  VISIBILITY       97 vs 100  -3
+  SPEED            69 vs 73   -4
+  FOUNDATIONS      90 vs 94   -4
+  REPUTATION      100 vs 100  +0
+  DISCOVERABILITY  97 vs 100  -3
+  EMAIL           100 vs  95  +5
 
   https://yoke.lol/compare/stripe.com/google.com`}
               />
@@ -291,6 +294,35 @@ export default function CliPage() {
 yoke ai stripe.com      # expert security/SEO/dev analysis`}
             />
           </div>
+
+          <div>
+            <p style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--dim)", marginBottom: 8 }}>
+              Deep-dive with satellite tools:
+            </p>
+            <CopyBlock
+              code={`yoke dns stripe.com          # DNS records via ns.lol
+yoke headers stripe.com      # security headers via xhttp.lol
+yoke tls stripe.com          # TLS certificate via certs.lol`}
+            />
+          </div>
+
+          <div>
+            <p style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--dim)", marginBottom: 8 }}>
+              CI gate — fail the build if score drops below a threshold:
+            </p>
+            <CopyBlock code={`yoke check stripe.com --min-grade B    # exit 1 if below Strong (78)`} />
+          </div>
+
+          <div>
+            <p style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--dim)", marginBottom: 8 }}>
+              Batch processing — pipe domains from stdin:
+            </p>
+            <CopyBlock
+              code={`cat domains.txt | yoke fast --json     # batch quick scan
+cat domains.txt | yoke dns --raw       # batch DNS lookup
+cat domains.txt | yoke check --min-grade B  # batch CI gate`}
+            />
+          </div>
         </div>
       </Section>
 
@@ -307,11 +339,17 @@ yoke ai stripe.com      # expert security/SEO/dev analysis`}
           {[
             ["yoke <domain>", "Full analysis card"],
             ["yoke <domain> --json", "Raw JSON output"],
-            ["yoke score <domain>", 'Quick score (e.g. "92/100 A")'],
-            ["yoke score <domain> --json", "Score as JSON"],
+            ["yoke <domain> --fresh", "Bypass cache, force fresh scan"],
+            ["yoke score <domain>", 'Quick score (e.g. "92/100 Strong")'],
+            ["yoke fast <domain>", "Lightweight scan — skip heavy probes"],
             ["yoke compare <d1> <d2>", "Side-by-side comparison"],
+            ["yoke dns <domain>", "DNS records + DNSSEC via ns.lol"],
+            ["yoke headers <domain>", "Security headers + CORS via xhttp.lol"],
+            ["yoke tls <domain>", "TLS cert + chain via certs.lol"],
+            ["yoke check <domain> --min-grade B", "CI gate — exit 1 if below threshold"],
             ["yoke ai <domain>", "AI-powered analysis"],
             ["yoke ai --setup", "Configure OpenRouter API key"],
+            ["cat domains.txt | yoke fast", "Batch processing via stdin pipe"],
             ["yoke config", "Show current configuration"],
             ["yoke config --set-base-url <url>", "Point to self-hosted instance"],
             ["yoke config --set-prompt <file>", "Custom AI prompt from file"],

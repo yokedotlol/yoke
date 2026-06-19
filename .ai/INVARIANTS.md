@@ -110,7 +110,14 @@
 - [ ] **Docker Compose is the maintained self-hosting path.** Three containers: Caddy (TLS + reverse proxy + MTA-STS), workerd (miniflare), probe (SSL/PageSpeed Go binary). Bare-metal is community-maintained.
   - _Verify:_ `docker-compose.yml` exists and defines all three services.
 
-## Billing & Cost
+## Documentation & Surface Sync
+
+- [ ] **User-facing surfaces must reflect current features.** When a feature ships (CLI subcommand, API endpoint, UI component, scoring change), all pages that document or demonstrate that feature must be updated in the same commit or PR. Stale docs are bugs.
+  - _Surfaces:_ `/cli`, `/about`, `/api/docs`, README, CHANGELOG, Chrome extension listing, MCP server README, social profiles/bios.
+  - _Verify:_ After any feature commit, check every surface that could reference the changed feature. Example: a new CLI subcommand requires updating `CliPage.tsx`, `cli/README.md`, and the Commands table.
+
+- [ ] **Sample output in docs matches current behavior.** Axis names, tier labels, output format, and command signatures shown in documentation must match what the tool actually produces. No stale screenshots, no old terminology.
+  - _Verify:_ Run each documented example command and diff actual output against what the page shows.
 
 - [ ] **Per-request D1 write budget stays under 10.** No feature may add more than 2 D1 writes per request without explicit cost justification.
   - _Verify:_ Count INSERT/UPDATE statements in the hot path for each endpoint.
