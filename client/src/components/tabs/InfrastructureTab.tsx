@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { AnalysisResult } from "../../utils/types";
 import { AvailabilityPanel } from "../AvailabilityPanel";
 import { AxisSummaryCard } from "../AxisSummaryCard";
@@ -7,7 +8,6 @@ import { IpMap } from "../IpMap";
 import { NetworkHealthPanel } from "../NetworkHealthPanel";
 import { HttpProtocolsPanel, IpInfoPanel } from "../NetworkPanel";
 import { DnssecPanel, HostingPanel } from "../NewPanels";
-import { SectionHeader } from "../Panel";
 import { type PanelDef, PanelGrid } from "../PanelLayout";
 import { ReverseIPPanel } from "../ReverseIPPanel";
 import { ShodanPanel } from "../ShodanPanel";
@@ -16,39 +16,78 @@ import { TechStackPanel } from "../TechStackPanel";
 import { GreenHostingPanel, WellKnownPanel } from "../Tier1Panels";
 import { WordPressPanel } from "../WordPressPanel";
 
+type SubTab = "dns" | "infra" | "tech";
+
+const SUB_TABS: { id: SubTab; label: string }[] = [
+  { id: "dns", label: "DNS & Routing" },
+  { id: "infra", label: "Infrastructure" },
+  { id: "tech", label: "Technology" },
+];
+
 export default function InfrastructureTab({ data }: { data: AnalysisResult }) {
+  const [subTab, setSubTab] = useState<SubTab>("dns");
   const domain = data.domain;
   const ip = data.ip_info?.ip;
 
-  const networkPanels: PanelDef[] = [
-    { id: "ip-map", node: <IpMap data={data} />, fullWidth: true },
+  const dnsPanels: PanelDef[] = [
     { id: "dns", node: <DnsPanel data={data} /> },
-    { id: "ip-info", node: <IpInfoPanel data={data} /> },
-    { id: "hosting", node: <HostingPanel data={data} /> },
-    { id: "green-hosting", node: <GreenHostingPanel data={data} /> },
     { id: "dnssec", node: <DnssecPanel data={data} /> },
-    { id: "http-protocols", node: <HttpProtocolsPanel data={data} /> },
     { id: "network-health", node: <NetworkHealthPanel data={data} /> },
-    { id: "availability", node: <AvailabilityPanel domain={domain} /> },
-    { id: "shodan", node: <ShodanPanel data={data} /> },
-    { id: "subdomain-scan", node: <SubdomainScanPanel domain={domain} /> },
-    { id: "reverse-ip", node: <ReverseIPPanel ip={ip ?? ""} />, visible: !!ip },
     { id: "redirects", node: <RedirectPanel data={data} /> },
   ];
 
-  const techStackPanels: PanelDef[] = [
+  const infraPanels: PanelDef[] = [
+    { id: "ip-map", node: <IpMap data={data} />, fullWidth: true },
+    { id: "ip-info", node: <IpInfoPanel data={data} /> },
+    { id: "hosting", node: <HostingPanel data={data} /> },
+    { id: "green-hosting", node: <GreenHostingPanel data={data} /> },
+    { id: "http-protocols", node: <HttpProtocolsPanel data={data} /> },
+    { id: "availability", node: <AvailabilityPanel domain={domain} /> },
+    { id: "shodan", node: <ShodanPanel data={data} /> },
+    { id: "reverse-ip", node: <ReverseIPPanel ip={ip ?? ""} />, visible: !!ip },
+    { id: "subdomain-scan", node: <SubdomainScanPanel domain={domain} /> },
+  ];
+
+  const techPanels: PanelDef[] = [
     { id: "tech-stack", node: <TechStackPanel data={data} /> },
     { id: "wordpress", node: <WordPressPanel data={data} />, visible: !!data.wordpress },
     { id: "well-known", node: <WellKnownPanel data={data} /> },
+    { id: "headers", node: <HeadersPanel data={data} /> },
   ];
+
+  const panelMap: Record<SubTab, { tabId: string; panels: PanelDef[] }> = {
+    dns: { tabId: "foundations-dns", panels: dnsPanels },
+    infra: { tabId: "foundations-infra", panels: infraPanels },
+    tech: { tabId: "foundations-tech", panels: techPanels },
+  };
+
+  const current = panelMap[subTab];
 
   return (
     <div className="space-y-3">
       <AxisSummaryCard data={data} axis="foundations" />
-      <SectionHeader title="Network & DNS" />
-      <PanelGrid tabId="foundations" panels={networkPanels} />
-      <SectionHeader title="Tech Stack" />
-      <PanelGrid tabId="foundations-tech" panels={techStackPanels} />
+
+      {/* Sub-tab navigation */}
+      <div className="yoke-subtab-bar" role="tablist" aria-label="Foundations sections">
+        {SUB_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            className={`yoke-subtab${subTab === t.id ? " active" : ""}`}
+            onClick={() => setSubTab(t.id)}
+            aria-selected={subTab === t.id}
+            aria-controls={`subtab-${t.id}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div id={`subtab-${subTab}`} role="tabpanel">
+        <PanelGrid tabId={current.tabId} panels={current.panels} />
+      </div>
+
       {/* Contextual external links */}
       <div className="flex flex-wrap gap-2 px-1">
         {ip && (
@@ -152,12 +191,6 @@ export default function InfrastructureTab({ data }: { data: AnalysisResult }) {
           Downdetector ↗
         </a>
       </div>
-      <SectionHeader title="Raw Headers" />
-      <PanelGrid
-        tabId="foundations-headers"
-        panels={[{ id: "headers", node: <HeadersPanel data={data} /> }]}
-        grid={false}
-      />
     </div>
   );
 }

@@ -1413,6 +1413,38 @@ main {
   }
 }
 
+/* Sub-tab navigation (used within Foundations) */
+.yoke-subtab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 2px;
+  background: var(--surface-dim, var(--bg-alt, rgba(128, 128, 128, 0.08)));
+  border-radius: 8px;
+  width: fit-content;
+}
+.yoke-subtab {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dim);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.yoke-subtab:hover {
+  color: var(--text);
+  background: var(--surface, rgba(128, 128, 128, 0.06));
+}
+.yoke-subtab.active {
+  color: var(--text);
+  background: var(--card-bg, var(--surface, rgba(128, 128, 128, 0.12)));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 .yoke-stack {
   display: flex;
   flex-direction: column;
