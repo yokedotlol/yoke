@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -16,8 +15,8 @@ func newFastCmd() *cobra.Command {
 		Use:   "fast <domain>",
 		Short: "Lightweight analysis — skip heavy probes",
 		Long: "Run a quick domain analysis that skips PageSpeed and other heavy probes.\n" +
-			"Returns score, tier, axis breakdown, and top findings in under 2 seconds.\n\n" +
-			"Uses the /api/quick endpoint when available, falls back to full analyze.",
+			"In JSON mode, returns raw probe data (DNS, WHOIS, SSL, email auth, headers) without scoring.\n" +
+			"In human mode, returns score, tier, and axis breakdown via full analyze.",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  runFast,
 		Example: `  yoke fast stripe.com                   # quick score card
@@ -47,14 +46,10 @@ func runSingleFast(domain string) error {
 }
 
 func runFastJSON(domain string) error {
-	// Try /api/quick first, fall back to regular analyze
+	// /api/quick returns the raw infodump (no scoring)
 	body, err := fetchJSON(apiBase + "/api/quick/" + domain)
 	if err != nil {
-		// Fallback to regular analyze
-		body, err = fetchJSON(apiBase + "/" + domain)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 	os.Stdout.Write(body)
 	if len(body) > 0 && body[len(body)-1] != '\n' {
@@ -144,16 +139,7 @@ func runFastHuman(domain string) error {
 	return nil
 }
 
-// fetchFastResult tries the quick endpoint first, falls back to full analyze.
+// fetchFastResult fetches full analysis for score display in human/raw modes.
 func fetchFastResult(domain string) (*AnalysisResult, error) {
-	// Try /api/quick first
-	body, err := fetchJSON(apiBase + "/api/quick/" + domain)
-	if err == nil {
-		var result AnalysisResult
-		if err := json.Unmarshal(body, &result); err == nil {
-			return &result, nil
-		}
-	}
-	// Fall back to regular analyze (no SSE, plain JSON)
 	return fetchAnalysis(domain)
 }

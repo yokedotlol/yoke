@@ -10,6 +10,7 @@ import * as apiBadge from "./routes/api-badge";
 import * as apiCore from "./routes/api-core";
 import * as apiEnrichment from "./routes/api-enrichment";
 import * as apiInternal from "./routes/api-internal";
+import * as apiQuick from "./routes/api-quick";
 import * as pages from "./routes/pages";
 import type { RouteContext } from "./routes/shared";
 import { jsonError } from "./routes/shared";
@@ -100,6 +101,10 @@ export default {
       );
 
       try {
+        // Quick scan (lightweight, no scoring)
+        const quickResp = await apiQuick.handle(rc);
+        if (quickResp) return quickResp;
+
         // Core analysis endpoints
         const coreResp = await apiCore.handle(rc);
         if (coreResp) return coreResp;

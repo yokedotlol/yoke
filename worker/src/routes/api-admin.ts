@@ -587,6 +587,11 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
           description: "Full domain analysis (content negotiation: JSON for curl/API clients, HTML for browsers)",
           rate_limit: "20 req/hr",
         },
+        "GET /api/quick/{domain}": {
+          description:
+            "Quick scan — DNS, HTTP probe, WHOIS, SSL, email auth, IP info. No scoring or grade. Returns in ~1-3s.",
+          rate_limit: "20 req/hr (shared with analyze)",
+        },
         "POST /api/analyze": {
           description: "Full domain analysis. Supports SSE streaming (Accept: text/event-stream) or JSON response.",
           body: '{"domain": "example.com"}',
