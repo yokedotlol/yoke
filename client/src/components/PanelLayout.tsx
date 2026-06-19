@@ -218,9 +218,52 @@ export function PanelGrid({ tabId, panels, grid = true }: { tabId: string; panel
     return <div className="yoke-stack">{items}</div>;
   }
 
-  // CSS columns give true masonry packing — each column fills
-  // independently so panels pack densely without visual holes.
-  return <div className="yoke-grid-masonry">{items}</div>;
+  // JS masonry: split panels into two independent columns so each
+  // column packs tightly without cross-column row alignment forcing
+  // gaps. fullWidth panels act as segment separators that span both.
+  type Segment =
+    | { kind: "full"; item: React.ReactElement }
+    | { kind: "cols"; left: React.ReactElement[]; right: React.ReactElement[] };
+
+  const segments: Segment[] = [];
+  let cur: { left: React.ReactElement[]; right: React.ReactElement[] } = { left: [], right: [] };
+
+  for (let i = 0; i < ordered.length; i++) {
+    const p = ordered[i];
+    const item = items[i];
+    if (p.fullWidth) {
+      if (cur.left.length || cur.right.length) {
+        segments.push({ kind: "cols", ...cur });
+        cur = { left: [], right: [] };
+      }
+      segments.push({ kind: "full", item });
+    } else {
+      // Alternate left/right for even distribution
+      if (cur.left.length <= cur.right.length) {
+        cur.left.push(item);
+      } else {
+        cur.right.push(item);
+      }
+    }
+  }
+  if (cur.left.length || cur.right.length) {
+    segments.push({ kind: "cols", ...cur });
+  }
+
+  return (
+    <div className="yoke-masonry-wrap">
+      {segments.map((seg, si) =>
+        seg.kind === "full" ? (
+          <div key={`fw-${si}`} className="yoke-masonry-full">{seg.item}</div>
+        ) : (
+          <div key={`seg-${si}`} className="yoke-masonry-segment">
+            <div className="yoke-masonry-col">{seg.left}</div>
+            <div className="yoke-masonry-col">{seg.right}</div>
+          </div>
+        ),
+      )}
+    </div>
+  );
 }
 
 // ─── ResetLayoutButton ───────────────────────────────────────────
