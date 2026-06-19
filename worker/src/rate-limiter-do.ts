@@ -166,7 +166,8 @@ export class RateLimiterDO {
       timestamps.push(now);
     }
     // Persist to durable storage (fire-and-forget — RAM is authoritative)
-    const val = this.windows.get(key); if (val !== undefined) this.state.storage.put(`${SK}${key}`, val);
+    const val = this.windows.get(key);
+    if (val !== undefined) this.state.storage.put(`${SK}${key}`, val);
     this.maybeEvictColdKeys();
 
     const remaining = limit - count - 1;
