@@ -200,6 +200,19 @@ function renderOverview(xhttp, ns, certs, status) {
 
   // Alerts
   const alerts = [];
+  // Grade-level alerts (failure/critical grades)
+  const hgUpper = (hGrade || "")[0]?.toUpperCase();
+  const tgUpper = (tGrade || "")[0]?.toUpperCase();
+  if (hgUpper === "F") {
+    alerts.push({ severity: "err", text: `Security headers grade: <strong>${esc(hGrade)}</strong>` });
+  } else if (hgUpper === "D") {
+    alerts.push({ severity: "warn", text: `Security headers grade: <strong>${esc(hGrade)}</strong>` });
+  }
+  if (tgUpper === "F" || tgUpper === "T") {
+    alerts.push({ severity: "err", text: `TLS grade: <strong>${esc(tGrade)}</strong>` });
+  } else if (tgUpper === "D") {
+    alerts.push({ severity: "warn", text: `TLS grade: <strong>${esc(tGrade)}</strong>` });
+  }
   if (xhttp?.security_headers) {
     const hdrs = xhttp.security_headers.headers || {};
     for (const [name, info] of Object.entries(hdrs)) {
