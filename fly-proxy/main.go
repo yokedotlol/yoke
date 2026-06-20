@@ -681,20 +681,72 @@ func probeSSL(domain string) SSLResult {
 	var connState *tls.ConnectionState
 	var connectErr error
 
-	// Attempt connection with TLS 1.2+ (Go's default)
-	conn, err := safeTLSDial(domain, 8*time.Second, &tls.Config{
-		ServerName:         domain,
-		InsecureSkipVerify: false,
-	})
-	if err != nil {
-		// Try with InsecureSkipVerify to still get cert info for expired/self-signed
-		conn, err = safeTLSDial(domain, 8*time.Second, &tls.Config{
+	// Race verify vs insecure concurrently — broken certs shouldn't
+	// cost 2× the dial timeout (badssl.com was hitting 12s+ sequential)
+	type dialResult struct {
+		conn     *tls.Conn
+		verified bool
+		err      error
+	}
+	ch := make(chan dialResult, 2)
+
+	go func() {
+		c, err := safeTLSDial(domain, 5*time.Second, &tls.Config{
+			ServerName:         domain,
+			InsecureSkipVerify: false,
+		})
+		ch <- dialResult{conn: c, verified: true, err: err}
+	}()
+	go func() {
+		c, err := safeTLSDial(domain, 5*time.Second, &tls.Config{
 			ServerName:         domain,
 			InsecureSkipVerify: true,
 		})
-		if err != nil {
-			connectErr = err
+		ch <- dialResult{conn: c, verified: false, err: err}
+	}()
+
+	var conn *tls.Conn
+	var spareConn *tls.Conn
+	received := 0
+	for received < 2 {
+		r := <-ch
+		received++
+		if r.err != nil {
+			continue
 		}
+		if conn == nil {
+			conn = r.conn
+			if r.verified {
+				// Verified connection wins — close insecure when it arrives
+				break
+			}
+			// Got insecure first — wait briefly for verified
+			continue
+		}
+		// Already have a connection; keep verified if it arrived, else close spare
+		if r.verified {
+			spareConn = conn
+			conn = r.conn
+		} else {
+			spareConn = r.conn
+		}
+	}
+	// Drain remaining goroutine in background and close spare
+	go func() {
+		for received < 2 {
+			r := <-ch
+			received++
+			if r.err == nil {
+				r.conn.Close()
+			}
+		}
+		if spareConn != nil {
+			spareConn.Close()
+		}
+	}()
+
+	if conn == nil {
+		connectErr = fmt.Errorf("all TLS dials failed for %s", domain)
 	}
 
 	if connectErr != nil {
@@ -716,7 +768,7 @@ func probeSSL(domain string) SSLResult {
 	case tls.VersionTLS13:
 		protocols = append(protocols, "TLS 1.3")
 		// Also test TLS 1.2 support
-		conn12, err := safeTLSDial(domain, 8*time.Second, &tls.Config{
+		conn12, err := safeTLSDial(domain, 5*time.Second, &tls.Config{
 			ServerName:         domain,
 			InsecureSkipVerify: true,
 			MaxVersion:         tls.VersionTLS12,
