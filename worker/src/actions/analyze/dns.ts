@@ -75,6 +75,7 @@ export async function checkDns(domain: string): Promise<DnsRecord[]> {
     const agentQueries = [
       { prefix: "_ans", label: "TXT" },
       { prefix: "_agents", label: "TXT" },
+      { prefix: "_agentid", label: "TXT" },
     ].map(async ({ prefix, label }) => {
       try {
         const data = await dohQuery(`${prefix}.${domain}`, label);

@@ -150,6 +150,11 @@ const CMP_PATTERNS: CmpPattern[] = [
     scriptPatterns: [/cdn\.securiti\.ai/i, /securiti\.ai/i],
     htmlPatterns: [/securiti-consent/i, /s-consent/i],
   },
+  {
+    name: "WebToffee",
+    scriptPatterns: [/webtoffee\.com/i, /cookie-law-info/i],
+    htmlPatterns: [/cli-modal-content/i, /cookie-law-info-bar/i, /wt-cli-cookie-bar/i],
+  },
 ];
 
 // ─── Cookie Parsing ─────────────────────────────────────────────────

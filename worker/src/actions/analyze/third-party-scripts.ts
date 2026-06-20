@@ -95,6 +95,13 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
       /adsrvr\.org/i,
       /liveramp\.com/i,
       /lotame\.com/i,
+      /analytics\.tiktok\.com/i,
+      /snap\.licdn\.com/i,
+      /px\.ads\.linkedin\.com/i,
+      /sc-static\.net\/scevent/i,
+      /tr\.snapchat\.com/i,
+      /alb\.reddit\.com/i,
+      /www\.redditstatic\.com.*ads/i,
     ],
   },
   {

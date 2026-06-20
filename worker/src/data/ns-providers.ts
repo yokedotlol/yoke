@@ -75,6 +75,8 @@ export const NS_PROVIDERS: NsProvider[] = [
   { name: "MarkMonitor", patterns: [/\.markmonitor\.com$/i] },
   { name: "Alibaba Cloud", patterns: [/\.alidns\.com$/i, /\.hichina\.com$/i] },
   { name: "Tencent Cloud", patterns: [/\.tencentcloudns\.com$/i, /\.dnspod\.net$/i] },
+  { name: "Tencent EdgeOne", patterns: [/\.edgeone\.ai$/i, /\.teo\.volces\.com$/i] },
+  { name: "CDNetworks", patterns: [/\.cdnetworks\.net$/i, /\.cdngc\.net$/i, /\.quantil\.com$/i] },
   { name: "Baidu Cloud", patterns: [/\.bdydns\.cn$/i] },
   { name: "Yandex Cloud", patterns: [/\.yandex\./i] },
 
