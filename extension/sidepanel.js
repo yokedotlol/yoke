@@ -253,10 +253,33 @@ function renderOverview(xhttp, ns, certs) {
 
   el.innerHTML = html;
 
-  // Set badge
-  const badgeGrade = hGrade !== "—" ? hGrade : tGrade !== "—" ? tGrade : null;
-  if (badgeGrade && currentDomain) {
-    chrome.runtime.sendMessage({ type: "SET_BADGE", domain: currentDomain, grade: badgeGrade }).catch(() => {});
+  // Set badge — alert-only (red "!" for serious issues, clean otherwise)
+  const serious = [];
+  if (expDays !== null && expDays <= 0) serious.push("SSL certificate expired");
+  else if (expDays !== null && expDays <= 14) serious.push(`SSL cert expires in ${expDays}d`);
+  const tg = (tGrade || "").toUpperCase();
+  if (tg === "D" || tg === "F" || tg === "T") serious.push(`TLS grade: ${tGrade}`);
+  const hg = (hGrade || "").toUpperCase();
+  if (hg === "D" || hg === "F") serious.push(`Security headers grade: ${hGrade}`);
+  if (xhttp?.security_headers?.headers) {
+    const h = xhttp.security_headers.headers;
+    if (h["strict-transport-security"] && !h["strict-transport-security"].present) serious.push("Missing HSTS header");
+  }
+  if (xhttp?.redirects) {
+    const chain = Array.isArray(xhttp.redirects) ? xhttp.redirects : [];
+    const httpOnly = chain.length > 0 && chain.every(r => (r.url || "").startsWith("http://"));
+    if (httpOnly) serious.push("No HTTPS redirect");
+  }
+
+  if (currentDomain) {
+    chrome.runtime.sendMessage({
+      type: "SET_BADGE",
+      domain: currentDomain,
+      alert: serious.length > 0,
+      tooltip: serious.length > 0
+        ? `⚠ ${serious.join(" · ")}`
+        : "No critical issues detected",
+    }).catch(() => {});
   }
 }
 

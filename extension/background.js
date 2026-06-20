@@ -43,39 +43,46 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 });
 
 // ── Badge ──
-// Set badge text from cached grade when available
+// Show alert badge (red "!") only for serious issues, clean otherwise
 async function updateBadge(tab) {
   const domain = extractDomain(tab.url);
   if (!domain) {
     chrome.action.setBadgeText({ tabId: tab.id, text: "" });
+    chrome.action.setTitle({ tabId: tab.id, title: "Yoke — Domain Intelligence" });
     return;
   }
   try {
     const result = await chrome.storage.session.get(`badge_${domain}`);
-    const grade = result[`badge_${domain}`];
-    if (grade) {
-      chrome.action.setBadgeText({ tabId: tab.id, text: grade });
-      chrome.action.setBadgeBackgroundColor({
-        tabId: tab.id,
-        color: gradeColor(grade)
-      });
+    const cached = result[`badge_${domain}`];
+    if (cached) {
+      if (cached.alert) {
+        chrome.action.setBadgeText({ tabId: tab.id, text: "!" });
+        chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: "#f85149" });
+        chrome.action.setTitle({ tabId: tab.id, title: cached.tooltip || "Issues detected" });
+      } else {
+        chrome.action.setBadgeText({ tabId: tab.id, text: "" });
+        chrome.action.setTitle({ tabId: tab.id, title: cached.tooltip || "No critical issues detected" });
+      }
     }
   } catch {}
 }
 
-// Listen for grade updates from the panel
+// Listen for alert updates from the panel
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === "SET_BADGE" && msg.domain && msg.grade) {
-    chrome.storage.session.set({ [`badge_${msg.domain}`]: msg.grade });
+  if (msg.type === "SET_BADGE" && msg.domain) {
+    chrome.storage.session.set({ [`badge_${msg.domain}`]: { alert: msg.alert, tooltip: msg.tooltip } });
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
         const d = extractDomain(tabs[0].url);
         if (d === msg.domain) {
-          chrome.action.setBadgeText({ tabId: tabs[0].id, text: msg.grade });
-          chrome.action.setBadgeBackgroundColor({
-            tabId: tabs[0].id,
-            color: gradeColor(msg.grade)
-          });
+          if (msg.alert) {
+            chrome.action.setBadgeText({ tabId: tabs[0].id, text: "!" });
+            chrome.action.setBadgeBackgroundColor({ tabId: tabs[0].id, color: "#f85149" });
+            chrome.action.setTitle({ tabId: tabs[0].id, title: msg.tooltip || "Issues detected" });
+          } else {
+            chrome.action.setBadgeText({ tabId: tabs[0].id, text: "" });
+            chrome.action.setTitle({ tabId: tabs[0].id, title: msg.tooltip || "No critical issues detected" });
+          }
         }
       }
     });
@@ -92,11 +99,3 @@ function extractDomain(url) {
   }
 }
 
-function gradeColor(grade) {
-  if (!grade) return "#6a6a80";
-  const g = grade[0].toUpperCase();
-  if (g === "A") return "#3fb950";
-  if (g === "B") return "#6ea8fe";
-  if (g === "C") return "#d29922";
-  return "#f85149";
-}
