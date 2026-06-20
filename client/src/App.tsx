@@ -1249,6 +1249,10 @@ export function App() {
               <span className="dot"> · </span>
             </>
           )}
+          <a href={cfg.extensionUrl} target="_blank" rel="noopener noreferrer">
+            extension
+          </a>
+          <span className="dot"> · </span>
           <a href="/privacy">privacy</a>
           <span className="dot"> · </span>
           <a href="/terms">terms</a>
