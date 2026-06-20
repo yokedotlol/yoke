@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Yoke \u2014 Domain Intelligence",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Instant domain intelligence \u2014 headers, DNS, TLS, and more \u2014 powered by the .lol tools family.",
   "permissions": [
     "activeTab",

@@ -243,8 +243,8 @@ function renderOverview(xhttp, ns, certs, status) {
       html += row("Nameservers", nsProvider || nsRecords[0].data.replace(/\.$/, ""), "dim");
     }
     html += row("DNS Records", `${ns?.summary?.total_records || "—"} records`, "dim");
-    html += row("DNSSEC", ns?.summary?.dnssec === "signed" ? "✓ Signed" : "Unsigned",
-      ns?.summary?.dnssec === "signed" ? "ok" : "dim");
+    const dnssecOk = ns?.summary?.dnssec === "authenticated" || ns?.summary?.dnssec === "signed";
+    html += row("DNSSEC", dnssecOk ? "✓ Signed" : "Unsigned", dnssecOk ? "ok" : "dim");
   }
 
   // TLS summary
@@ -382,7 +382,7 @@ function renderDNS(data) {
 
   // Propagation / DNSSEC bar
   let html = `<div class="prop-bar">`;
-  if (summary.dnssec === "signed") {
+  if (summary.dnssec === "signed" || summary.dnssec === "authenticated") {
     html += `<span class="badge badge-ok" style="font-size:9px">DNSSEC ✓</span>`;
   } else {
     html += `<span class="badge badge-info" style="font-size:9px">DNSSEC unsigned</span>`;
