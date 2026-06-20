@@ -183,7 +183,7 @@ function renderOverview(xhttp, ns, certs, status) {
   const expLabel = expDays !== null ? (expDays > 0 ? `✓ ${expDays}d` : `✗ expired`) : (st.certs === "loading" ? "…" : "—");
   const expColor = expDays === null ? "dim" : expDays > 30 ? "ok" : expDays > 0 ? "warn" : "err";
 
-  let html = `<div class="grade-row">
+  html += `<div class="grade-row">
     <div class="grade-card">
       <div class="grade-letter ${gradeColor(hGrade)}">${esc(hGrade)}</div>
       <div class="grade-label">Headers</div>
