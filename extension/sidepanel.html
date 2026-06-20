@@ -294,6 +294,14 @@ body { display: flex; flex-direction: column; }
   border-radius: 50%; margin: 12px auto 0;
   animation: spin 0.7s linear infinite;
 }
+.scan-progress {
+  padding: 6px 12px; margin: 0 0 8px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--muted); text-align: center;
+  background: var(--surface); border-radius: 6px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
 
 /* ── Copy tooltip ── */
 .copy-toast {

@@ -161,14 +161,26 @@ function renderError(el, msg) {
 }
 
 // ── Overview ──
-function renderOverview(xhttp, ns, certs) {
+function renderOverview(xhttp, ns, certs, status) {
   const el = tabs.overview;
+  const st = status || { xhttp: "done", ns: "done", certs: "done" };
+
+  // Progress indicator
+  const loading = [];
+  if (st.xhttp === "loading") loading.push("headers");
+  if (st.ns === "loading") loading.push("DNS");
+  if (st.certs === "loading") loading.push("TLS");
+
+  let html = "";
+  if (loading.length) {
+    html += `<div class="scan-progress">Scanning ${loading.join(", ")}…</div>`;
+  }
 
   // Header grade
-  const hGrade = xhttp?.security_headers?.grade || xhttp?.grade || "—";
-  const tGrade = certs?.grade || "—";
+  const hGrade = xhttp?.security_headers?.grade || xhttp?.grade || (st.xhttp === "loading" ? "…" : "—");
+  const tGrade = certs?.grade || (st.certs === "loading" ? "…" : "—");
   const expDays = certs?.valid_to ? daysUntil(certs.valid_to) : null;
-  const expLabel = expDays !== null ? (expDays > 0 ? `✓ ${expDays}d` : `✗ expired`) : "—";
+  const expLabel = expDays !== null ? (expDays > 0 ? `✓ ${expDays}d` : `✗ expired`) : (st.certs === "loading" ? "…" : "—");
   const expColor = expDays === null ? "dim" : expDays > 30 ? "ok" : expDays > 0 ? "warn" : "err";
 
   let html = `<div class="grade-row">
@@ -254,24 +266,26 @@ function renderOverview(xhttp, ns, certs) {
   el.innerHTML = html;
 
   // Set badge — alert-only (red "!" for serious issues, clean otherwise)
-  const serious = [];
-  if (expDays !== null && expDays <= 0) serious.push("SSL certificate expired");
-  else if (expDays !== null && expDays <= 14) serious.push(`SSL cert expires in ${expDays}d`);
-  const tg = (tGrade || "").toUpperCase();
-  if (tg === "D" || tg === "F" || tg === "T") serious.push(`TLS grade: ${tGrade}`);
-  const hg = (hGrade || "").toUpperCase();
-  if (hg === "D" || hg === "F") serious.push(`Security headers grade: ${hGrade}`);
-  if (xhttp?.security_headers?.headers) {
-    const h = xhttp.security_headers.headers;
-    if (h["strict-transport-security"] && !h["strict-transport-security"].present) serious.push("Missing HSTS header");
-  }
-  if (xhttp?.redirects) {
-    const chain = Array.isArray(xhttp.redirects) ? xhttp.redirects : [];
-    const httpOnly = chain.length > 0 && chain.every(r => (r.url || "").startsWith("http://"));
-    if (httpOnly) serious.push("No HTTPS redirect");
-  }
+  // Only update badge once all APIs have finished (avoid premature "no issues")
+  const allDone = st.xhttp !== "loading" && st.ns !== "loading" && st.certs !== "loading";
+  if (allDone && currentDomain) {
+    const serious = [];
+    if (expDays !== null && expDays <= 0) serious.push("SSL certificate expired");
+    else if (expDays !== null && expDays <= 14) serious.push(`SSL cert expires in ${expDays}d`);
+    const tg = (tGrade || "").toUpperCase();
+    if (tg === "D" || tg === "F" || tg === "T") serious.push(`TLS grade: ${tGrade}`);
+    const hg = (hGrade || "").toUpperCase();
+    if (hg === "D" || hg === "F") serious.push(`Security headers grade: ${hGrade}`);
+    if (xhttp?.security_headers?.headers) {
+      const h = xhttp.security_headers.headers;
+      if (h["strict-transport-security"] && !h["strict-transport-security"].present) serious.push("Missing HSTS header");
+    }
+    if (xhttp?.redirects) {
+      const chain = Array.isArray(xhttp.redirects) ? xhttp.redirects : [];
+      const httpOnly = chain.length > 0 && chain.every(r => (r.url || "").startsWith("http://"));
+      if (httpOnly) serious.push("No HTTPS redirect");
+    }
 
-  if (currentDomain) {
     chrome.runtime.sendMessage({
       type: "SET_BADGE",
       domain: currentDomain,
@@ -598,30 +612,43 @@ async function analyzeDomain(domain, force = false) {
 }
 
 async function loadOverview(domain) {
-  renderLoading(tabs.overview);
-
   const results = { xhttp: null, ns: null, certs: null };
+  const status = { xhttp: "loading", ns: "loading", certs: "loading" };
+
+  // Render immediately with loading state
+  renderOverviewProgressive(results, status);
+
+  // Fire all 3 in parallel, re-render as each completes
   const fetches = [
     fetchWithCache(domain, "xhttp", API.xhttp)
-      .then(r => { results.xhttp = r.data; })
-      .catch(() => {}),
+      .then(r => { results.xhttp = r.data; status.xhttp = "done"; })
+      .catch(() => { status.xhttp = "error"; })
+      .finally(() => { if (currentDomain === domain) renderOverviewProgressive(results, status); }),
     fetchWithCache(domain, "ns", API.ns)
-      .then(r => { results.ns = r.data; })
-      .catch(() => {}),
+      .then(r => { results.ns = r.data; status.ns = "done"; })
+      .catch(() => { status.ns = "error"; })
+      .finally(() => { if (currentDomain === domain) renderOverviewProgressive(results, status); }),
     fetchWithCache(domain, "certs", API.certs)
-      .then(r => { results.certs = r.data; })
-      .catch(() => {}),
+      .then(r => { results.certs = r.data; status.certs = "done"; })
+      .catch(() => { status.certs = "error"; })
+      .finally(() => { if (currentDomain === domain) renderOverviewProgressive(results, status); }),
   ];
 
   await Promise.allSettled(fetches);
+  updateCachedLabel("overview");
+}
 
-  if (!results.xhttp && !results.ns && !results.certs) {
+function renderOverviewProgressive(results, status) {
+  const { xhttp, ns, certs } = results;
+  const allDone = status.xhttp !== "loading" && status.ns !== "loading" && status.certs !== "loading";
+  const anyData = xhttp || ns || certs;
+
+  if (allDone && !anyData) {
     renderError(tabs.overview, "Failed to reach all APIs. Check your connection.");
     return;
   }
 
-  renderOverview(results.xhttp, results.ns, results.certs);
-  updateCachedLabel("overview");
+  renderOverview(xhttp, ns, certs, status);
 }
 
 async function loadTabData(tabName) {
