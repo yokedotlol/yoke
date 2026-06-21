@@ -387,26 +387,6 @@ export function SecurityHeadersPanel({ data }: { data: AnalysisResult }) {
           <DataRow key={check.header} label={headerLabel} value={displayValue} copyValue={check.value || undefined} />
         );
       })}
-      {data.domain && (
-        <div style={{ padding: "8px 12px", borderTop: "1px solid var(--border)", textAlign: "center" }}>
-          <a
-            href={`https://xhttp.lol/${data.domain}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "11px",
-              color: "var(--accent)",
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-            }}
-          >
-            Deep-dive on xhttp.lol →
-          </a>
-        </div>
-      )}
     </Panel>
   );
 }
