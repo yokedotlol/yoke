@@ -422,6 +422,28 @@ go build -o yoke .
         </div>
       </Section>
 
+      {/* Privacy notice */}
+      <div
+        style={{
+          margin: "24px 0",
+          padding: "8px 12px",
+          background: "var(--surface)",
+          borderLeft: "3px solid var(--accent)",
+          borderRadius: 4,
+          fontSize: 12,
+          color: "var(--dim)",
+          lineHeight: "20px",
+          fontFamily: "var(--font-ui)",
+        }}
+      >
+        🌐 <strong style={{ color: "var(--accent)" }}>Privacy:</strong> This CLI queries the yoke.lol API and its
+        satellite services (certs.lol, ns.lol, xhttp.lol) to analyze domains. Only the domain name is sent — no
+        accounts, no tracking, no personal data collected.{" "}
+        <a href="https://github.com/yokedotlol/yoke" target="_blank" rel="noopener" style={{ color: "var(--accent)" }}>
+          You can always self-host if you need privacy.
+        </a>
+      </div>
+
       {/* Self-hosting */}
       <Section title="Self-Hosting">
         <p
