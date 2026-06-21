@@ -218,6 +218,16 @@ Start with **[CLAUDE.md](CLAUDE.md)** for technical context. The **[.ai/](.ai/)*
 
 The **[.ai/reviews/](.ai/reviews/)** directory contains a 20-panel expert review system you can run with any AI agent harness — see [.ai/reviews/README.md](.ai/reviews/README.md).
 
+## Family
+
+Part of the [.lol developer tools](https://yoke.lol) family:
+
+- **[yoke.lol](https://yoke.lol)** — Full domain intelligence ← you are here
+- **[certs.lol](https://certs.lol)** — TLS/SSL certificate analysis
+- **[ns.lol](https://ns.lol)** — DNS toolkit
+- **[xhttp.lol](https://xhttp.lol)** — HTTP response debugger
+- **[vrfy.lol](https://vrfy.lol)** — Email validation
+
 ## License
 
 [MIT](LICENSE) · [Third-Party Notices](docs/THIRD-PARTY-NOTICES.md) · [Data Sources](docs/DATA-SOURCES.md)
