@@ -69,8 +69,8 @@ describe("Check Registry", () => {
     }
   });
 
-  it("should have 30 checks (28 original + 2 promoted)", () => {
-    expect(registry.length).toBe(30);
+  it("should have 31 checks (28 original + 2 promoted + 1 ai-catalog)", () => {
+    expect(registry.length).toBe(31);
   });
 
   it("should have a default value defined for every check", () => {
