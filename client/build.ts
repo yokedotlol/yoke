@@ -217,29 +217,19 @@ const html = `<!DOCTYPE html>
 
 writeFileSync(join(outdir, "index.html"), html);
 
-// Copy logo/favicon images to dist for social crawlers and /logo.png, /favicon.ico routes
+// Copy all public/ files to dist (favicons, manifest, icons, BIMI, fonts, _headers, etc.)
+// This mirrors Vite's public directory behavior — everything in public/ is served as-is.
 import { copyFileSync, cpSync } from "fs";
 
+cpSync(join(import.meta.dir, "public"), outdir, { recursive: true, force: true });
+
+// Copy logo.png for /logo.png route (used by social profiles, README badges)
 const assetsDir = join(import.meta.dir, "..", "assets", "logo");
 copyFileSync(join(assetsDir, "mark-transparent-512.png"), join(outdir, "logo.png"));
-copyFileSync(join(assetsDir, "icon-32.png"), join(outdir, "favicon.ico"));
-copyFileSync(join(import.meta.dir, "..", "assets", "og-banner-v4.png"), join(outdir, "og-banner.png"));
-
-// Copy self-hosted fonts to dist
-cpSync(join(import.meta.dir, "public", "fonts"), join(outdir, "fonts"), { recursive: true });
-
-// Copy apple-touch-icon to dist
-copyFileSync(join(import.meta.dir, "public", "apple-touch-icon.png"), join(outdir, "apple-touch-icon.png"));
-
-// Copy _headers for CF Workers static assets cache control
-copyFileSync(join(import.meta.dir, "public", "_headers"), join(outdir, "_headers"));
-
-// Copy BIMI logo for email brand verification (must be publicly accessible with CORS)
-copyFileSync(join(import.meta.dir, "public", "bimi-logo.svg"), join(outdir, "bimi-logo.svg"));
 
 console.log("✓ Client build complete");
 console.log(`  JS:   ${jsPath}`);
 if (cssPath) console.log(`  CSS:  ${cssPath}`);
 console.log(`  HTML: index.html`);
-console.log(`  Assets: logo.png, favicon.ico, og-banner.png, fonts/`);
+console.log(`  Assets: public/ files, logo.png`);
 console.log(`  Output dir: ${outdir}`);
