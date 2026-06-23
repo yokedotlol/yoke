@@ -43,6 +43,7 @@ describe("Check Registry", () => {
     // Promoted from former "Phase 3" post-checks
     "legal_pages",
     "wordpress_security",
+    "ai_catalog",
   ];
 
   it("should contain exactly the expected checks in the correct order", () => {
