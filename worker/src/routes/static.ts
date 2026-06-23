@@ -41,6 +41,54 @@ export function handle(rc: RouteContext): Response | Promise<Response> | null {
     );
   }
 
+  // ARD ai-catalog.json — Agentic Resource Discovery (https://agenticresourcediscovery.org)
+  if (method === "GET" && path === "/.well-known/ai-catalog.json") {
+    const catalog = {
+      specVersion: "1.0",
+      host: {
+        displayName: brand.name,
+        identifier: `did:web:${host}`,
+        documentationUrl: `${baseUrl}/api/docs`,
+      },
+      entries: [
+        {
+          identifier: `urn:air:${host}:server:domain-intelligence`,
+          displayName: `${brand.name} Domain Intelligence MCP Server`,
+          type: "application/mcp-server-card+json",
+          url: "https://www.npmjs.com/package/@yokedotlol/mcp-server",
+          capabilities: ["yoke_analyze", "yoke_score_summary", "yoke_compare"],
+          description:
+            "Domain intelligence MCP server — analyze security, speed, SEO, email auth, reputation, and tech stack for any domain. 150+ signals scored across 6 axes.",
+          representativeQueries: [
+            "analyze the security and performance of example.com",
+            "compare domain scores for github.com vs gitlab.com",
+            "what's the overall domain score for cloudflare.com",
+            "check if a domain has DNSSEC and DMARC configured",
+          ],
+        },
+        {
+          identifier: `urn:air:${host}:api:domain-analysis`,
+          displayName: `${brand.name} REST API`,
+          type: "application/openapi+json",
+          url: `${baseUrl}/api/docs`,
+          description: "Public JSON API for domain analysis — 18 endpoints, no auth required. Cached results are free.",
+          representativeQueries: [
+            "get the DNS records for a domain",
+            "check SSL certificate details for a website",
+            "run a full domain audit with scoring",
+          ],
+        },
+      ],
+    };
+    return new Response(JSON.stringify(catalog, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "public, max-age=86400",
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
   if (method === "GET" && path === "/robots.txt") {
     return new Response(`User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${baseUrl}/sitemap.xml`, {
       headers: { "Content-Type": "text/plain", "Cache-Control": "public, max-age=86400", ...CORS_HEADERS },

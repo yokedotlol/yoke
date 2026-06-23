@@ -145,6 +145,7 @@ export interface AnalysisResult {
   waf: WafDetection | null;
   trust_signals: TrustSignals | null;
   ai_readiness: unknown;
+  ai_catalog: unknown;
   wordpress: unknown;
   breaches: BreachResult;
   cert_transparency: CertTransparencyResult;
@@ -242,6 +243,7 @@ function makeNxdomainResult(domain: string): AnalysisResult {
     waf: null,
     trust_signals: null,
     ai_readiness: null,
+    ai_catalog: null,
     wordpress: null,
     breaches: DEFAULT_BREACH,
     cert_transparency: DEFAULT_CERT_TRANSPARENCY,
@@ -1001,6 +1003,7 @@ async function runAnalysisCore(
   const setCookieHeaders = setCookieRaw ? setCookieRaw.split(/\n/) : [];
   const wafDetection = httpProbeSucceeded ? checkWaf(effectiveHeaders, html, setCookieHeaders) : null;
 
+  const aiCatalogResult = (results.ai_catalog ?? null) as import("../../checks/ai-catalog").AiCatalogResult | null;
   const aiReadiness = calculateAiReadiness(
     llmsTxt,
     robotsParsed,
@@ -1008,6 +1011,7 @@ async function runAnalysisCore(
     html,
     socialMeta,
     ansResult as AnsResult | null,
+    aiCatalogResult,
   );
   const structuredDataValidation = validateStructuredData(jsonLd);
 
@@ -1091,6 +1095,7 @@ async function runAnalysisCore(
     robotsParsed,
     wordpress: wpDetails,
     assetCdn: assetCdnResult,
+    aiCatalog: (results.ai_catalog ?? null) as import("../../checks/ai-catalog").AiCatalogResult | null,
   });
 
   // Tick scoring progress
@@ -1147,6 +1152,7 @@ async function runAnalysisCore(
     waf: wafDetection,
     trust_signals: trustSignals,
     ai_readiness: aiReadiness,
+    ai_catalog: aiCatalogResult,
     wordpress: wpDetails,
     breaches: breachResult,
     cert_transparency: certTransparency,

@@ -864,6 +864,7 @@ export function calculateDomainScore(opts: {
   robotsParsed: RobotsParsed | null;
   wordpress: WordPressDetails | null;
   assetCdn: AssetCdnResult | null;
+  aiCatalog: import("../../checks/ai-catalog").AiCatalogResult | null;
   /** Internal: set during breach analysis for grade cap logic */
   _recentBreachCount?: number;
   _weightedPwned?: number;
@@ -3848,6 +3849,30 @@ export function calculateDomainScore(opts: {
       label: "Progressive Web App ready (manifest + service worker)",
       tradeoff: null,
       weight: arch === "application" || arch === "commerce" ? 2 : 1,
+    });
+  }
+
+  // ─── NEW: ARD ai-catalog.json (Agentic Resource Discovery) ──────
+  if (opts.aiCatalog?.found) {
+    const entries = opts.aiCatalog.entryCount;
+    const types = opts.aiCatalog.entryTypes;
+    const hasMcp = types.some((t) => t.includes("mcp"));
+    const hasA2a = types.some((t) => t.includes("a2a"));
+    const hasTrust = opts.aiCatalog.hasTrustManifest;
+
+    let label = `ARD ai-catalog.json published (${entries} entr${entries === 1 ? "y" : "ies"})`;
+    if (hasMcp && hasA2a) label += " — MCP + A2A";
+    else if (hasMcp) label += " — MCP server";
+    else if (hasA2a) label += " — A2A agent";
+    if (hasTrust) label += " with Trust Manifest";
+
+    findings.push({
+      signal: "ai_catalog",
+      axis: "discoverability",
+      severity: "good",
+      label,
+      tradeoff: null,
+      weight: hasTrust ? 2 : 1,
     });
   }
 

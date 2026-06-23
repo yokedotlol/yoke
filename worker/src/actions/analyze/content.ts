@@ -1,4 +1,5 @@
 import { logApiError } from "../../api-errors";
+import type { AiCatalogResult } from "../../checks/ai-catalog";
 import {
   boundedText,
   type Env,
@@ -954,6 +955,7 @@ export function calculateAiReadiness(
   html: string,
   ogResult: OgTwitterResult | null,
   ansResult?: AnsResult | null,
+  aiCatalog?: AiCatalogResult | null,
 ): AiReadinessResult {
   const checks: Array<{ name: string; passed: boolean; points: number }> = [];
 
@@ -1019,6 +1021,15 @@ export function calculateAiReadiness(
   const rssMatch = html.match(/<link[^>]+type=["']application\/(?:rss|atom)\+xml["'][^>]+href=["']([^"']+)["']/i);
   const rssFeed = rssMatch?.[1] ?? null;
   checks.push({ name: "RSS/Atom feed", passed: !!rssFeed, points: rssFeed ? 5 : 0 });
+
+  // ARD ai-catalog.json (Agentic Resource Discovery)
+  const hasAiCatalog = !!aiCatalog?.found;
+  checks.push({ name: "ARD ai-catalog.json", passed: hasAiCatalog, points: hasAiCatalog ? 15 : 0 });
+
+  const hasTrustManifest = !!aiCatalog?.hasTrustManifest;
+  if (hasAiCatalog) {
+    checks.push({ name: "ARD Trust Manifest", passed: hasTrustManifest, points: hasTrustManifest ? 5 : 0 });
+  }
 
   // ANS / DNS-AID agent discovery (bonus — above base max)
   const hasAns = !!ansResult?.ans_found;

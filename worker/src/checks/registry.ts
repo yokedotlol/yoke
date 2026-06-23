@@ -16,6 +16,7 @@
 // inside their run() function. This does NOT gate on PageSpeed or any other
 // slow check — it resolves as soon as the HTTP probe finishes (~1-5s).
 
+import { aiCatalogCheck } from "./ai-catalog";
 import { ansCheck } from "./ans";
 import { blocklistsCheck } from "./blocklists";
 import { breachesCheck } from "./breaches";
@@ -87,4 +88,5 @@ export const registry: readonly Check[] = [
   // parallel with all other checks, using ctx.httpProbePromise for HTML.
   legalPagesCheck,
   wordPressSecurityCheck,
+  aiCatalogCheck,
 ] as const;

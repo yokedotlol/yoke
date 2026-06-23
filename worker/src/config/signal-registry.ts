@@ -2172,6 +2172,25 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     weightRange: [5, 5],
     promptGuidance: "Unreachable = zero visibility. Root cause is infrastructure.",
   },
+  ai_catalog: {
+    axis: "discoverability",
+    label: "AI Catalog (ARD)",
+    absentLabel: "No ai-catalog.json",
+    actionable: true,
+    canBeNonGood: false,
+    canBeGood: true,
+    effort: "~15 min — create /.well-known/ai-catalog.json",
+    fixDescription: "Publish an ARD ai-catalog.json to make your tools and APIs discoverable by AI agents",
+    weightRange: [1, 2],
+    goodPrevalence: 0.01,
+    promptGuidance:
+      "Agentic Resource Discovery (ARD) catalog at /.well-known/ai-catalog.json. Very new spec (v0.9, June 2026) — presence signals cutting-edge AI readiness. Absence is neutral — reward-only. More valuable for sites that expose APIs, MCP servers, or AI-accessible services.",
+    archetypeNotes: {
+      corporate: "Enterprise sites with APIs or developer platforms benefit most.",
+      application: "SaaS products with APIs or integrations should consider ARD for discoverability.",
+    },
+    requiresHttpAccess: true,
+  },
 };
 
 // ─── Derived Constants ──────────────────────────────────────────────
