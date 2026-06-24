@@ -151,7 +151,7 @@ npx wrangler secret put IP_HASH_SALT       # GDPR-safe IP hashing salt (openssl 
 **Recommended:**
 
 ```bash
-npx wrangler secret put OPENROUTER_API_KEY          # AI Analysis — https://openrouter.ai/keys
+npx wrangler secret put OPENROUTER_API_KEY          # AI Analysis — https://openrouter.context/keys
 npx wrangler secret put GOOGLE_PAGESPEED_API_KEY    # Lighthouse + CrUX — free, 25K req/day
 npx wrangler secret put WHOISFREAKS_API_KEY         # WHOIS fallback for ccTLDs — free, 100/mo
 ```

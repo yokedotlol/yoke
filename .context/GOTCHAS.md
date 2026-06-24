@@ -19,7 +19,7 @@
 **What happened:** `SCORING-CALIBRATION.md` (containing internal scoring methodology and calibration notes) was committed to the public repo at least 4 times across different sprints.
 
 **Don't:** `git add` any `.md` file without asking: "Is this code documentation or internal work product?"
-**Do:** Code docs (README, API docs, CHANGELOG, CONTRIBUTING, .ai/ files) go in the repo. Everything else (calibration methodology, audit reports, scoring rationale, planning notes) goes to `~/workspace/yoke-internal/`, never committed. When in doubt, it's internal.
+**Do:** Code docs (README, API docs, CHANGELOG, CONTRIBUTING, .context/ files) go in the repo. Everything else (calibration methodology, audit reports, scoring rationale, planning notes) goes to `~/workspace/yoke-internal/`, never committed. When in doubt, it's internal.
 
 ---
 
@@ -91,16 +91,16 @@
 **What happened:** CLAUDE.md referenced "5 axes" and "~136 signals" long after the project had 6 axes and 156 signals. Agents reading it as authoritative context produced work based on outdated assumptions.
 
 **Don't:** Treat CLAUDE.md as a write-once file.
-**Do:** Update CLAUDE.md when the project state changes significantly. Review `.ai/STATE.md` to detect drift. The `.ai/STATE.md` file is the volatile snapshot; CLAUDE.md should point agents there.
+**Do:** Update CLAUDE.md when the project state changes significantly. Review `.context/STATE.md` to detect drift. The `.context/STATE.md` file is the volatile snapshot; CLAUDE.md should point agents there.
 
 ---
 
 ### Subagents don't inherit context files
 
-**What happened:** Spawned subagents have transcript context but don't automatically read MEMORY.md, CLAUDE.md, or `.ai/` files. They make decisions based on incomplete context, sometimes reverting agreed-upon changes.
+**What happened:** Spawned subagents have transcript context but don't automatically read MEMORY.md, CLAUDE.md, or `.context/` files. They make decisions based on incomplete context, sometimes reverting agreed-upon changes.
 
 **Don't:** Assume subagents know project invariants or recent decisions.
-**Do:** When spawning subagents for Yoke work, explicitly include relevant invariants and recent decisions in the task instructions. At minimum, summarize the key points from `.ai/INVARIANTS.md`.
+**Do:** When spawning subagents for Yoke work, explicitly include relevant invariants and recent decisions in the task instructions. At minimum, summarize the key points from `.context/INVARIANTS.md`.
 
 ---
 

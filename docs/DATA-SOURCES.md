@@ -27,7 +27,7 @@ Yoke pulls data from a variety of third-party services to build its domain intel
 | **Wayback Machine** | Historical snapshot availability via the Internet Archive | Free public API | [web.archive.org](https://web.archive.org) |
 | **HackerTarget** | Supplementary reconnaissance lookups | Free tier, rate-limited | [hackertarget.com](https://hackertarget.com) |
 | **ipwho.is** | IP geolocation (HTTPS fallback, used by both Worker and Fly proxy) | Free, no key required | [ipwho.is](https://ipwho.is) |
-| **OpenRouter** | LLM inference proxy (powers AI-generated analysis) | [OpenRouter ToS](https://openrouter.ai/terms) — BYO key or platform key | [openrouter.ai](https://openrouter.ai) |
+| **OpenRouter** | LLM inference proxy (powers AI-generated analysis) | [OpenRouter ToS](https://openrouter.context/terms) — BYO key or platform key | [openrouter.ai](https://openrouter.ai) |
 | **check-host.net** | Global HTTP availability probes from 20+ worldwide locations (relayed via Fly proxy) | Free public API | [check-host.net](https://check-host.net) |
 | **MaxMind GeoLite2** | Local IP geolocation database (city, country, ASN/ISP) used in Fly proxy | [GeoLite2 EULA](https://www.maxmind.com/en/geolite2/eula) — attribution required | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
 | **CARTO** | Dark-themed map tile layer for IP geolocation maps | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | [carto.com](https://carto.com) |

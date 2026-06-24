@@ -2,20 +2,20 @@
 
 Project context for AI coding assistants (Claude Code, Cursor, Copilot, Codex, Hatch, etc.).
 
-## ⚡ Start Here: .ai/ Context Framework
+## ⚡ Start Here: .context/ Context Framework
 
-**Before working on this project, read these files in `.ai/`:**
+**Before working on this project, read these files in `.context/`:**
 
 | File | When to read | What it contains |
 |------|-------------|------------------|
-| `.ai/CONSTITUTION.md` | **Always** | Architecture, scoring philosophy, red lines |
-| `.ai/INVARIANTS.md` | **Always** | Things that must always be true — check before any change |
-| `.ai/PATTERNS.md` | **Always** | Key patterns, anti-patterns, build/deploy, file reference |
-| `.ai/STATE.md` | **Always** | Current versions, signal counts, test counts |
-| `.ai/DECISIONS.md` | Before modifying scoring, signals, or architecture | Why things are the way they are |
-| `.ai/GOTCHAS.md` | Before modifying scoring, signals, or client code | Mistakes we've made and how to avoid them |
+| `.context/CONSTITUTION.md` | **Always** | Architecture, scoring philosophy, red lines |
+| `.context/INVARIANTS.md` | **Always** | Things that must always be true — check before any change |
+| `.context/PATTERNS.md` | **Always** | Key patterns, anti-patterns, build/deploy, file reference |
+| `.context/STATE.md` | **Always** | Current versions, signal counts, test counts |
+| `.context/DECISIONS.md` | Before modifying scoring, signals, or architecture | Why things are the way they are |
+| `.context/GOTCHAS.md` | Before modifying scoring, signals, or client code | Mistakes we've made and how to avoid them |
 
-Run `bash .ai/base/audit.sh yoke --live` to verify invariants and live deployment state.
+Run `bash .context/base/audit.sh yoke --live` to verify invariants and live deployment state.
 
 ## What This Is
 
@@ -37,7 +37,7 @@ npx @biomejs/biome check .
 cd worker && bun run typecheck
 ```
 
-See `.ai/PATTERNS.md` for full build/deploy docs, coding patterns, and file reference.
+See `.context/PATTERNS.md` for full build/deploy docs, coding patterns, and file reference.
 
 ## Badges
 
@@ -50,4 +50,4 @@ Badges refresh lazily on-view (demand-gated): cold-start is a pure read, already
 
 KV key: `badge:<domain>` (48h TTL, ~200 bytes). D1 table: `badge_domains` (tracks requested domains). Badge cache is written as a side effect of every analysis via `finalizeResult()` in `worker/src/actions/analyze/finalize.ts`.
 
-Post-analysis enrichment (share_url, pdf_url, badge_url, percentiles, badge cache write) is centralized in `finalizeResult()` — never duplicate across code paths. See `.ai/GOTCHAS.md`.
+Post-analysis enrichment (share_url, pdf_url, badge_url, percentiles, badge cache write) is centralized in `finalizeResult()` — never duplicate across code paths. See `.context/GOTCHAS.md`.

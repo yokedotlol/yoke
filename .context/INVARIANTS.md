@@ -74,7 +74,7 @@
   - _Verify:_ Check `share.ts` for `SHARE_SECRET` usage — must throw/reject if undefined.
 
 - [ ] **No internal docs in the public repo.** Calibration methodology, audit reports, scoring rationale, planning notes stay in `~/workspace/yoke-internal/`.
-  - _Verify:_ `find . -name "SCORING-CALIBRATION*" -o -name "*audit*" -o -name "*internal*" | grep -v node_modules | grep -v .ai/` — should be empty.
+  - _Verify:_ `find . -name "SCORING-CALIBRATION*" -o -name "*audit*" -o -name "*internal*" | grep -v node_modules | grep -v .context/` — should be empty.
 
 - [ ] **Cache hits don't count against rate limits.** This is intentional, not a bug.
   - _Verify:_ Rate-limit check happens after cache lookup in the request flow.

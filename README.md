@@ -214,9 +214,9 @@ Contributions welcome — the easiest entry point is adding a new analysis check
 
 ### AI Contributors
 
-Start with **[CLAUDE.md](CLAUDE.md)** for technical context. The **[.ai/](.ai/)** directory has structured project context (architecture, invariants, decisions, gotchas). Run `bash .ai/staleness-check.sh` to verify docs match the codebase.
+Start with **[CLAUDE.md](CLAUDE.md)** for technical context. The **[.context/](.context/)** directory has structured project context (architecture, invariants, decisions, gotchas). Run `bash .context/staleness-check.sh` to verify docs match the codebase.
 
-The **[.ai/reviews/](.ai/reviews/)** directory contains a 20-panel expert review system you can run with any AI agent harness — see [.ai/reviews/README.md](.ai/reviews/README.md).
+The **[.context/reviews/](.context/reviews/)** directory contains a 20-panel expert review system you can run with any AI agent harness — see [.context/reviews/README.md](.context/reviews/README.md).
 
 ## Family
 

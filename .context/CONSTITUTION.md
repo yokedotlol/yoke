@@ -112,7 +112,7 @@ Self-hosters on Docker Compose pay only for their VPS (~$10-20/mo). No CF/Fly.io
 
 ---
 
-## .ai/ Maintenance Protocol
+## .context/ Maintenance Protocol
 
 These files are maintained by AI agents **with human approval**:
 
@@ -122,6 +122,6 @@ These files are maintained by AI agents **with human approval**:
 - **STATE.md** — Can be updated more freely; agent proposes changes, human confirms.
 - **GOTCHAS.md** — Append when a new lesson is learned. Pair every "don't" with a "do."
 
-**Update cadence:** After significant sessions (~10 commits or a major decision), the agent should propose: _"About to update `.ai/` with: [changes]. Approve?"_ — then wait for confirmation before writing.
+**Update cadence:** After significant sessions (~10 commits or a major decision), the agent should propose: _"About to update `.context/` with: [changes]. Approve?"_ — then wait for confirmation before writing.
 
-Review `.ai/STATE.md` periodically to detect drift between these docs and the actual codebase.
+Review `.context/STATE.md` periodically to detect drift between these docs and the actual codebase.

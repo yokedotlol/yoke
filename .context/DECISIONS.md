@@ -128,9 +128,9 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 
 ---
 
-### 2026-06-01 — .ai/ context framework added
+### 2026-06-01 — .context/ context framework added
 
-**What changed:** Added `.ai/` directory with CONSTITUTION.md, DECISIONS.md, INVARIANTS.md, STATE.md, GOTCHAS.md, and staleness-check.sh.
+**What changed:** Added `.context/` directory with CONSTITUTION.md, DECISIONS.md, INVARIANTS.md, STATE.md, GOTCHAS.md, and staleness-check.sh.
 **Why:** AI agents working on the project need persistent, structured context about decisions, invariants, and current state to avoid reverting agreed-upon changes or violating project principles.
 **Directive:** Keep these files updated. See CONSTITUTION.md for the maintenance protocol.
 
@@ -146,7 +146,7 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 
 ### 2026-06-01: Canonical curl format is `curl -s https://`
 
-- **What:** Updated all curl examples across README, CLAUDE.md, .ai/, CurlShowcase, API docs, MCP content, and meta tags to use `curl -s https://yoke.lol/...` format
+- **What:** Updated all curl examples across README, CLAUDE.md, .context/, CurlShowcase, API docs, MCP content, and meta tags to use `curl -s https://yoke.lol/...` format
 - **Why:** Bare `curl yoke.lol/...` hits HTTP and doesn't follow the 301 redirect to HTTPS. Adding `-s` suppresses progress bars for cleaner piping to jq.
 - **Directive:** All curl examples referencing yoke.lol must use explicit `https://` and `-s` flag.
 

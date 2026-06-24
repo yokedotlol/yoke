@@ -8,19 +8,19 @@ A multi-expert review framework for auditing the Yoke codebase and product. Desi
 
 ```bash
 # Run a single panel
-claude "Run the Yoke HN Heckler review panel. Follow .ai/reviews/panels/hn-heckler.md"
+claude "Run the Yoke HN Heckler review panel. Follow .context/reviews/panels/hn-heckler.md"
 
 # Run a full review
-claude "Run a full Yoke pre-launch review. See .ai/reviews/SKILL.md for the process and .ai/reviews/panels/ for all panel prompts."
+claude "Run a full Yoke pre-launch review. See .context/reviews/SKILL.md for the process and .context/reviews/panels/ for all panel prompts."
 
 # Audit a specific domain's scoring
-claude "Run a domain scoring audit on example.com. Follow .ai/reviews/panels/domain-scoring-audit.md"
+claude "Run a domain scoring audit on example.com. Follow .context/reviews/panels/domain-scoring-audit.md"
 ```
 
 ### With OpenAI Codex
 
 ```bash
-codex "Run the Yoke security review panel following .ai/reviews/panels/security-privacy.md"
+codex "Run the Yoke security review panel following .context/reviews/panels/security-privacy.md"
 ```
 
 ### With OpenCode / Aider / Any Agent
@@ -28,7 +28,7 @@ codex "Run the Yoke security review panel following .ai/reviews/panels/security-
 Point your agent at a panel prompt file and ask it to follow the instructions:
 
 ```
-Read .ai/reviews/panels/scoring-signals.md and execute that review against the current codebase.
+Read .context/reviews/panels/scoring-signals.md and execute that review against the current codebase.
 ```
 
 ### Running Multiple Panels in Parallel
@@ -44,7 +44,7 @@ Domain Scoring Audit runs independently on a per-domain basis.
 ## What's Here
 
 ```
-.ai/reviews/
+.context/reviews/
 ├── README.md          ← You are here
 ├── SKILL.md           ← Full review process, panel list, execution flow
 └── panels/

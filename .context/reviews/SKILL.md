@@ -34,18 +34,18 @@ This system uses **21 expert panels**, each with a dedicated prompt in `panels/`
 
 ### Full Pre-Launch Review
 ```
-Run the full Yoke pre-launch review. Use all 20 panels from .ai/reviews/panels/.
+Run the full Yoke pre-launch review. Use all 20 panels from .context/reviews/panels/.
 Present results section by section.
 ```
 
 ### Single Panel
 ```
-Run the Yoke [panel name] review panel. Follow .ai/reviews/panels/[filename].md.
+Run the Yoke [panel name] review panel. Follow .context/reviews/panels/[filename].md.
 ```
 
 ### Domain Scoring Audit (takes a domain as input)
 ```
-Run a Yoke domain scoring audit on [domain]. Follow .ai/reviews/panels/domain-scoring-audit.md.
+Run a Yoke domain scoring audit on [domain]. Follow .context/reviews/panels/domain-scoring-audit.md.
 First analyze the domain via the API, then feed the full signal dump to the panel.
 ```
 
