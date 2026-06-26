@@ -2,6 +2,7 @@ import { logApiError } from "../api-errors";
 import { AI_CACHE_TTL_MS, getAnalysisCacheTtlMs } from "../config/cache";
 import { CORS_HEADERS, type Env, fetchWithTimeout, getFromCache, normalizeDomain, setCache } from "../helpers";
 import { logError, logWarn } from "../logger";
+import { shardKeyFromIP } from "../rate-limiter-do";
 
 // ─── Content-based cache key ────────────────────────────────────────
 // Hash the analysis input so AI cache invalidates when signals change.
@@ -402,76 +403,47 @@ interface CachedAIResult {
 // ─── Rate Limiting ──────────────────────────────────────────────────
 
 const AI_HOURLY_LIMIT = 10;
+const AI_HOURLY_WINDOW_SECS = 3600;
 const AI_DOMAIN_HOURLY_LIMIT = 3; // max 3 AI analyses per domain per hour
 
-async function ensureRateLimitTable(db: D1Database): Promise<void> {
-  await db
-    .prepare(
-      "CREATE TABLE IF NOT EXISTS ai_rate_limits (id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)",
-    )
-    .run();
-  await db.prepare("CREATE INDEX IF NOT EXISTS idx_ai_rate_ip_ts ON ai_rate_limits(ip, ts)").run();
+interface DOCheckResponse {
+  allowed: boolean;
+  limit: number;
+  remaining: number;
+  resetAt: number;
 }
 
-async function getRateLimitCount(db: D1Database, ip: string): Promise<number> {
-  const cutoff = Math.floor(Date.now() / 1000) - 3600;
-  const row = await db
-    .prepare("SELECT COUNT(*) as cnt FROM ai_rate_limits WHERE ip = ? AND ts > ?")
-    .bind(ip, cutoff)
-    .first<{ cnt: number }>();
-  return row?.cnt ?? 0;
-}
-
-// recordRateLimitHit removed — rate limit insertion is done inline in getAIAnalysis
-
-async function cleanupOldRateLimits(db: D1Database): Promise<void> {
-  // Probabilistic cleanup: 5% chance per request, delete entries older than 2 hours
-  if (Math.random() > 0.05) return;
+/**
+ * Check rate limit via the RateLimiterDO. Returns null if allowed,
+ * or {used, resetAt} if blocked. Fails open on DO errors.
+ */
+async function checkAIRateLimit(
+  rateLimiter: DurableObjectNamespace | undefined,
+  ip: string,
+  endpoint: string,
+  limit: number,
+): Promise<{ used: number; resetAt: number } | null> {
+  if (!rateLimiter) return null; // no DO binding — fail open (self-hosted)
   try {
-    const cutoff = Math.floor(Date.now() / 1000) - 7200;
-    await db.prepare("DELETE FROM ai_rate_limits WHERE ts < ?").bind(cutoff).run();
-    await db.prepare("DELETE FROM ai_domain_rate_limits WHERE ts < ?").bind(cutoff).run();
-  } catch {
-    /* cleanup failure is non-critical */
-  }
-}
-
-// ─── Domain-level rate limiting ─────────────────────────────────────
-
-async function ensureDomainRateLimitTable(db: D1Database): Promise<void> {
-  await db
-    .prepare(
-      "CREATE TABLE IF NOT EXISTS ai_domain_rate_limits (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT 0)",
-    )
-    .run();
-  await db
-    .prepare("CREATE INDEX IF NOT EXISTS idx_ai_domain_rate_domain_ts ON ai_domain_rate_limits(domain, ts)")
-    .run();
-}
-
-async function getDomainRateLimitCount(db: D1Database, domain: string): Promise<number> {
-  try {
-    await ensureDomainRateLimitTable(db);
-    const cutoff = Math.floor(Date.now() / 1000) - 3600;
-    const row = await db
-      .prepare("SELECT COUNT(*) as cnt FROM ai_domain_rate_limits WHERE domain = ? AND ts > ?")
-      .bind(domain, cutoff)
-      .first<{ cnt: number }>();
-    return row?.cnt ?? 0;
-  } catch {
-    return 0;
-  }
-}
-
-async function recordDomainRateLimitHit(db: D1Database, domain: string): Promise<void> {
-  try {
-    await ensureDomainRateLimitTable(db);
-    await db
-      .prepare("INSERT INTO ai_domain_rate_limits (domain, ts) VALUES (?, ?)")
-      .bind(domain, Math.floor(Date.now() / 1000))
-      .run();
-  } catch {
-    /* non-critical */
+    const shardKey = shardKeyFromIP(ip);
+    const doId = rateLimiter.idFromName(shardKey);
+    const stub = rateLimiter.get(doId);
+    const resp = await stub.fetch(
+      new Request("https://do/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ip, endpoint, limit, windowSecs: AI_HOURLY_WINDOW_SECS }),
+      }),
+    );
+    if (!resp.ok) return null; // DO error — fail open
+    const result = (await resp.json()) as DOCheckResponse;
+    if (!result.allowed) {
+      return { used: result.limit - result.remaining, resetAt: result.resetAt };
+    }
+    return null;
+  } catch (err) {
+    logError("AI rate-limit DO error", { error: err instanceof Error ? err.message : String(err) });
+    return null; // fail open
   }
 }
 
@@ -702,136 +674,56 @@ export async function getAIAnalysis(
   }
 
   // Rate limiting — skip for BYO key users (they're using their own credits)
-  let rateLimitRowId: number | undefined;
   if (!isByoKey) {
-    try {
-      if (!env.STATS_DB) throw new Error("STATS_DB not available (self-hosted)");
-      await ensureRateLimitTable(env.STATS_DB);
-      const count = await getRateLimitCount(env.STATS_DB, clientIP);
-      if (count >= AI_HOURLY_LIMIT) {
-        const { system, user } = buildAIPrompt(analysisCache);
-        const diyPrompt = `${system}\n\n---\n\n${user}`;
-        return new Response(
-          JSON.stringify({
-            rate_limited: true,
-            limit: AI_HOURLY_LIMIT,
-            used: count,
-            reset: "~1 hour",
-            diy_prompt: diyPrompt,
-            model_suggestion: "deepseek/deepseek-chat-v3-0324",
-            instructions: "Copy the prompt below and paste it into ChatGPT, Claude, Gemini, or any AI assistant.",
-          }),
-          {
-            status: 429,
-            headers: {
-              "Content-Type": "application/json",
-              ...CORS_HEADERS,
-              "X-RateLimit-Limit": String(AI_HOURLY_LIMIT),
-              "X-RateLimit-Remaining": "0",
-              "X-RateLimit-Reset": String(Math.floor(Date.now() / 1000) + 3600),
-              "Retry-After": "3600",
-            },
+    // Per-IP rate limit
+    const ipBlock = await checkAIRateLimit(env.RATE_LIMITER, clientIP, "ai-analysis", AI_HOURLY_LIMIT);
+    if (ipBlock) {
+      const { system, user } = buildAIPrompt(analysisCache);
+      const diyPrompt = `${system}\n\n---\n\n${user}`;
+      return new Response(
+        JSON.stringify({
+          rate_limited: true,
+          limit: AI_HOURLY_LIMIT,
+          used: ipBlock.used,
+          reset: "~1 hour",
+          diy_prompt: diyPrompt,
+          model_suggestion: "deepseek/deepseek-chat-v3-0324",
+          instructions: "Copy the prompt below and paste it into ChatGPT, Claude, Gemini, or any AI assistant.",
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            ...CORS_HEADERS,
+            "X-RateLimit-Limit": String(AI_HOURLY_LIMIT),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": String(ipBlock.resetAt),
+            "Retry-After": String(Math.max(1, ipBlock.resetAt - Math.floor(Date.now() / 1000))),
           },
-        );
-      }
-      // Domain-level rate limit — prevent hammering the same domain
-      const domainCount = await getDomainRateLimitCount(env.STATS_DB, normalized);
-      if (domainCount >= AI_DOMAIN_HOURLY_LIMIT) {
-        return new Response(
-          JSON.stringify({
-            rate_limited: true,
-            limit: AI_DOMAIN_HOURLY_LIMIT,
-            used: domainCount,
-            reset: "~1 hour",
-            message: `This domain has been analyzed ${domainCount} times in the last hour. Results are cached — the analysis doesn't change that fast.`,
-          }),
-          {
-            status: 429,
-            headers: { "Content-Type": "application/json", ...CORS_HEADERS, "Retry-After": "3600" },
-          },
-        );
-      }
-      const rlResult = await env.STATS_DB.prepare("INSERT INTO ai_rate_limits (ip, ts) VALUES (?, ?)")
-        .bind(clientIP, Math.floor(Date.now() / 1000))
-        .run();
-      rateLimitRowId = rlResult.meta?.last_row_id as number | undefined;
-      await recordDomainRateLimitHit(env.STATS_DB, normalized);
-    } catch (rateLimitErr) {
-      logError("AI rate-limit DB error", {
-        error: rateLimitErr instanceof Error ? rateLimitErr.message : String(rateLimitErr),
-      });
-      // KV fallback: if D1 is unreachable but KV is available, use it for rate limiting (I13)
-      if (env.REFERENCE_DATA) {
-        try {
-          const window = Math.floor(Date.now() / 3600000); // hourly window
-          const kvKey = `ratelimit:${clientIP}:ai:${window}`;
-          const existing = await env.REFERENCE_DATA.get(kvKey);
-          const count = existing ? parseInt(existing, 10) : 0;
-          if (count >= AI_HOURLY_LIMIT) {
-            const { system, user } = buildAIPrompt(analysisCache);
-            const diyPrompt = `${system}\n\n---\n\n${user}`;
-            return new Response(
-              JSON.stringify({
-                rate_limited: true,
-                limit: AI_HOURLY_LIMIT,
-                used: count,
-                reset: "~1 hour",
-                diy_prompt: diyPrompt,
-                model_suggestion: "deepseek/deepseek-chat-v3-0324",
-                instructions: "Copy the prompt below and paste it into ChatGPT, Claude, Gemini, or any AI assistant.",
-              }),
-              {
-                status: 429,
-                headers: { "Content-Type": "application/json", ...CORS_HEADERS, "Retry-After": "3600" },
-              },
-            );
-          }
-          // Domain-level KV rate limit
-          const domainKvKey = `ratelimit:domain:${normalized}:ai:${window}`;
-          const domainExisting = await env.REFERENCE_DATA.get(domainKvKey);
-          const domainCount = domainExisting ? parseInt(domainExisting, 10) : 0;
-          if (domainCount >= AI_DOMAIN_HOURLY_LIMIT) {
-            return new Response(
-              JSON.stringify({
-                rate_limited: true,
-                limit: AI_DOMAIN_HOURLY_LIMIT,
-                used: domainCount,
-                reset: "~1 hour",
-                message: `This domain has been analyzed ${domainCount} times in the last hour. Results are cached.`,
-              }),
-              {
-                status: 429,
-                headers: { "Content-Type": "application/json", ...CORS_HEADERS, "Retry-After": "3600" },
-              },
-            );
-          }
-          // Increment counters with 2hr TTL
-          await env.REFERENCE_DATA.put(kvKey, String(count + 1), { expirationTtl: 7200 });
-          await env.REFERENCE_DATA.put(domainKvKey, String(domainCount + 1), { expirationTtl: 7200 });
-          logWarn("AI rate-limit: using KV fallback (D1 unavailable)");
-        } catch (kvErr) {
-          logError("AI rate-limit KV fallback also failed", {
-            error: kvErr instanceof Error ? kvErr.message : String(kvErr),
-          });
-          // Both D1 and KV failed — fail closed
-          return new Response(
-            JSON.stringify({ error: "AI analysis temporarily unavailable — rate limit service error" }),
-            {
-              status: 503,
-              headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-            },
-          );
-        }
-      } else {
-        // Fail closed on DB error — return 503 instead of allowing unlimited requests
-        return new Response(
-          JSON.stringify({ error: "AI analysis temporarily unavailable — rate limit service error" }),
-          {
-            status: 503,
-            headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-          },
-        );
-      }
+        },
+      );
+    }
+    // Per-domain rate limit
+    const domainBlock = await checkAIRateLimit(
+      env.RATE_LIMITER,
+      clientIP,
+      `ai-domain:${normalized}`,
+      AI_DOMAIN_HOURLY_LIMIT,
+    );
+    if (domainBlock) {
+      return new Response(
+        JSON.stringify({
+          rate_limited: true,
+          limit: AI_DOMAIN_HOURLY_LIMIT,
+          used: domainBlock.used,
+          reset: "~1 hour",
+          message: `This domain has been analyzed ${domainBlock.used} times in the last hour. Results are cached — the analysis doesn't change that fast.`,
+        }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...CORS_HEADERS, "Retry-After": "3600" },
+        },
+      );
     }
   } // end BYO key rate-limit skip
 
@@ -855,21 +747,8 @@ export async function getAIAnalysis(
             }
           }
         }
-        try {
-          await cleanupOldRateLimits(env.STATS_DB);
-        } catch {
-          /* non-critical */
-        }
       })
       .catch(async (err) => {
-        // Stream failed — release rate limit slot
-        if (rateLimitRowId) {
-          try {
-            await env.STATS_DB.prepare("DELETE FROM ai_rate_limits WHERE id = ?").bind(rateLimitRowId).run();
-          } catch {
-            /* non-critical */
-          }
-        }
         logApiError(env.STATS_DB, {
           api: "openrouter",
           status: 0,
@@ -898,23 +777,10 @@ export async function getAIAnalysis(
 
     await setCache(env.REFERENCE_DATA, normalized, aiCacheType, responseData);
 
-    try {
-      await cleanupOldRateLimits(env.STATS_DB);
-    } catch {
-      /* non-critical */
-    }
-
     return new Response(JSON.stringify({ ...responseData, cached: false }), {
       headers: { "Content-Type": "application/json", ...CORS_HEADERS },
     });
   } catch (err) {
-    if (rateLimitRowId) {
-      try {
-        await env.STATS_DB.prepare("DELETE FROM ai_rate_limits WHERE id = ?").bind(rateLimitRowId).run();
-      } catch {
-        /* decrement failure is non-critical */
-      }
-    }
     const msg = err instanceof Error ? err.message : "AI analysis failed";
     logApiError(env.STATS_DB, { api: "openrouter", status: 0, message: msg.slice(0, 200), domain: normalized });
     return new Response(JSON.stringify({ error: msg }), {
