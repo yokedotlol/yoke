@@ -366,6 +366,77 @@ export const VULNERABLE_LIBRARIES: VulnerableLibrary[] = [
     cves: [],
     severity: "medium",
   },
+
+  // ── jQuery UI ──────────────────────────────────────────────────
+  {
+    name: "jQuery UI",
+    patterns: [
+      /jquery-ui[.-](\d+\.\d+\.\d+)/i,
+      /jquery\.ui[.-](\d+\.\d+\.\d+)/i,
+      /jquery-ui\/(\d+\.\d+\.\d+)\//i,
+      /jqueryui\/(\d+\.\d+\.\d+)\//i,
+    ],
+    vulnerableBelow: "1.13.2",
+    cves: ["CVE-2021-41182", "CVE-2021-41183", "CVE-2021-41184", "CVE-2022-31160"],
+    severity: "medium",
+  },
+
+  // ── Highcharts ─────────────────────────────────────────────────
+  {
+    name: "Highcharts",
+    patterns: [/highcharts[.-](\d+\.\d+\.\d+)/i, /highcharts\/(\d+\.\d+\.\d+)\//i, /Highcharts.*?(\d+\.\d+\.\d+)/i],
+    vulnerableBelow: "9.0.0",
+    cves: ["CVE-2021-29489", "CVE-2018-20801"],
+    severity: "high",
+  },
+
+  // ── Froala Editor ──────────────────────────────────────────────
+  {
+    name: "Froala Editor",
+    patterns: [
+      /froala-editor[/@](\d+\.\d+\.\d+)/i,
+      /froala\/(\d+\.\d+\.\d+)\//i,
+      /froala-editor(?:\.min)?\.js.*?(\d+\.\d+\.\d+)/i,
+    ],
+    vulnerableBelow: "4.3.1",
+    cves: ["CVE-2021-28114", "CVE-2024-51434", "CVE-2023-41592"],
+    severity: "high",
+  },
+
+  // ── Mustache.js ────────────────────────────────────────────────
+  {
+    name: "Mustache.js",
+    patterns: [
+      /mustache[.-](\d+\.\d+\.\d+)/i,
+      /mustache\/(\d+\.\d+\.\d+)\//i,
+      /mustache(?:\.min)?\.js.*?(\d+\.\d+\.\d+)/i,
+    ],
+    vulnerableBelow: "2.2.1",
+    cves: ["CVE-2015-8862"],
+    severity: "high",
+  },
+
+  // ── Marked ─────────────────────────────────────────────────────
+  {
+    name: "Marked",
+    patterns: [/marked[/@](\d+\.\d+\.\d+)/i, /marked[.-](\d+\.\d+\.\d+)/i, /marked(?:\.min)?\.js.*?(\d+\.\d+\.\d+)/i],
+    vulnerableBelow: "4.0.10",
+    cves: ["CVE-2022-21681", "CVE-2022-21680"],
+    severity: "high",
+  },
+
+  // ── Swiper ─────────────────────────────────────────────────────
+  {
+    name: "Swiper",
+    patterns: [
+      /swiper[/@](\d+\.\d+\.\d+)/i,
+      /swiper[.-](\d+\.\d+\.\d+)/i,
+      /swiper(?:-bundle)?(?:\.min)?\.js.*?(\d+\.\d+\.\d+)/i,
+    ],
+    vulnerableBelow: "11.2.1",
+    cves: [],
+    severity: "critical",
+  },
 ];
 
 // ─── Scanner ─────────────────────────────────────────────────────────
