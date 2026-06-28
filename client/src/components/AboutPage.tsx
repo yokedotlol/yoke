@@ -391,10 +391,10 @@ export default function AboutPage() {
         <SimpleTable
           headers={["Endpoint", "Limit", "Window"]}
           rows={[
-            ["Domain scan", "50 requests", "per hour"],
-            ["Compare", "50 requests", "per hour"],
-            ["Subdomain scan", "30 requests", "per hour"],
-            ["Availability check", "60 requests", "per hour"],
+            ["Domain scan", "20 requests", "per hour"],
+            ["Compare", "20 requests", "per hour"],
+            ["Subdomain scan", "15 requests", "per hour"],
+            ["Availability check", "30 requests", "per hour"],
           ]}
         />
 
