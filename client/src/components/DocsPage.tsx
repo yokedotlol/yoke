@@ -396,7 +396,7 @@ const FAQ_ITEMS: { q: string; a: string; persona: string }[] = [
   {
     persona: "smb",
     q: "My site works fine — why is the score low?",
-    a: '"Works fine" and "well-configured" are different things. Your site might load correctly but be missing security headers, have an outdated TLS configuration, lack email authentication, or be missing SEO best practices. Yoke checks 156 signals across security, performance, infrastructure, reputation, discoverability, and email. Open the Score Breakdown to see exactly what was deducted and why.',
+    a: '"Works fine" and "well-configured" are different things. Your site might load correctly but be missing security headers, have an outdated TLS configuration, lack email authentication, or be missing SEO best practices. Yoke checks 158 signals across security, performance, infrastructure, reputation, discoverability, and email. Open the Score Breakdown to see exactly what was deducted and why.',
   },
   {
     persona: "smb",
