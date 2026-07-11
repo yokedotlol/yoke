@@ -9,12 +9,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Load Cloudflare credentials
-WRANGLER_ENV="${HOME}/.wrangler/.env"
-if [ ! -f "$WRANGLER_ENV" ]; then
-  echo "Error: $WRANGLER_ENV not found" >&2; exit 1
+# Load Cloudflare credentials (skip if already in env, e.g. CI)
+if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+  WRANGLER_ENV="${HOME}/.wrangler/.env"
+  if [ ! -f "$WRANGLER_ENV" ]; then
+    echo "Error: CLOUDFLARE_API_TOKEN not set and $WRANGLER_ENV not found" >&2; exit 1
+  fi
+  set -a && source "$WRANGLER_ENV" && set +a
 fi
-set -a && source "$WRANGLER_ENV" && set +a
 export PATH="${HOME}/.local/node22/bin:$PATH"
 
 WRANGLER="npx wrangler"
