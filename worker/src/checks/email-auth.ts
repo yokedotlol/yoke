@@ -6,7 +6,17 @@ export const emailAuthCheck: Check = {
   label: "Email Auth",
   default: {
     spf: { found: false, record: null, mechanisms: [], all_qualifier: null },
-    dmarc: { found: false, record: null, policy: null, subdomain_policy: null, rua: null, ruf: null },
+    dmarc: {
+      found: false,
+      record: null,
+      policy: null,
+      subdomain_policy: null,
+      nonexistent_subdomain_policy: null,
+      psd: null,
+      rua: null,
+      ruf: null,
+      deprecated_tags: [],
+    },
     dkim_selectors_found: [],
     bimi: { found: false, record: null, logo_url: null, authority_url: null },
     mta_sts: { dns_found: false, policy_found: false, mode: null },

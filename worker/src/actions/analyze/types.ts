@@ -321,8 +321,11 @@ export interface EmailAuthResult {
     record: string | null;
     policy: string | null;
     subdomain_policy: string | null;
+    nonexistent_subdomain_policy: string | null; // DMARCbis np= tag (RFC 9989)
+    psd: string | null; // DMARCbis psd= tag (RFC 9989)
     rua: string | null;
     ruf: string | null;
+    deprecated_tags: string[]; // DMARCbis: pct=, rf=, ri= are deprecated
   };
   dkim_selectors_found: string[];
   bimi: BimiResult;

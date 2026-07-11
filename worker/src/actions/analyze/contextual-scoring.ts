@@ -1388,6 +1388,36 @@ export function calculateDomainScore(opts: {
       // sp=none → no finding (don't penalize, inheriting parent is standard)
     }
 
+    // ── DMARCbis: Non-existent subdomain policy (np=) ──────────────
+    // RFC 9989 introduced np= for policy on subdomains that don't exist in DNS
+    if (opts.emailAuth.dmarc.found && opts.emailAuth.dmarc.nonexistent_subdomain_policy) {
+      const np = opts.emailAuth.dmarc.nonexistent_subdomain_policy;
+      if (np === "reject") {
+        findings.push({
+          signal: "dmarc_np_policy",
+          axis: "email",
+          severity: "good",
+          label: "DMARC non-existent subdomain policy: reject (RFC 9989)",
+          tradeoff: null,
+          weight: 1,
+        });
+      }
+    }
+
+    // ── DMARCbis: Deprecated tags (pct=, rf=, ri=) ─────────────────
+    // RFC 9989 deprecated these tags — receivers MUST ignore them
+    if (opts.emailAuth.dmarc.found && opts.emailAuth.dmarc.deprecated_tags?.length) {
+      findings.push({
+        signal: "dmarc_deprecated_tags",
+        axis: "email",
+        severity: "info",
+        label: `DMARC record uses deprecated tag${opts.emailAuth.dmarc.deprecated_tags.length > 1 ? "s" : ""}: ${opts.emailAuth.dmarc.deprecated_tags.join(", ")} (ignored per RFC 9989)`,
+        tradeoff:
+          "These tags were deprecated in DMARCbis (RFC 9989). They are harmless but no longer functional — consider removing them to keep the record clean.",
+        weight: 0,
+      });
+    }
+
     // ── DKIM Discovered ─────────────────────────────────────────────
     const dkimCount = opts.emailAuth.dkim_selectors_found.length;
     if (dkimCount > 0) {

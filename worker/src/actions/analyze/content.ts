@@ -294,8 +294,11 @@ export async function checkEmailAuth(domain: string, dnsRecords: DnsRecord[], en
     record: null as string | null,
     policy: null as string | null,
     subdomain_policy: null as string | null,
+    nonexistent_subdomain_policy: null as string | null, // DMARCbis np= tag (RFC 9989)
+    psd: null as string | null, // DMARCbis psd= tag (RFC 9989)
     rua: null as string | null,
     ruf: null as string | null,
+    deprecated_tags: [] as string[], // DMARCbis: pct=, rf=, ri= are deprecated
   };
   try {
     const res = await fetchWithTimeout(
@@ -311,8 +314,16 @@ export async function checkEmailAuth(domain: string, dnsRecords: DnsRecord[], en
           dmarc.record = cleanData;
           dmarc.policy = cleanData.match(/;\s*p=([^;\s]+)/)?.[1] ?? null;
           dmarc.subdomain_policy = cleanData.match(/;\s*sp=([^;\s]+)/)?.[1] ?? null;
+          dmarc.nonexistent_subdomain_policy = cleanData.match(/;\s*np=([^;\s]+)/)?.[1] ?? null;
+          dmarc.psd = cleanData.match(/;\s*psd=([^;\s]+)/)?.[1] ?? null;
           dmarc.rua = cleanData.match(/;\s*rua=([^;\s]+)/)?.[1] ?? null;
           dmarc.ruf = cleanData.match(/;\s*ruf=([^;\s]+)/)?.[1] ?? null;
+          // DMARCbis (RFC 9989): pct=, rf=, ri= are deprecated — receivers MUST ignore them
+          const deprecatedTags: string[] = [];
+          if (/;\s*pct=/i.test(cleanData)) deprecatedTags.push("pct");
+          if (/;\s*rf=/i.test(cleanData)) deprecatedTags.push("rf");
+          if (/;\s*ri=/i.test(cleanData)) deprecatedTags.push("ri");
+          dmarc.deprecated_tags = deprecatedTags;
           break;
         }
       }

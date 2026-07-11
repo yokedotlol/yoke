@@ -1684,6 +1684,32 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     promptGuidance:
       "DMARC sp= sets explicit subdomain policy. sp=reject closes subdomain spoofing gap. Absence inherits parent policy — usually fine. Bonus-only.",
   },
+  dmarc_np_policy: {
+    axis: "email",
+    label: "DMARC Non-Existent Subdomain Policy",
+    absentLabel: "DMARC np= tag not set",
+    fixDescription: "Add np=reject to your DMARC record to protect non-existent subdomains (RFC 9989)",
+    actionable: false,
+    canBeNonGood: false,
+    canBeGood: true,
+    dependsOn: "dmarc_reject",
+    weightRange: [1, 1],
+    goodPrevalence: 0.001,
+    promptGuidance:
+      "DMARCbis (RFC 9989) introduced np= for policy on subdomains that don't exist in DNS. Very few domains use it yet. Bonus-only signal.",
+  },
+  dmarc_deprecated_tags: {
+    axis: "email",
+    label: "DMARC Deprecated Tags",
+    actionable: true,
+    canBeNonGood: true,
+    canBeGood: false,
+    effort: "~5 min — remove deprecated tags from DMARC record",
+    fixDescription: "Remove deprecated pct=/rf=/ri= tags from your DMARC record (RFC 9989)",
+    weightRange: [0, 0],
+    promptGuidance:
+      "RFC 9989 deprecated pct=, rf=, ri= tags. Receivers MUST ignore them. Harmless but worth cleaning up. Weight 0 — informational only.",
+  },
   dkim_discovered: {
     axis: "email",
     label: "DKIM Discovered",
