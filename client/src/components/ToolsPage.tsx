@@ -75,7 +75,6 @@ const tools: Tool[] = [
     description:
       "Know everything DNS can tell you about an email address. MX, SPF, DKIM, DMARC, disposable provider detection — no SMTP probes, no accounts.",
     website: "https://vrfy.lol",
-    cli: "brew install yokedotlol/tap/vrfy",
     docs: "https://vrfy.lol/api/docs",
     github: "https://github.com/yokedotlol/vrfy-lol",
   },
