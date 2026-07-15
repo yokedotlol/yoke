@@ -18,7 +18,7 @@
 
 ## What is Yoke?
 
-Yoke pulls 150+ scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
+Yoke pulls 160+ scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
 
 ```bash
 curl -s https://yoke.lol/stripe.com | jq
