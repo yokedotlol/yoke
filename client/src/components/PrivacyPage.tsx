@@ -54,9 +54,9 @@ export default function PrivacyPage() {
       <Section title="Rate Limiting & IP Handling">
         <p>
           To prevent abuse, Yoke enforces per-IP rate limits. Your IP address is{" "}
-          <strong>never stored in raw form</strong>. Instead, we immediately hash it using SHA-256 with a secret salt
-          and a daily-rotating component. The resulting hash is used only to count requests within a rate-limit window —
-          it cannot be reversed to recover your IP address, and it changes every day.
+          <strong>never stored in raw form</strong>. Instead, we immediately hash it using SHA-256 with a secret salt.
+          The resulting hash is used only to count requests within a rate-limit window — it cannot be reversed to
+          recover your IP address.
         </p>
         <p>
           Rate-limit records are automatically cleaned up within hours. No raw IP addresses are written to any database
