@@ -97,7 +97,7 @@ export default function PrivacyPage() {
 
       <Section title="BYO API Key (AI Analysis)">
         <p>
-          Yoke's AI tab lets you bring your own{" "}
+          Yoke's AI tab and CLI let you bring your own{" "}
           <a href="https://openrouter.ai" style={{ color: "var(--accent)" }}>
             OpenRouter
           </a>{" "}
@@ -105,11 +105,15 @@ export default function PrivacyPage() {
         </p>
         <ul style={{ paddingLeft: "1.5rem", margin: "0.75rem 0" }}>
           <li>
-            <strong>Storage:</strong> Your API key is saved in your browser's{" "}
+            <strong>Storage:</strong> In the browser, your API key is saved in{" "}
             <code style={{ background: "var(--surface)", padding: "2px 6px", borderRadius: 4, fontSize: "0.9em" }}>
               localStorage
-            </code>{" "}
-            — on your device, under your control.
+            </code>
+            . In the CLI, it is saved in{" "}
+            <code style={{ background: "var(--surface)", padding: "2px 6px", borderRadius: 4, fontSize: "0.9em" }}>
+              ~/.yoke.toml
+            </code>
+            . Both stay on your device, under your control.
           </li>
           <li>
             <strong>In flight:</strong> When you run an AI analysis, your key is sent to Yoke's server as part of the
@@ -117,12 +121,20 @@ export default function PrivacyPage() {
             or store your key at any point — it exists in memory only for the duration of that single request.
           </li>
           <li>
-            <strong>Removal:</strong> Click "Remove key" in the Advanced panel, or clear your browser's site data.
-            That's it — there's nothing to delete on our side because we never stored it.
+            <strong>Removal:</strong> In the browser, click "Remove key" in the Advanced panel or clear your browser's
+            site data. In the CLI, remove{" "}
+            <code style={{ background: "var(--surface)", padding: "2px 6px", borderRadius: 4, fontSize: "0.9em" }}>
+              openrouter_key
+            </code>{" "}
+            from{" "}
+            <code style={{ background: "var(--surface)", padding: "2px 6px", borderRadius: 4, fontSize: "0.9em" }}>
+              ~/.yoke.toml
+            </code>
+            . That's it — there's nothing to delete on our side because we never stored it.
           </li>
           <li>
-            <strong>Without a key:</strong> You still get 3 AI analyses per day using Yoke's shared platform key. No key
-            required for any other feature.
+            <strong>Without a key:</strong> You still get shared-key AI analysis on yoke.lol within the current free
+            limit. No key required for any other feature.
           </li>
         </ul>
       </Section>

@@ -89,6 +89,8 @@ yoke ai stripe.com
 yoke ai stripe.com --model openai/gpt-4o
 ```
 
+Privacy note: domain scans send domain names to yoke.lol or the satellite APIs listed below. `yoke ai` stores your OpenRouter key locally in `~/.yoke.toml`, sends it to Yoke only for that AI request, and Yoke passes it through to OpenRouter without logging or storing it. Point `YOKE_BASE_URL` or `yoke config --set-base-url` at a self-hosted instance if you need full control.
+
 ### CI/CD Gate
 
 Use `yoke check` to enforce minimum domain scores in CI pipelines:

@@ -402,12 +402,9 @@ cat domains.txt | yoke check --min-grade B  # batch CI gate`}
           >
             ~/.yoke.toml
           </code>
-          . Override per-session with env vars:
+          . Override the Yoke instance per-session with an env var:
         </p>
-        <CopyBlock
-          code={`export YOKE_BASE_URL=https://your-instance.com
-export OPENROUTER_API_KEY=sk-or-...`}
-        />
+        <CopyBlock code={`export YOKE_BASE_URL=https://your-instance.com`} />
       </Section>
 
       {/* Build from source */}
@@ -437,8 +434,10 @@ go build -o yoke .
         }}
       >
         🌐 <strong style={{ color: "var(--accent)" }}>Privacy:</strong> This CLI queries the yoke.lol API and its
-        satellite services (certs.lol, ns.lol, xhttp.lol) to analyze domains. Only the domain name is sent — no
-        accounts, no tracking, no personal data collected.{" "}
+        satellite services (certs.lol, ns.lol, xhttp.lol) to analyze domains. Domain scans send the domain name only. If
+        you run <code style={{ color: "var(--text)" }}>yoke ai</code> with a BYO OpenRouter key, the key is stored
+        locally in <code style={{ color: "var(--text)" }}>~/.yoke.toml</code>, sent to Yoke for that AI request, passed
+        through to OpenRouter, then discarded without logging or storage. No accounts, no tracking.{" "}
         <a href="https://github.com/yokedotlol/yoke" target="_blank" rel="noopener" style={{ color: "var(--accent)" }}>
           You can always self-host if you need privacy.
         </a>
