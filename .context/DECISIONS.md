@@ -410,3 +410,17 @@ Yoke registered at yoke.lol. Initial architecture: Cloudflare Worker + Vite SPA 
 **Constraint:** Nothing deployed now can be fundamentally incompatible with B. Satellite integrations must be modular — binding vs HTTP call vs localhost swappable by config, not by code change. B should be additive, not a rewrite.
 
 **Directive:** Ship A now. Build toward B. Every satellite integration must be behind an interface where the backing implementation is swappable by config. Production CF bindings are internal to the deployment and invisible to self-hosters.
+
+---
+
+### 2026-07-20 — Privacy residue cleanup: code fixes plus storage cleanup
+
+**What changed:** The July privacy-drift cleanup now treats historical storage as part of the bug, not just future writes. Yoke runs an idempotent cleanup from the hourly maintenance path and manual `/api/cleanup`: delete legacy target-bearing KV indexes, drop old operational target tables such as `domain_lookups`, clear `request_meta.domain` and `api_errors.domain`, and force `tab_views` into the aggregate-only `(tab, day, views)` schema. A one-shot GitHub Actions workflow can run the same cleanup through Cloudflare REST APIs and fail unless verification passes.
+
+**Satellite cleanup:** certs.lol, ns.lol, and xhttp.lol rotated their rate-limit Durable Object class from `RateLimiterDO` to `RateLimiterV2DO`, then deployed a separate `deleted_classes = ["RateLimiterDO"]` migration. This deletes old Durable Object storage that may have been keyed by raw IP before hashed rate-limit IDs shipped.
+
+**Why:** Privacy fixes are incomplete if old target-bearing rows, KV indexes, or raw-IP-keyed Durable Object namespaces remain in production storage. The product invariant is aggregate-only operational analytics: no request domains in telemetry, no raw user IPs in application storage, and no leaderboard-style target lists. Product data such as analysis caches, score history, and public DNS/TLS/HTTP facts remains allowed because it is the core product output, not operational analytics.
+
+**Rejected:** Waiting for TTLs or organic pruning to remove old residue → not auditable and misses schema-level residue. Manual dashboard cleanup only → easy to forget and not reproducible. Reusing the same Durable Object class after hashing keys → prevents future raw keys but leaves old object state reachable in Cloudflare storage.
+
+**Directive:** Any privacy-impacting storage fix must include a residue plan: delete or reshape historical data, add idempotent cleanup where practical, and add a verification path that fails closed. For Cloudflare legacy Durable Object migrations, use the safe two-step delete sequence: first deploy the new class while still exporting the old class, then deploy a separate deletion migration after the new class is live.
