@@ -76,7 +76,7 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ### `yoke_analyze`
 
-Full domain analysis with 160+ signals across 6 scoring axes. Returns comprehensive structured JSON.
+Full domain analysis with 190+ signals across 6 scoring axes. Returns comprehensive structured JSON.
 
 ```
 Input: { "domain": "stripe.com", "force": false }

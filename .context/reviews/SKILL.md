@@ -10,7 +10,7 @@ This system uses **21 expert panels**, each with a dedicated prompt in `panels/`
 |---|-------|--------|-------|
 | 1 | System Design | `system-design.md` | Architecture, resilience, rate limiting, caching, API hygiene |
 | 2 | Platform Best Practices | `platform-best-practices.md` | CF Workers, SPA patterns, TypeScript, web standards |
-| 3 | Scoring & Signals | `scoring-signals.md` | All 6 axes, 156 signals, budget-based deductive algorithm |
+| 3 | Scoring & Signals | `scoring-signals.md` | All 6 axes, signal registry coverage, budget-based deductive algorithm |
 | 4 | Code Quality | `code-quality.md` | Correctness, dead code, structure, refactor opportunities, testing gaps |
 | 5 | Security & Privacy | `security-privacy.md` | SSRF, injection, auth, key handling, data exposure, CSP |
 | 6 | QA — Browser | `qa-browser.md` | Full functional QA of live site at multiple viewports |
@@ -99,7 +99,7 @@ Each panel should end with a **Questions for the maintainer** section — places
 - Worker entry: `worker/src/index.ts`
 - Analysis core: `worker/src/actions/analyze/core.ts`
 - Scoring engine: `worker/src/actions/analyze/contextual-scoring.ts`
-- Signal registry: `worker/src/config/signal-registry.ts` (156 signals)
+- Signal registry: `worker/src/config/signal-registry.ts`
 - Client SPA: `client/src/App.tsx`, `client/src/api.ts`
 - SPA serving + security headers: `worker/src/spa.ts`
 - SSRF protection: `worker/src/helpers.ts`, `fly-proxy/main.go`

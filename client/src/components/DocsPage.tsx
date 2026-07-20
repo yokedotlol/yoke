@@ -381,7 +381,7 @@ const FAQ_ITEMS: { q: string; a: string; persona: string }[] = [
   {
     persona: "smb",
     q: "Is Yoke free?",
-    a: "Yes, completely free and open source (MIT license). No accounts, no sign-ups, no hidden paywalls. You get 50 scans per hour. The API is free too — just curl any domain. AI-powered analysis uses a shared API key with a per-hour limit, or you can bring your own OpenRouter key for unlimited AI analysis.",
+    a: "Yes, completely free and open source (MIT license). No accounts, no sign-ups, no hidden paywalls. You get 20 fresh scans per hour, and cached scans don't count. The API is free too — just curl any domain. AI-powered analysis uses a shared API key with a per-hour limit, or you can bring your own OpenRouter key for unlimited AI analysis.",
   },
   {
     persona: "smb",
@@ -396,7 +396,7 @@ const FAQ_ITEMS: { q: string; a: string; persona: string }[] = [
   {
     persona: "smb",
     q: "My site works fine — why is the score low?",
-    a: '"Works fine" and "well-configured" are different things. Your site might load correctly but be missing security headers, have an outdated TLS configuration, lack email authentication, or be missing SEO best practices. Yoke checks 160 signals across security, performance, infrastructure, reputation, discoverability, and email. Open the Score Breakdown to see exactly what was deducted and why.',
+    a: '"Works fine" and "well-configured" are different things. Your site might load correctly but be missing security headers, have an outdated TLS configuration, lack email authentication, or be missing SEO best practices. Yoke checks 190+ signals across security, performance, infrastructure, reputation, discoverability, and email. Open the Score Breakdown to see exactly what was deducted and why.',
   },
   {
     persona: "smb",

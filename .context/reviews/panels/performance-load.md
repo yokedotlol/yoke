@@ -19,7 +19,7 @@ Yoke runs as a Cloudflare Worker (edge compute, V8 isolates, 128MB memory limit,
 - Does the WASM module (resvg for OG/PDF) impact cold start for non-OG requests?
 
 #### CPU Time
-- What's the worst-case CPU time for a single analysis? (156 signals, some with regex, some with fetch)
+- What's the worst-case CPU time for a single analysis? (signal registry, some with regex, some with fetch)
 - Is there a risk of hitting the 30s CPU time limit?
 - Are there hot loops in the scoring engine? String operations on large HTML?
 - Profile the signal evaluation — which signals are most expensive?
@@ -81,7 +81,7 @@ Simulate what happens when 1000 users hit yoke.lol simultaneously:
 
 #### Rendering Performance
 - Is there jank during SSE updates? (React re-renders on every event)
-- Are large components memoized? (Score waterfall with 156 signals)
+- Are large components memoized? (Score waterfall with the full signal registry)
 - Does the compare view with two full analyses cause performance issues?
 - Are chart/visualization components (radar plot, heatmap) GPU-accelerated?
 

@@ -1,6 +1,6 @@
 # Panel 3: Scoring & Signals Review
 
-You are a data quality and measurement expert reviewing Yoke's domain scoring system. Yoke scores domains across 6 axes using 156 signals with a budget-based deductive scoring model.
+You are a data quality and measurement expert reviewing Yoke's domain scoring system. Yoke scores domains across 6 axes using the signal registry with a budget-based deductive scoring model.
 
 **Read first:** `docs/internal/reviews/review-log.md` (if it exists) for prior findings.
 
@@ -11,7 +11,7 @@ You are a data quality and measurement expert reviewing Yoke's domain scoring sy
 - **Tiers**: Excellent ≥90, Strong ≥78, Moderate ≥60, Weak ≥40, Critical <40
 - **Outlier floor cap**: Any single axis below 40 caps the composite at 74 (Moderate max)
 - **Not Assessed**: Axes with <3 scoreable findings are excluded and imputed at 35
-- **Signal registry**: `worker/src/config/signal-registry.ts` — single source of truth for all 156 signals
+- **Signal registry**: `worker/src/config/signal-registry.ts` — single source of truth for all scoring signals
 - **Scoring engine**: `worker/src/actions/analyze/contextual-scoring.ts`
 - **Score Waterfall**: Axis-grouped collapsible sections with Issues/Improvements/Not Assessed tiers, effort badges, "What if?" simulate mode with live composite recalculation
 - **Percentiles**: Histogram-based (101 buckets/axis), composite + 6 axes, sample-size gated
@@ -19,7 +19,7 @@ You are a data quality and measurement expert reviewing Yoke's domain scoring sy
 ## Your Focus
 
 ### Signal Completeness & Accuracy
-- For each axis, are the 156 signals comprehensive? Missing any obvious ones?
+- For each axis, is the signal set comprehensive? Missing any obvious ones?
 - Are signal severities appropriate? (Is a missing DMARC really "medium"? Is HTTP/1.1-only really worth a penalty?)
 - Are there signals that contradict each other?
 - Are `canBeGood` / `goodPrevalence` values well-calibrated? (Does the IDF-influenced absent penalty match real-world prevalence?)

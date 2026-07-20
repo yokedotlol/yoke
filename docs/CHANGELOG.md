@@ -4,6 +4,20 @@ All notable changes to Yoke are documented here.
 
 > **Scope:** This changelog tracks the **Service (Worker + Client)** version. The CLI and MCP Server version independently via their own release tags (`cli/vX.Y.Z` and `mcp/vX.Y.Z`).
 
+## [2.4.0] — 2026-06-12
+
+### Bug Fixes
+- **SSE stream resilience** — streaming analysis now handles mid-stream reader failures gracefully, shows a usable error instead of a raw browser `TypeError`, and suppresses late errors after the `done` event.
+- **Google Analytics false positive tightened** — GA detection now requires a real `gtag('config', ...)` call instead of matching arbitrary `gtag` function names.
+
+### Cost Model & Testing
+- **Global analysis budget in Docker** — Docker Compose now passes `GLOBAL_ANALYSIS_BUDGET` through to the Worker.
+- **RateLimiterDO coverage** — added tests for sliding windows, persisted state across Durable Object eviction, garbage collection, and independent IP/endpoint buckets.
+
+### Documentation
+- **Version bump** — service packages and README badge updated to 2.4.0.
+- **708 tests passing.**
+
 ## [2.3.1] — 2026-06-11
 
 ### Cost Model & Budget

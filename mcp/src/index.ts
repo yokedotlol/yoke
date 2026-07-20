@@ -153,7 +153,7 @@ const server = new McpServer({
 // Tool 1: Full domain analysis
 server.tool(
   "yoke_analyze",
-  "Analyze a domain across security, speed, DNS, SSL, email authentication, tech stack, and more. Returns comprehensive structured data with 160+ signals scored across 6 categories. Use yoke_score_summary for a concise overview instead.",
+  "Analyze a domain across security, speed, DNS, SSL, email authentication, tech stack, and more. Returns comprehensive structured data with 190+ signals scored across 6 categories. Use yoke_score_summary for a concise overview instead.",
   {
     domain: z
       .string()

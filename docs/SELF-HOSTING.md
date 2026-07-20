@@ -46,7 +46,7 @@ The simplest path. Cloudflare handles TLS, DDoS protection, edge caching, and gl
 | All external APIs | $0 | PageSpeed, WHOIS, Shodan, etc. — free tiers |
 | **Total** | **~$5–11/mo** | |
 
-> **Why not the free tier?** The free plan caps CPU time at 10ms/request. A single analysis runs ~30 external API calls, scores 160+ signals, and writes results to KV/D1 — needs hundreds of ms minimum. The free tier also limits subrequests (50/request) and KV writes (1,000/day).
+> **Why not the free tier?** The free plan caps CPU time at 10ms/request. A single analysis runs ~30 external API calls, scores 190+ signals, and writes results to KV/D1 — needs hundreds of ms minimum. The free tier also limits subrequests (50/request) and KV writes (1,000/day).
 
 ### Prerequisites
 

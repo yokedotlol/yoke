@@ -4,7 +4,7 @@
 
 ## Signal Registry (`worker/src/config/signal-registry.ts`)
 
-Single source of truth for all 158 scoring signals. Every signal declares its axis, actionability, effort, fix description, and weight range. Derived constants (`NON_ACTIONABLE`, `EFFORT_MAP`, `FIX_DESC_MAP`, etc.) are exported for use across server and client.
+Single source of truth for every scoring signal. Every signal declares its axis, actionability, effort, fix description, and weight range. Derived constants (`NON_ACTIONABLE`, `EFFORT_MAP`, `FIX_DESC_MAP`, etc.) are exported for use across server and client.
 
 When adding a signal:
 1. Add it to `signal-registry.ts`

@@ -18,7 +18,7 @@
 
 ## What is Yoke?
 
-Yoke pulls 160+ scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
+Yoke pulls 190+ scoring signals for any domain and presents them in a clean tabbed interface with a contextual scoring system. Think `dig` + `whois` + `nmap` + `curl` + BuiltWith + SecurityTrails — in one tool, no account required.
 
 ```bash
 curl -s https://yoke.lol/stripe.com | jq
@@ -42,7 +42,7 @@ Sites are auto-classified into 7 archetypes (commerce, content, application, cor
 | **Security Headers** | CSP, HSTS, X-Frame-Options, Permissions-Policy, Referrer-Policy, cookie audit |
 | **Email Auth** | SPF, DKIM, DMARC, BIMI, MTA-STS, TLS-RPT |
 | **Performance** | Lighthouse (mobile-first 60/40 blend), Core Web Vitals, CrUX, cache analysis |
-| **Tech Stack** | 256 fingerprints — CMS, frameworks, CDNs, analytics, 25+ cookie consent platforms |
+| **Tech Stack** | 250+ fingerprints — CMS, frameworks, CDNs, analytics, 25+ cookie consent platforms |
 | **WordPress** | Version, theme, 100+ plugins, page builder, hosting |
 | **Breaches** | HIBP lookup with time-decay severity weighting |
 | **Subdomains** | 130 curated prefixes + CT log discovery via CertSpotter |
