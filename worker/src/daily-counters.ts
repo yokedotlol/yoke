@@ -154,9 +154,58 @@ export async function readDailyCounter(db: D1Database | undefined, metric: strin
 }
 
 /**
+ * Remove historical operational analytics residue that predates the current
+ * aggregate-only privacy model. Product caches and product score history stay;
+ * old recent/showcase feed keys, request telemetry target columns, and the old
+ * D1 recent-lookup table are purged. Best-effort, safe to run repeatedly.
+ */
+export async function cleanupPrivacyResidue(env: Env): Promise<void> {
+  const db = env.STATS_DB;
+
+  if (env.REFERENCE_DATA) {
+    await Promise.allSettled([env.REFERENCE_DATA.delete("recent:index"), env.REFERENCE_DATA.delete("showcase:index")]);
+  }
+
+  if (!db) return;
+
+  const safeRun = async (sql: string, ...binds: unknown[]) => {
+    try {
+      await db
+        .prepare(sql)
+        .bind(...binds)
+        .run();
+    } catch {
+      /* table may not exist or schema may differ — ignore */
+    }
+  };
+
+  await safeRun("DROP TABLE IF EXISTS domain_lookups");
+  await safeRun("UPDATE api_errors SET domain = NULL WHERE domain IS NOT NULL");
+  await safeRun("UPDATE request_meta SET domain = NULL WHERE domain IS NOT NULL");
+
+  // The old tab_views shape was one row per tab click and included a domain
+  // column. The current shape is aggregate-only: one row per (tab, day).
+  try {
+    const info = await db.prepare("PRAGMA table_info(tab_views)").all<{ name: string }>();
+    const cols = new Set((info.results || []).map((r) => r.name));
+    if (cols.has("domain") || !cols.has("day") || !cols.has("views")) {
+      await db.prepare("DROP TABLE IF EXISTS tab_views").run();
+      await db
+        .prepare(
+          "CREATE TABLE IF NOT EXISTS tab_views (tab TEXT NOT NULL, day TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (tab, day))",
+        )
+        .run();
+      await db.prepare("CREATE INDEX IF NOT EXISTS idx_tab_views_day ON tab_views(day)").run();
+    }
+  } catch {
+    /* table may not exist — normal on quiet/self-hosted instances */
+  }
+}
+
+/**
  * Lightweight cleanup run on the hourly cron. Prunes expired rate-limit and
- * error rows, and enforces request_meta retention (the one table the manual
- * /api/cleanup historically skipped). Best-effort — never throws.
+ * error rows, enforces request_meta retention, and removes historical privacy
+ * residue. Best-effort — never throws.
  */
 export async function pruneOldRows(env: Env): Promise<void> {
   const db = env.STATS_DB;
@@ -182,9 +231,8 @@ export async function pruneOldRows(env: Env): Promise<void> {
   await safeRun("DELETE FROM ai_domain_rate_limits WHERE ts < ?", cutoff1d);
   await safeRun("DELETE FROM endpoint_rate_limits WHERE ts < ?", cutoff1d);
   await safeRun("DELETE FROM api_errors WHERE ts < ?", cutoff7d);
-  await safeRun("UPDATE api_errors SET domain = NULL WHERE domain IS NOT NULL");
   await safeRun("DELETE FROM request_meta WHERE day < ?", rmCutoffDay);
-  await safeRun("UPDATE request_meta SET domain = NULL WHERE domain IS NOT NULL");
+  await cleanupPrivacyResidue(env);
 }
 
 /** Resolve request_meta retention (days) from env, defaulting to 90. */

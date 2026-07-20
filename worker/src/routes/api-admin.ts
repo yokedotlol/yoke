@@ -19,7 +19,7 @@ import {
   SIGNAL_REGISTRY,
   TIER_THRESHOLDS,
 } from "../config/signal-registry";
-import { requestMetaRetentionDays } from "../daily-counters";
+import { cleanupPrivacyResidue, requestMetaRetentionDays } from "../daily-counters";
 import { loadData } from "../data/kv-loader";
 import type { VulnerableLibrary } from "../data/vulnerable-libraries";
 import { scanForVulnerableLibraries, VULNERABLE_LIBRARIES } from "../data/vulnerable-libraries";
@@ -388,6 +388,13 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       results.request_meta = `${rmRes.meta?.changes ?? "?"} rows deleted (>${retentionDays} days old); ${rmDomainRes.meta?.changes ?? "?"} legacy domain values cleared`;
     } catch (e) {
       results.request_meta = `error: ${e instanceof Error ? e.message : String(e)}`;
+    }
+    try {
+      await cleanupPrivacyResidue(env);
+      results.privacy_residue =
+        "legacy recent/showcase KV keys deleted; request_meta/api_errors domains cleared; old domain_lookups dropped; tab_views aggregate schema enforced";
+    } catch (e) {
+      results.privacy_residue = `error: ${e instanceof Error ? e.message : String(e)}`;
     }
     // badge_domains: prune pre-#12 cold-start junk. Since #12, cold-starts no
     // longer seed badge_domains and the cron no longer sweeps it, but stale rows

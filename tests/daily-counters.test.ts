@@ -1,7 +1,13 @@
 // daily_counters flush/read tests — verifies UPSERT semantics + retention prune.
 
 import type { BudgetStats } from "@worker/analysis-budget-do";
-import { flushBudgetCounters, flushEndpointCounters, pruneOldRows, readDailyCounter } from "@worker/daily-counters";
+import {
+  cleanupPrivacyResidue,
+  flushBudgetCounters,
+  flushEndpointCounters,
+  pruneOldRows,
+  readDailyCounter,
+} from "@worker/daily-counters";
 import type { Env } from "@worker/helpers";
 import { describe, expect, it } from "vitest";
 
@@ -11,9 +17,14 @@ import { describe, expect, it } from "vitest";
  * (metric, day); endpoint_usage by (endpoint, day). `endpointUsage` is exposed
  * so tests can assert SET (not increment) semantics across flushes.
  */
-function memoryD1(captured?: { deletes: string[] }): D1Database & { endpointUsage: Map<string, number> } {
+function memoryD1(captured?: {
+  deletes: string[];
+  updates?: string[];
+  creates?: string[];
+}): D1Database & { endpointUsage: Map<string, number>; droppedTables: Set<string> } {
   const table = new Map<string, number>(); // `${metric}|${day}` -> value
   const endpointUsage = new Map<string, number>(); // `${endpoint}|${day}` -> hits
+  const droppedTables = new Set<string>();
 
   function makeStmt(sql: string, binds: unknown[] = []): D1PreparedStatement {
     return {
@@ -35,6 +46,12 @@ function memoryD1(captured?: { deletes: string[] }): D1Database & { endpointUsag
           endpointUsage.set(`${endpoint}|${day}`, hits); // ON CONFLICT DO UPDATE SET = excluded.hits
         } else if (sql.startsWith("DELETE FROM")) {
           captured?.deletes.push(sql);
+        } else if (sql.startsWith("DROP TABLE IF EXISTS")) {
+          droppedTables.add(sql.replace("DROP TABLE IF EXISTS ", ""));
+        } else if (sql.startsWith("UPDATE")) {
+          captured?.updates?.push(sql);
+        } else if (sql.startsWith("CREATE TABLE") || sql.startsWith("CREATE INDEX")) {
+          captured?.creates?.push(sql);
         }
         return {
           results: [],
@@ -42,7 +59,16 @@ function memoryD1(captured?: { deletes: string[] }): D1Database & { endpointUsag
           meta: { changes: 0, duration: 0, last_row_id: 0, rows_read: 0, rows_written: 0 },
         } as unknown as D1Result;
       },
-      all: async () => ({ results: [], success: true, meta: {} }) as unknown as D1Result,
+      all: async () => {
+        if (sql.includes("PRAGMA table_info(tab_views)")) {
+          return {
+            results: [{ name: "id" }, { name: "tab" }, { name: "domain" }, { name: "ts" }],
+            success: true,
+            meta: {},
+          } as unknown as D1Result;
+        }
+        return { results: [], success: true, meta: {} } as unknown as D1Result;
+      },
       raw: async () => [],
     } as unknown as D1PreparedStatement;
   }
@@ -57,7 +83,8 @@ function memoryD1(captured?: { deletes: string[] }): D1Database & { endpointUsag
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
     endpointUsage,
-  } as unknown as D1Database & { endpointUsage: Map<string, number> };
+    droppedTables,
+  } as unknown as D1Database & { endpointUsage: Map<string, number>; droppedTables: Set<string> };
 }
 
 function makeStats(overrides: Partial<BudgetStats> = {}): BudgetStats {
@@ -156,10 +183,32 @@ describe("daily_counters", () => {
   });
 
   it("pruneOldRows deletes request_meta past the retention window", async () => {
-    const captured = { deletes: [] as string[] };
+    const captured = { deletes: [] as string[], updates: [] as string[], creates: [] as string[] };
     const env = { STATS_DB: memoryD1(captured), REQUEST_META_RETENTION_DAYS: "90" } as unknown as Env;
     await pruneOldRows(env);
     expect(captured.deletes.some((s) => s.includes("DELETE FROM request_meta"))).toBe(true);
     expect(captured.deletes.some((s) => s.includes("DELETE FROM endpoint_rate_limits"))).toBe(true);
+  });
+
+  it("privacy cleanup purges old target-bearing operational tables and reshapes tab_views", async () => {
+    const captured = { deletes: [] as string[], updates: [] as string[], creates: [] as string[] };
+    const db = memoryD1(captured);
+    const deletedKeys: string[] = [];
+    const env = {
+      STATS_DB: db,
+      REFERENCE_DATA: { delete: async (key: string) => deletedKeys.push(key) } as unknown as KVNamespace,
+    } as unknown as Env;
+
+    await cleanupPrivacyResidue(env);
+
+    expect(deletedKeys).toEqual(expect.arrayContaining(["recent:index", "showcase:index"]));
+    expect(db.droppedTables.has("domain_lookups")).toBe(true);
+    expect(captured.updates).toEqual(
+      expect.arrayContaining([
+        "UPDATE api_errors SET domain = NULL WHERE domain IS NOT NULL",
+        "UPDATE request_meta SET domain = NULL WHERE domain IS NOT NULL",
+      ]),
+    );
+    expect(captured.creates.some((s) => s.includes("CREATE TABLE IF NOT EXISTS tab_views"))).toBe(true);
   });
 });
