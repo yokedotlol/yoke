@@ -82,6 +82,8 @@ async function ensureTable(db: D1Database): Promise<void> {
 
 /** Track a request with rich metadata. Non-blocking — fire and forget via backgroundWork. */
 export function trackRequest(env: Env, request: Request, meta: RequestMeta): void {
+  if (!env.STATS_DB || env.DISABLE_ANALYTICS) return;
+
   const ip =
     request.headers.get("cf-connecting-ip") ||
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||

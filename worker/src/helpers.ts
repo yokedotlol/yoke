@@ -68,7 +68,7 @@ export interface Env {
   HIDE_CLI?: string;
   /** Set "true" to hide GitHub repo links in footer */
   HIDE_GITHUB?: string;
-  /** Set "true" to disable endpoint usage tracking and tab view analytics (self-hosted) */
+  /** Set "true" to disable anonymous request analytics: endpoint counters, tab views, and request metadata. */
   DISABLE_ANALYTICS?: string;
   /** Execution context for ctx.waitUntil — set per-request from the Worker fetch handler */
   _ctx?: ExecutionContext;

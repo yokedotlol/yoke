@@ -774,7 +774,7 @@ Set via `npx wrangler secret put` (Cloudflare), `.env` (Docker), or workerd conf
 | `HIDE_EXTENSION` | Optional | White-label: remove extension link |
 | `HIDE_CLI` | Optional | White-label: remove CLI link |
 | `FEEDBACK_URL` | Optional | White-label: custom feedback URL |
-| `DISABLE_ANALYTICS` | Optional | Set `true` to skip endpoint usage tracking and tab view analytics |
+| `DISABLE_ANALYTICS` | Optional | Set `true` to skip anonymous request analytics: endpoint counters, tab views, and request metadata. Rate limiting and product score history are unaffected |
 
 ---
 
