@@ -1,0 +1,23 @@
+name: Privacy residue cleanup
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run cleanup and verify
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          D1_STATS_DB_ID: ${{ secrets.D1_STATS_DB_ID }}
+          KV_REFERENCE_DATA_ID: ${{ secrets.KV_REFERENCE_DATA_ID }}
+        run: node scripts/privacy-residue-cleanup.mjs
