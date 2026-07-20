@@ -51,7 +51,7 @@ There is no formal bug bounty program. If you find something significant, you'll
 
 Yoke takes a privacy-first approach to user data:
 
-- **No raw IP storage.** User IP addresses are SHA-256 hashed with a daily-rotating salt before being written to any database. The hash is used for rate limiting and anonymous visitor counting — it cannot be reversed and rotates every 24 hours.
+- **No raw IP storage.** User IP addresses are hashed before any service-owned persistence. Rate-limit keys use a secret-salted stable SHA-256 hash so sliding windows survive day boundaries and are pruned within hours. Anonymous visitor analytics use a separate secret-salted daily-rotating hash. Neither hash is reversible, and raw IPs are not written to Yoke's databases.
 - **No accounts or sessions.** There are no user accounts, login cookies, session tokens, or tracking pixels.
 - **No client-side tracking.** No analytics scripts, no fingerprinting, no third-party trackers.
 - **BYO API keys are ephemeral.** Keys stored in `localStorage` on the client. On the server, they exist in memory for a single request, then are discarded. Never logged or persisted.

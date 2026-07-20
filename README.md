@@ -119,7 +119,7 @@ See [mcp/README.md](mcp/README.md) for configuration.
 
 ## Badges
 
-Embed a live domain score badge in your README, docs, or website. Badges are auto-refreshed — scores stay within 24 hours of the latest analysis.
+Embed a live domain score badge in your README, docs, or website. Badges serve the latest analyzed score, refresh lazily on view after the configured interval (default 6h), and decay to a neutral stale state after the stale-decay window (default 30 days) rather than showing misleading old scores.
 
 **Direct SVG** (standalone, no external dependencies):
 ```markdown
@@ -138,7 +138,7 @@ Embed a live domain score badge in your README, docs, or website. Badges are aut
 | `label` | `?label=My+Site` | Override badge label |
 | `style` | `?style=flat-square` | Sharp corners |
 
-Self-hosters: badges work out of the box with lazy refresh. See [Self-Hosting docs](docs/SELF-HOSTING.md) for cache maintenance setup.
+Self-hosters: badges work out of the box with lazy refresh. See [Self-Hosting docs](docs/SELF-HOSTING.md) for the exact badge refresh and stale-decay behavior.
 
 ## Architecture
 

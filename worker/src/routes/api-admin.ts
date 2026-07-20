@@ -678,7 +678,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
         },
         "GET /badge/{domain}.svg": {
           description:
-            "Embeddable SVG badge showing domain score. Query params: ?axis=security|speed|foundations|reputation|discoverability|email (specific axis), ?label=Custom (override label), ?style=flat-square (sharp corners). Cached 5 min, background refresh.",
+            "Embeddable SVG badge showing domain score. Query params: ?axis=security|speed|foundations|reputation|discoverability|email (specific axis), ?label=Custom (override label), ?style=flat-square (sharp corners). Scored badges cache for 1h, cold badges cache for 60s, and already-analyzed domains refresh lazily on view after the configured interval.",
           rate_limit: "none",
         },
         "GET /badge/{domain}.json": {

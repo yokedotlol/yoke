@@ -670,7 +670,7 @@ Every Yoke instance — managed or self-hosted — ships with these protections 
 - **HMAC-SHA256 signed share URLs** — share cards can't be forged.
 - **Admin auth** — `/usage`, `/api/cleanup`, `/api/cache` behind HTTP Basic auth with timing-safe comparison.
 - **Cache-aware rate limiting** — cached results don't count against per-IP limits.
-- **IP hashing** — user IPs are SHA-256 hashed with a daily-rotating salt before storage. No raw IPs are persisted.
+- **IP hashing** — user IPs are hashed before storage. Rate-limit keys use a secret-salted stable SHA-256 hash for sliding-window counters, while anonymous visitor analytics use a separate daily-rotating hash. No raw IPs are persisted by Yoke.
 
 ### What Self-Hosters Don't Get (vs. Cloudflare)
 
