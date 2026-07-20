@@ -370,7 +370,10 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     }
     try {
       const errRes = await env.STATS_DB.prepare("DELETE FROM api_errors WHERE ts < ?").bind(cutoff7d).run();
-      results.api_errors = `${errRes.meta?.changes ?? "?"} rows deleted (>7 days old)`;
+      const errDomainRes = await env.STATS_DB.prepare(
+        "UPDATE api_errors SET domain = NULL WHERE domain IS NOT NULL",
+      ).run();
+      results.api_errors = `${errRes.meta?.changes ?? "?"} rows deleted (>7 days old); ${errDomainRes.meta?.changes ?? "?"} legacy domain values cleared`;
     } catch (e) {
       results.api_errors = `error: ${e instanceof Error ? e.message : String(e)}`;
     }

@@ -182,6 +182,7 @@ export async function pruneOldRows(env: Env): Promise<void> {
   await safeRun("DELETE FROM ai_domain_rate_limits WHERE ts < ?", cutoff1d);
   await safeRun("DELETE FROM endpoint_rate_limits WHERE ts < ?", cutoff1d);
   await safeRun("DELETE FROM api_errors WHERE ts < ?", cutoff7d);
+  await safeRun("UPDATE api_errors SET domain = NULL WHERE domain IS NOT NULL");
   await safeRun("DELETE FROM request_meta WHERE day < ?", rmCutoffDay);
   await safeRun("UPDATE request_meta SET domain = NULL WHERE domain IS NOT NULL");
 }

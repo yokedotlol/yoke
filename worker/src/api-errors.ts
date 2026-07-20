@@ -6,7 +6,7 @@ export interface ApiError {
   api: string; // e.g. "hibp", "fly-probe", "hackertarget", "pagespeed"
   status: number; // HTTP status or 0 for network/timeout errors
   message: string; // Brief error description
-  domain?: string; // Domain being analyzed when error occurred
+  domain?: string; // Accepted for caller compatibility; never persisted in operational error telemetry
 }
 
 const TABLE_SQL = `CREATE TABLE IF NOT EXISTS api_errors (
@@ -35,13 +35,19 @@ async function ensureTable(db: D1Database): Promise<void> {
   }
 }
 
+function sanitizeMessage(message: string): string {
+  return message
+    .slice(0, 200)
+    .replace(/(?<![A-Za-z0-9-])([A-Za-z0-9-]+\.)+[A-Za-z]{2,63}(?![A-Za-z0-9-])/g, "[domain]");
+}
+
 export async function logApiError(db: D1Database | undefined, err: ApiError): Promise<void> {
   if (!db) return;
   try {
     await ensureTable(db);
     await db
       .prepare("INSERT INTO api_errors (api, status, message, domain, ts) VALUES (?, ?, ?, ?, ?)")
-      .bind(err.api, err.status, err.message.slice(0, 200), err.domain ?? null, Date.now())
+      .bind(err.api, err.status, sanitizeMessage(err.message), null, Date.now())
       .run();
   } catch {
     /* non-critical — don't break analysis over logging */
