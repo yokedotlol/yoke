@@ -137,7 +137,6 @@ export async function getRequestAnalytics(db: D1Database | undefined, days: numb
       avg_latency_ms: 0,
       error_rate_pct: 0,
       by_country: [],
-      top_domains: [],
       visitors_per_day: [],
       domains_per_day: [],
       requests_per_day: [],
@@ -154,7 +153,6 @@ export async function getRequestAnalytics(db: D1Database | undefined, days: numb
     unique_domains: 0,
     avg_latency_ms: 0,
     error_rate_pct: 0,
-    top_domains: [],
     visitors_per_day: [],
     domains_per_day: [],
     requests_per_day: [],
@@ -211,21 +209,6 @@ export async function getRequestAnalytics(db: D1Database | undefined, days: numb
         .bind(`${cutoff}T00:00:00`)
         .first<{ domains: number }>();
       result.unique_domains = domainAgg?.domains ?? 0;
-
-      const topDomains = await db
-        .prepare(
-          `SELECT domain, COUNT(*) as cnt
-         FROM domain_scores WHERE scored_at >= ?
-         GROUP BY domain ORDER BY cnt DESC LIMIT 20`,
-        )
-        .bind(`${cutoff}T00:00:00`)
-        .all();
-      result.top_domains = ((topDomains.results || []) as { domain: string; cnt: number }[]).map((r) => ({
-        domain: r.domain,
-        scans: r.cnt,
-        avg_latency: 0,
-        unique_scanners: 0,
-      }));
     } catch {
       /* domain_scores may not exist yet */
     }
@@ -349,7 +332,6 @@ export interface RequestAnalytics {
   unique_domains: number;
   avg_latency_ms: number;
   error_rate_pct: number;
-  top_domains: { domain: string; scans: number; avg_latency: number; unique_scanners: number }[];
   visitors_per_day: { date: string; count: number }[];
   domains_per_day: { date: string; count: number }[];
   requests_per_day: { date: string; count: number }[];

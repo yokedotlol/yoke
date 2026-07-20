@@ -281,33 +281,6 @@ ${
     </div>
   </div>
 </div>
-
-<!-- ═══ TOP DOMAINS ═══ -->
-${
-  rq.top_domains.length > 0
-    ? `
-<h2>🏆 Top Scored Domains</h2>
-<table>
-  <thead><tr><th>#</th><th>Domain</th><th>Score Records</th><th>Frequency</th></tr></thead>
-  <tbody>
-    ${rq.top_domains
-      .map((d, i) => {
-        const maxScans = rq.top_domains[0]?.scans || 1;
-        const pct = (d.scans / maxScans) * 100;
-        return `<tr>
-        <td style="color:var(--muted)">${i + 1}</td>
-        <td class="mono">${d.domain}</td>
-        <td class="hits">${n(d.scans)}</td>
-        <td><span class="pct-bar" style="width:${Math.max(pct * 0.8, 2)}px;background:var(--cyan)"></span></td>
-      </tr>`;
-      })
-      .join("")}
-  </tbody>
-</table>
-`
-    : ""
-}
-
 <!-- ═══ TRAFFIC SOURCES + GEO + HOURLY ═══ -->
 <h2>🌍 Traffic Breakdown</h2>
 <div class="row3">
