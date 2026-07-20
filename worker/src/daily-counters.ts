@@ -183,6 +183,7 @@ export async function pruneOldRows(env: Env): Promise<void> {
   await safeRun("DELETE FROM endpoint_rate_limits WHERE ts < ?", cutoff1d);
   await safeRun("DELETE FROM api_errors WHERE ts < ?", cutoff7d);
   await safeRun("DELETE FROM request_meta WHERE day < ?", rmCutoffDay);
+  await safeRun("UPDATE request_meta SET domain = NULL WHERE domain IS NOT NULL");
 }
 
 /** Resolve request_meta retention (days) from env, defaulting to 90. */

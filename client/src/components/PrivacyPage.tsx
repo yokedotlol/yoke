@@ -82,7 +82,7 @@ export default function PrivacyPage() {
             <strong>Client type</strong> — whether the request came from a browser, CLI, API client, or extension
           </li>
           <li>
-            <strong>Request metadata</strong> — endpoint, analyzed domain, HTTP status code, response latency
+            <strong>Request metadata</strong> — endpoint, HTTP status code, response latency
           </li>
         </ul>
         <p>None of this is linked to an identity. There are no user accounts, sessions, or tracking pixels.</p>

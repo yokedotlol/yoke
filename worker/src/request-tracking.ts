@@ -6,7 +6,7 @@ import { backgroundWork, type Env } from "./helpers";
 
 export interface RequestMeta {
   endpoint: string;
-  domain?: string; // analyzed domain (public data, not user data)
+  domain?: string; // accepted for caller compatibility; never persisted in request telemetry
   status: number;
   latencyMs: number;
 }
@@ -102,18 +102,7 @@ export function trackRequest(env: Env, request: Request, meta: RequestMeta): voi
           `INSERT INTO request_meta (ts, day, hour, endpoint, domain, client_type, country, status_code, latency_ms, visitor_hash)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-          .bind(
-            now,
-            day,
-            hour,
-            meta.endpoint,
-            meta.domain || null,
-            clientType,
-            country,
-            meta.status,
-            meta.latencyMs,
-            visitorHash,
-          )
+          .bind(now, day, hour, meta.endpoint, null, clientType, country, meta.status, meta.latencyMs, visitorHash)
           .run();
       } catch {
         // Auto-migrate on first failure
@@ -126,18 +115,7 @@ export function trackRequest(env: Env, request: Request, meta: RequestMeta): voi
             `INSERT INTO request_meta (ts, day, hour, endpoint, domain, client_type, country, status_code, latency_ms, visitor_hash)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
-            .bind(
-              now,
-              day,
-              hour,
-              meta.endpoint,
-              meta.domain || null,
-              clientType,
-              country,
-              meta.status,
-              meta.latencyMs,
-              visitorHash,
-            )
+            .bind(now, day, hour, meta.endpoint, null, clientType, country, meta.status, meta.latencyMs, visitorHash)
             .run();
         } catch {
           /* non-critical telemetry */
@@ -192,17 +170,17 @@ export async function getRequestAnalytics(db: D1Database | undefined, days: numb
   }
 
   try {
-    // Aggregate KPIs — visitor/domain counts from request_meta, total from endpoint_usage for full history
+    // Aggregate KPIs — operational request telemetry stays aggregate and never stores analyzed domains.
     const agg = await db
       .prepare(
-        `SELECT COUNT(DISTINCT visitor_hash) as visitors, COUNT(DISTINCT domain) as domains,
+        `SELECT COUNT(DISTINCT visitor_hash) as visitors,
               AVG(latency_ms) as avg_lat,
               SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) as errors,
               COUNT(*) as rm_total
        FROM request_meta WHERE day >= ?`,
       )
       .bind(cutoff)
-      .first<{ visitors: number; domains: number; avg_lat: number; errors: number; rm_total: number }>();
+      .first<{ visitors: number; avg_lat: number; errors: number; rm_total: number }>();
 
     // Total requests from endpoint_usage (has full history)
     let totalFromUsage = 0;
@@ -219,28 +197,36 @@ export async function getRequestAnalytics(db: D1Database | undefined, days: numb
     if (agg) {
       result.total_requests = totalFromUsage || agg.rm_total;
       result.unique_visitors = agg.visitors;
-      result.unique_domains = agg.domains;
+      // unique_domains is populated from domain_scores below; request_meta intentionally does not retain targets.
       result.avg_latency_ms = Math.round(agg.avg_lat || 0);
       result.error_rate_pct = agg.rm_total > 0 ? Math.round((agg.errors / agg.rm_total) * 1000) / 10 : 0;
     }
 
-    // Top 20 scanned domains
-    const topDomains = await db
-      .prepare(
-        `SELECT domain, COUNT(*) as cnt, AVG(latency_ms) as avg_lat, COUNT(DISTINCT visitor_hash) as uniq_visitors
-       FROM request_meta WHERE day >= ? AND domain IS NOT NULL
-       GROUP BY domain ORDER BY cnt DESC LIMIT 20`,
-      )
-      .bind(cutoff)
-      .all();
-    result.top_domains = (
-      (topDomains.results || []) as { domain: string; cnt: number; avg_lat: number; uniq_visitors: number }[]
-    ).map((r) => ({
-      domain: r.domain,
-      scans: r.cnt,
-      avg_latency: Math.round(r.avg_lat || 0),
-      unique_scanners: r.uniq_visitors,
-    }));
+    // Domain analytics come from product score history, not request telemetry.
+    try {
+      const domainAgg = await db
+        .prepare(`SELECT COUNT(DISTINCT domain) as domains FROM domain_scores WHERE scored_at >= ?`)
+        .bind(`${cutoff}T00:00:00`)
+        .first<{ domains: number }>();
+      result.unique_domains = domainAgg?.domains ?? 0;
+
+      const topDomains = await db
+        .prepare(
+          `SELECT domain, COUNT(*) as cnt
+         FROM domain_scores WHERE scored_at >= ?
+         GROUP BY domain ORDER BY cnt DESC LIMIT 20`,
+        )
+        .bind(`${cutoff}T00:00:00`)
+        .all();
+      result.top_domains = ((topDomains.results || []) as { domain: string; cnt: number }[]).map((r) => ({
+        domain: r.domain,
+        scans: r.cnt,
+        avg_latency: 0,
+        unique_scanners: 0,
+      }));
+    } catch {
+      /* domain_scores may not exist yet */
+    }
 
     // Visitors per day
     const vpd = await db
@@ -254,38 +240,21 @@ export async function getRequestAnalytics(db: D1Database | undefined, days: numb
       count: r.visitors,
     }));
 
-    // Unique domains per day — blend request_meta + domain_scores for full history
+    // Unique domains per day from product score history only.
     try {
       const dpd = await db
         .prepare(
-          `SELECT day as d, COUNT(DISTINCT domain) as domains FROM (
-           SELECT day, domain FROM request_meta WHERE day >= ? AND domain IS NOT NULL
-           UNION ALL
-           SELECT DATE(scored_at) as day, domain FROM domain_scores WHERE scored_at >= ?
-         ) GROUP BY d ORDER BY d`,
+          `SELECT DATE(scored_at) as day, COUNT(DISTINCT domain) as domains
+         FROM domain_scores WHERE scored_at >= ? GROUP BY DATE(scored_at) ORDER BY day`,
         )
-        .bind(cutoff, `${cutoff}T00:00:00`)
+        .bind(`${cutoff}T00:00:00`)
         .all();
-      result.domains_per_day = ((dpd.results || []) as { d: string; domains: number }[]).map((r) => ({
-        date: r.d,
+      result.domains_per_day = ((dpd.results || []) as { day: string; domains: number }[]).map((r) => ({
+        date: r.day,
         count: r.domains,
       }));
     } catch {
-      // Fallback to request_meta only
-      try {
-        const dpd = await db
-          .prepare(
-            `SELECT day, COUNT(DISTINCT domain) as domains FROM request_meta WHERE day >= ? AND domain IS NOT NULL GROUP BY day ORDER BY day`,
-          )
-          .bind(cutoff)
-          .all();
-        result.domains_per_day = ((dpd.results || []) as { day: string; domains: number }[]).map((r) => ({
-          date: r.day,
-          count: r.domains,
-        }));
-      } catch {
-        /* */
-      }
+      /* domain_scores may not exist yet */
     }
 
     // Requests per day — pull from endpoint_usage for full history
@@ -349,15 +318,21 @@ export async function getRequestAnalytics(db: D1Database | undefined, days: numb
       result.by_status[r.status_code] = r.cnt;
     }
 
-    // Repeat analysis rate: domains analyzed more than once
-    const repeats = await db
-      .prepare(
-        `SELECT COUNT(*) as multi FROM (SELECT domain FROM request_meta WHERE day >= ? AND domain IS NOT NULL GROUP BY domain HAVING COUNT(*) > 1)`,
-      )
-      .bind(cutoff)
-      .first<{ multi: number }>();
-    if (repeats && result.unique_domains > 0) {
-      result.repeat_analysis_rate = Math.round((repeats.multi / result.unique_domains) * 100);
+    // Repeat analysis rate: domains scored more than once in product score history.
+    try {
+      const repeats = await db
+        .prepare(
+          `SELECT COUNT(*) as multi FROM (
+           SELECT domain FROM domain_scores WHERE scored_at >= ? GROUP BY domain HAVING COUNT(*) > 1
+         )`,
+        )
+        .bind(`${cutoff}T00:00:00`)
+        .first<{ multi: number }>();
+      if (repeats && result.unique_domains > 0) {
+        result.repeat_analysis_rate = Math.round((repeats.multi / result.unique_domains) * 100);
+      }
+    } catch {
+      /* domain_scores may not exist yet */
     }
   } catch {
     /* tables may not exist yet */

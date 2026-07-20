@@ -283,7 +283,7 @@ describe("Badge Routes", () => {
       const staleEntry = makeBadgeEntry({
         analyzedAt: new Date(Date.now() - 21 * 60 * 60 * 1000).toISOString(),
       });
-      const env = mockEnv({ "badge:stripe.com": JSON.stringify(staleEntry) });
+      const env = mockEnv({ "badge:stripe.com": JSON.stringify(staleEntry) }, { BADGE_REFRESH_INTERVAL_HRS: "24" });
       const resp = await worker.fetch(req("/badge/stripe.com.svg"), env);
 
       expect(resp.status).toBe(200);

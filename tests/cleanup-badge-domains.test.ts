@@ -1,9 +1,17 @@
 // GET /api/cleanup badge_domains prune — verifies the cleanup path DELETEs
 // cold-start junk rows (badge_domains with no matching domain_scores row).
 
+import { webcrypto } from "node:crypto";
 import type { Env } from "@worker/helpers";
 import worker from "@worker/index";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+
+beforeAll(() => {
+  if (!globalThis.crypto?.subtle) {
+    // biome-ignore lint/suspicious/noExplicitAny: polyfill for test environment
+    (globalThis as any).crypto = webcrypto;
+  }
+});
 
 /** D1 stub that records every executed SQL string (for prune assertions). */
 function recordingD1(executed: string[]): D1Database {

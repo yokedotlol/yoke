@@ -379,7 +379,10 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       const retentionDays = requestMetaRetentionDays(env);
       const rmCutoffDay = new Date(Date.now() - retentionDays * 86400000).toISOString().slice(0, 10);
       const rmRes = await env.STATS_DB.prepare("DELETE FROM request_meta WHERE day < ?").bind(rmCutoffDay).run();
-      results.request_meta = `${rmRes.meta?.changes ?? "?"} rows deleted (>${retentionDays} days old)`;
+      const rmDomainRes = await env.STATS_DB.prepare(
+        "UPDATE request_meta SET domain = NULL WHERE domain IS NOT NULL",
+      ).run();
+      results.request_meta = `${rmRes.meta?.changes ?? "?"} rows deleted (>${retentionDays} days old); ${rmDomainRes.meta?.changes ?? "?"} legacy domain values cleared`;
     } catch (e) {
       results.request_meta = `error: ${e instanceof Error ? e.message : String(e)}`;
     }

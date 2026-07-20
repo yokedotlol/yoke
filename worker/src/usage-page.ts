@@ -286,9 +286,9 @@ ${
 ${
   rq.top_domains.length > 0
     ? `
-<h2>🏆 Top Scanned Domains</h2>
+<h2>🏆 Top Scored Domains</h2>
 <table>
-  <thead><tr><th>#</th><th>Domain</th><th>Scans</th><th>Unique Scanners</th><th>Avg Latency</th><th>Popularity</th></tr></thead>
+  <thead><tr><th>#</th><th>Domain</th><th>Score Records</th><th>Frequency</th></tr></thead>
   <tbody>
     ${rq.top_domains
       .map((d, i) => {
@@ -298,8 +298,6 @@ ${
         <td style="color:var(--muted)">${i + 1}</td>
         <td class="mono">${d.domain}</td>
         <td class="hits">${n(d.scans)}</td>
-        <td class="hits">${n(d.unique_scanners)}</td>
-        <td class="hits">${n(d.avg_latency)}ms</td>
         <td><span class="pct-bar" style="width:${Math.max(pct * 0.8, 2)}px;background:var(--cyan)"></span></td>
       </tr>`;
       })
