@@ -169,6 +169,26 @@ export const fingerprints: Fingerprint[] = [
       scriptUrls: [/cdn-client\.medium\.com/i],
     },
   },
+  {
+    name: "Tilda",
+    category: "CMS",
+    patterns: {
+      meta: { generator: /tilda/i },
+      htmlPatterns: [/class=["'][^"']*\bt-records\b/i, /class=["'][^"']*\btilda-/i],
+      scriptUrls: [/tildacdn\.com/i],
+      cssUrls: [/tildacdn\.com/i],
+    },
+  },
+  {
+    name: "Duda",
+    category: "CMS",
+    patterns: {
+      meta: { generator: /duda/i },
+      htmlPatterns: [/\bwindow\._d_site/i, /\bduda_[a-z0-9_]+/i],
+      scriptUrls: [/multiscreensite\.com/i, /duda\.co/i, /\bdmcdn\.net/i],
+      cssUrls: [/multiscreensite\.com/i, /\bdmcdn\.net/i],
+    },
+  },
 
   // ─── E-commerce ────────────────────────────────────────────────────────
   {

@@ -63,6 +63,39 @@ describe("CDN/Server Detection", () => {
   });
 });
 
+describe("Tilda Detection", () => {
+  it("should detect Tilda from tildacdn assets", () => {
+    const html = '<script src="https://static-ts.tildacdn.com/js/tilda-scripts-3.0.min.js"></script>';
+    const result = detectTechStack({}, html);
+    const tilda = result.find((r) => r.name === "Tilda");
+    expect(tilda).toBeDefined();
+    expect(tilda?.category).toBe("CMS");
+  });
+
+  it("should detect Tilda from page markup", () => {
+    const html = '<div id="allrecords" class="t-records"><div class="tilda-block">Hello</div></div>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Tilda")).toBeDefined();
+  });
+});
+
+describe("Duda Detection", () => {
+  it("should detect Duda from multiscreensite assets", () => {
+    const html = '<script src="https://static.multiscreensite.com/script.js"></script>';
+    const result = detectTechStack({}, html);
+    const duda = result.find((r) => r.name === "Duda");
+    expect(duda).toBeDefined();
+    expect(duda?.category).toBe("CMS");
+  });
+
+  it("should detect Duda from dmcdn assets plus site globals", () => {
+    const html =
+      '<script>window._d_site = { id: "abc" };</script><script src="https://static-cdn.dmcdn.net/site.js"></script>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "Duda")).toBeDefined();
+  });
+});
+
 describe("Shopify Detection", () => {
   it("should detect Shopify from x-shopid header", () => {
     const result = detectTechStack({ "x-shopid": "12345", "x-shopify-stage": "production" }, "");

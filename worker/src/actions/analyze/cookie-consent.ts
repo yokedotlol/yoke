@@ -155,6 +155,11 @@ const CMP_PATTERNS: CmpPattern[] = [
     scriptPatterns: [/webtoffee\.com/i, /cookie-law-info/i],
     htmlPatterns: [/cli-modal-content/i, /cookie-law-info-bar/i, /wt-cli-cookie-bar/i],
   },
+  {
+    name: "Klaro",
+    scriptPatterns: [/klaro\.js/i, /klaro-no-css/i, /kiprotect\.com\/klaro/i, /klaro\.org/i, /heyklaro\.com/i],
+    htmlPatterns: [/klaro--/i, /klaro-modal/i, /\bklaro\b/i],
+  },
 ];
 
 // ─── Cookie Parsing ─────────────────────────────────────────────────
