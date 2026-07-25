@@ -97,13 +97,13 @@ const html = `<!DOCTYPE html>
     <meta property="og:url" content="https://yoke.lol" />
     <meta property="og:site_name" content="Yoke" />
     <meta property="og:locale" content="en_US" />
-    <meta property="og:image" content="https://yoke.lol/og-banner.png" />
+    <meta property="og:image" content="https://yoke.lol/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Yoke — Free Domain Intelligence Tool" />
     <meta name="twitter:description" content="Analyze any domain instantly. DNS, SSL, WHOIS, security headers, tech stack, performance, and breach detection. Free API: curl -s https://yoke.lol/stripe.com" />
-    <meta name="twitter:image" content="https://yoke.lol/og-banner.png" />
+    <meta name="twitter:image" content="https://yoke.lol/og.png" />
 
     <!-- Social verification (rel="me") -->
     <link rel="me" href="https://mastodon.social/@yokelol" />
