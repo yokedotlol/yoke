@@ -396,7 +396,7 @@ export default function ToolsPage() {
             {
               label: "Abuse-resistant",
               detail:
-                "Per-IP rate limiting, proof-of-work challenges, SSRF protection. Designed to prevent weaponization.",
+                "Per-IP rate limiting via Durable Objects, SSRF protection, and abuse-resistant quotas. Cached results are free.",
             },
             {
               label: "API-first",

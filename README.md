@@ -172,7 +172,7 @@ Self-hosters: badges work out of the box with lazy refresh. See [Self-Hosting do
 |-------|------|------|
 | Frontend | React 19, Tailwind v4, React Query, Leaflet | ~213KB initial JS |
 | Backend | Cloudflare Worker (TypeScript, zero deps) | ~214KB bundled |
-| Database | Cloudflare D1 (stats) + KV (cache, rate limits) | — |
+| Database | Cloudflare D1 (stats) + KV (cache, reference data) + Durable Objects (rate limits, budget) | — |
 | Proxy | Go on Fly.io (HTTP probes, MaxMind GeoIP) | — |
 | Build | Bun + Vite, Node.js 22+ for Wrangler | — |
 
