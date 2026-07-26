@@ -58,7 +58,7 @@ export function handle(rc: RouteContext): Response | Promise<Response> | null {
           url: "https://www.npmjs.com/package/@yokedotlol/mcp-server",
           capabilities: ["yoke_analyze", "yoke_score_summary", "yoke_compare"],
           description:
-            "Domain intelligence MCP server — analyze security, speed, SEO, email auth, reputation, and tech stack for any domain. 190+ signals scored across 6 axes.",
+            "Domain intelligence MCP server — analyze security, speed, SEO, email auth, reputation, and tech stack for any domain. 160+ signals scored across 6 axes.",
           representativeQueries: [
             "analyze the security and performance of example.com",
             "compare domain scores for github.com vs gitlab.com",
