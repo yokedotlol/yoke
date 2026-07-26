@@ -21,20 +21,10 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   const domain = cleanDomain(match[1]);
   if (!domain) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
 
-  // Rate limit — shares the /api/analyze bucket
-  const clientIP = await hashIp(
-    request.headers.get("cf-connecting-ip") ||
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "unknown",
-    env,
-  );
-  const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/analyze", env);
-  if (rl.blocked) return rl.blocked;
-
   const t0 = Date.now();
   const baseUrl = rc.baseUrl;
 
-  // ── Quick cache (5 min TTL) ──
+  // ── Quick cache (5 min TTL) ── fleet-wide rule: cache hits skip rate limits
   if (env.REFERENCE_DATA) {
     try {
       const raw = await env.REFERENCE_DATA.get(`cache:quick:${domain}`, "text");
@@ -53,6 +43,16 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       /* ignore cache failures */
     }
   }
+
+  // Rate limit — shares the /api/analyze bucket (only for cache MISS)
+  const clientIP = await hashIp(
+    request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown",
+    env,
+  );
+  const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/analyze", env);
+  if (rl.blocked) return rl.blocked;
 
   // ── Fan out all fast probes concurrently ──
   const dnsPromise = checkDns(domain).catch(() => []);

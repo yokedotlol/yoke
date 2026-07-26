@@ -4,6 +4,7 @@
 import { runAnalysis } from "./actions/analyze/core";
 import { finalizeResult } from "./actions/analyze/finalize";
 import { BudgetExceededError, recordEndpointHit } from "./analysis-budget";
+import { getAnalysisCacheTtlMs } from "./config/cache";
 import { tierFromComposite } from "./config/signal-registry";
 import type { Env } from "./helpers";
 import {
@@ -15,7 +16,7 @@ import {
   MIN_CLIENT_VERSION,
   YOKE_VERSION,
 } from "./helpers";
-import { checkRateLimitAuto, timingSafeEq } from "./routes/shared";
+import { checkRateLimitAuto, rateLimitNoop, timingSafeEq } from "./routes/shared";
 
 // ─── Security Headers ────────────────────────────────────────────────
 // Applied to all HTML responses served by the worker.
@@ -322,9 +323,24 @@ async function serveDomainJSON(request: Request, env: Env, domain: string): Prom
     // GET+POST combo can't double the effective ceiling. Admin key bypasses
     // (mirrors POST /api/analyze). The credit is only consumed on a cache MISS —
     // cached responses stay free, same as POST /api/analyze.
+    // Fleet-wide rule (June 19, 2026): cache hits skip rate limits — probe cache BEFORE rate limiter.
     const adminBypass = env.ADMIN_KEY && timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY);
+    let isPreCached = false;
+    if (!adminBypass && env.REFERENCE_DATA) {
+      try {
+        const raw = await env.REFERENCE_DATA.get(`cache:analysis:${clean}`, "text");
+        if (raw) {
+          const envelope = JSON.parse(raw) as { cached_at: number };
+          isPreCached = Date.now() - envelope.cached_at < getAnalysisCacheTtlMs(env);
+        }
+      } catch {
+        /* cache probe failure → fall through to normal rate limiting */
+      }
+    }
     let rl: Awaited<ReturnType<typeof checkRateLimitAuto>> | null = null;
-    if (!adminBypass) {
+    if (adminBypass || isPreCached) {
+      rl = { blocked: null, headers: {}, record: rateLimitNoop } as Awaited<ReturnType<typeof checkRateLimitAuto>>;
+    } else {
       const ip = await hashIp(
         request.headers.get("cf-connecting-ip") ||
           request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
