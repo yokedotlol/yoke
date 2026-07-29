@@ -141,7 +141,7 @@ export async function checkSecurityTxt(domain: string, instanceHost?: string): P
   }
 
   if (!text) return empty;
-  return parseSecurityTxt(text, empty, urls[0]!);
+  return parseSecurityTxt(text, empty, urls[0] ?? `https://${domain}/.well-known/security.txt`);
 }
 
 function parseSecurityTxt(text: string, empty: SecurityTxtResult, _canonicalUrl: string): SecurityTxtResult {
@@ -242,6 +242,14 @@ export async function checkWellKnownEndpoints(domain: string): Promise<WellKnown
     { path: "/manifest.json", name: "Web App Manifest" },
     { path: "/.well-known/apple-app-site-association", name: "Apple App Site Association" },
     { path: "/.well-known/assetlinks.json", name: "Android Asset Links" },
+    // ── Agent Identity / Web Bot Auth / MCP (2026 additions) ──────────
+    { path: "/.well-known/http-message-signatures-directory", name: "Web Bot Auth Directory (RFC 9421)" },
+    { path: "/.well-known/mcp/server-cards.json", name: "MCP Server Cards (SEP-2127)" },
+    { path: "/.well-known/mcp.json", name: "MCP Discovery" },
+    { path: "/.well-known/agent-card.json", name: "A2A Agent Card" },
+    { path: "/.well-known/ai-catalog.json", name: "AI Catalog (ARD)" },
+    { path: "/.well-known/oauth-protected-resource", name: "OAuth Protected Resource (RFC 9728)" },
+    { path: "/.well-known/api-catalog", name: "API Catalog (RFC 9727)" },
   ];
 
   const ua =
@@ -348,6 +356,40 @@ export async function checkWellKnownEndpoints(domain: string): Promise<WellKnown
           }
         } catch {
           results.push({ path: ep.path, name: ep.name, found: false, data: null });
+        }
+      } else {
+        // Generic handler for JSON/well-known agent identity endpoints (2026+)
+        // Counts as found if we got 200 + non-empty body, without requiring specific schema validation.
+        // For security, cap data preview.
+        try {
+          const preview = JSON.parse(text);
+          const isObject = preview && typeof preview === "object";
+          const keyCount = isObject ? Object.keys(preview as object).length : 0;
+          const entryCount = Array.isArray(preview)
+            ? preview.length
+            : Array.isArray((preview as Record<string, unknown>)?.keys)
+              ? ((preview as Record<string, unknown>).keys as unknown[]).length
+              : undefined;
+          results.push({
+            path: ep.path,
+            name: ep.name,
+            found: true,
+            data: {
+              size: text.length,
+              keys: keyCount > 0 ? keyCount : undefined,
+              entries: entryCount,
+              content_type: contentType || null,
+            },
+          });
+        } catch {
+          // Non-JSON but 200 OK (e.g., JWKS with text/plain) — still counts as present if body looks structured
+          const looksStructured = text.trim().startsWith("{") || text.trim().startsWith("[");
+          results.push({
+            path: ep.path,
+            name: ep.name,
+            found: looksStructured ? true : text.length > 20,
+            data: { size: text.length, content_type: contentType || null },
+          });
         }
       }
     } catch {

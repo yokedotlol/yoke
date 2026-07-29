@@ -10,7 +10,10 @@ export interface NsProvider {
 
 export const NS_PROVIDERS: NsProvider[] = [
   // ── Major Cloud DNS ─────────────────────────────────────────────
-  { name: "Cloudflare", patterns: [/\.ns\.cloudflare\.com$/i, /\.cloudflare\.com$/i] },
+  {
+    name: "Cloudflare",
+    patterns: [/\.ns\.cloudflare\.com$/i, /\.cloudflare\.com$/i, /foundationdns\.com$/i, /foundationdns\.net$/i],
+  },
   { name: "AWS Route 53", patterns: [/\.awsdns-\d+\./i, /awsdns/i] },
   { name: "Google Cloud DNS", patterns: [/ns-cloud-\w+\.googledomains\.com$/i, /\.googledomains\.com$/i] },
   { name: "Azure DNS", patterns: [/\.azure-dns\./i, /azuredns/i] },
@@ -87,6 +90,7 @@ export const NS_PROVIDERS: NsProvider[] = [
   { name: "Kinsta", patterns: [/\.kinsta\.cloud$/i, /\.kinsta\.com$/i] },
   { name: "Strato", patterns: [/\.strato\./i] },
   { name: "Scaleway", patterns: [/\.scaleway\./i, /\.online\.net$/i] },
+  { name: "Team.blue", patterns: [/team-blue/i, /\.team\.blue$/i, /\.register-dns\.com$/i] },
 ];
 
 /**
