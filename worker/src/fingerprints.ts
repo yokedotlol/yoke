@@ -1853,6 +1853,22 @@ export const fingerprints: Fingerprint[] = [
       htmlPatterns: [/teachable/i],
     },
   },
+  {
+    name: "EmDash",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [
+        /\/_emdash\//i,
+        /data-emdash-/i,
+        /\bemdash-toolbar\b/i,
+        /class=["'][^"']*\bemdash-/i,
+        /emdashLoader/i,
+      ],
+      scriptUrls: [/emdash/i, /@emdash-cms/i],
+      meta: { generator: /emdash/i },
+    },
+    versionExtract: { source: "html", pattern: /EmDash\s+v?([\d.]+)/i },
+  },
 
   // ─── Additional Search ────────────────────────────────────────────────
   {
@@ -2094,6 +2110,254 @@ export const fingerprints: Fingerprint[] = [
     patterns: {
       scriptUrls: [/js\.recurly\.com/i, /recurly\.js/i],
       htmlPatterns: [/recurly/i],
+    },
+  },
+
+  // ─── Wappalyzer 6.11.1 sync — CMS gaps (high-value) ───────────────────
+  {
+    name: "Strapi",
+    category: "CMS",
+    patterns: {
+      headers: { "x-powered-by": /strapi/i },
+      htmlPatterns: [/strapi\.io/i, /strapi/i],
+    },
+  },
+  {
+    name: "Directus",
+    category: "CMS",
+    patterns: {
+      headers: { "x-powered-by": /^directus$/i },
+      htmlPatterns: [/directus\.io/i, /directus/i],
+    },
+  },
+  {
+    name: "Contentstack",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [/contentstack\.(?:io|com)/i, /cma\.contentstack/i],
+    },
+  },
+  {
+    name: "Builder.io",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [/data-builder-content-id/i, /cdn\.builder\.io/i, /builder\.io/i],
+      scriptUrls: [/cdn\.builder\.io/i],
+    },
+  },
+  {
+    name: "Payload CMS",
+    category: "CMS",
+    patterns: {
+      meta: { generator: /payload/i },
+      htmlPatterns: [/payload cms/i, /\/api\/payload/i, /__payload__/i],
+      scriptUrls: [/payload/i],
+    },
+  },
+  {
+    name: "Statamic",
+    category: "CMS",
+    patterns: {
+      headers: { "x-powered-by": /^statamic$/i, "x-statamic-version": /./ },
+      htmlPatterns: [/statamic\.com/i, /statamic/i],
+    },
+    versionExtract: { source: "header", pattern: /Statamic\/?([\d.]+)/i },
+  },
+  {
+    name: "Adobe Experience Manager",
+    category: "CMS",
+    patterns: {
+      htmlPatterns: [
+        /<div class="[^"]*parbase/i,
+        /data-component-path="[^"]*jcr:/i,
+        /<div class="[^"]*aem-Grid/i,
+        /\/etc\/clientlibs\//i,
+      ],
+      scriptUrls: [/\/etc\/designs\//i, /\/etc\/clientlibs\//i, /\/etc\.clientlibs\//i],
+    },
+  },
+
+  // ─── Wappalyzer 6.11.1 sync — Ecommerce gaps ───────────────────────────
+  {
+    name: "Shopware",
+    category: "Ecommerce",
+    patterns: {
+      headers: {
+        "sw-context-token": /./,
+        "sw-version-id": /./,
+      },
+      meta: { "application-name": /shopware/i },
+      htmlPatterns: [/shopware/i, /sw-context-token/i],
+      scriptUrls: [/shopware.*\.js/i, /jquery\.shopware\.min\.js/i, /\/engine\/Shopware\//i],
+    },
+    versionExtract: { source: "html", pattern: /<title>Shopware\s+([\d.]+)/i },
+  },
+  {
+    name: "Saleor",
+    category: "Ecommerce",
+    patterns: {
+      htmlPatterns: [/saleor\.imgix\.net/i, /_next.*saleor-/i, /saleor/i],
+      scriptUrls: [/saleor/i],
+    },
+  },
+  {
+    name: "Mage-OS",
+    category: "Ecommerce",
+    patterns: {
+      headers: { "x-dist": /^mage-os$/i, "x-magento-version": /./ },
+      htmlPatterns: [/mage-os\.org/i, /Mage-OS/i],
+    },
+  },
+  {
+    name: "Sylius",
+    category: "Ecommerce",
+    patterns: {
+      htmlPatterns: [
+        /body\.sylius_homepage/i,
+        /sylius_homepage/i,
+        /sylius-cart-button/i,
+        /sylius_shop_product_tiny_thumbnail/i,
+      ],
+      scriptUrls: [/sylius/i, /syliusshop\/script\.js/i],
+    },
+  },
+  {
+    name: "Medusa",
+    category: "Ecommerce",
+    patterns: {
+      htmlPatterns: [/medusa-js/i, /medusajs/i, /__medusa__/i],
+      scriptUrls: [/medusa-client/i, /@medusajs\/medusa/i, /medusa/i],
+    },
+  },
+
+  // ─── Wappalyzer 6.11.1 sync — JS Framework / Library gaps ──────────────
+  {
+    name: "AngularJS",
+    category: "JS Framework",
+    patterns: {
+      htmlPatterns: [/<(?:div|html)[^>]+ng-app=/i, /<ng-app/i, /ng-controller/i],
+      scriptUrls: [/angular[.-][\d.]+\.js/i, /\/angular(?:\.min)?\.js/i],
+    },
+    versionExtract: { source: "script", pattern: /angular[.-]([\d.]+)/i },
+  },
+  {
+    name: "Handlebars",
+    category: "JS Framework",
+    patterns: {
+      htmlPatterns: [/text\/x-handlebars-template/i, /Handlebars/i],
+      scriptUrls: [/handlebars(?:\.runtime)?(?:-v[\d.]+)?(?:\.min)?\.js/i],
+    },
+  },
+  {
+    name: "Redux",
+    category: "JS Framework",
+    patterns: {
+      scriptUrls: [/\/redux(?:@|\/)[\d.]+/i, /redux(?:\.min)?\.js/i],
+      htmlPatterns: [/__REDUX__/i, /redux/i],
+    },
+  },
+  {
+    name: "React Router",
+    category: "JS Framework",
+    patterns: {
+      htmlPatterns: [/__reactRouterVersion/i, /react-router/i],
+      scriptUrls: [/react-router/i, /react-router-dom/i],
+    },
+  },
+  {
+    name: "Inertia.js",
+    category: "JS Framework",
+    patterns: {
+      headers: { "x-inertia": /./, vary: /x-inertia/i },
+      htmlPatterns: [/data-page="[^"]*component/i, /inertia/i],
+    },
+  },
+  {
+    name: "Next.js App Router",
+    category: "JS Framework",
+    patterns: {
+      htmlPatterns: [/__next_app__/i, /next\.appDir/i, /_next\/static\/chunks\/app/i],
+      scriptUrls: [/_next\/static\/chunks\/app/i],
+    },
+  },
+
+  // ─── Wappalyzer 6.11.1 sync — Web Framework gaps (Cloudflare / modern) ─
+  {
+    name: "Hono",
+    category: "Web Framework",
+    patterns: {
+      headers: { "x-powered-by": /^hono$/i },
+      htmlPatterns: [/hono\.dev/i],
+    },
+  },
+  {
+    name: "AdonisJS",
+    category: "Web Framework",
+    patterns: {
+      cookies: ["adonis-session", "adonis-session-values"],
+      htmlPatterns: [/adonisjs/i],
+    },
+  },
+  {
+    name: "Symfony",
+    category: "Web Framework",
+    patterns: {
+      cookies: ["sf_redirect"],
+      htmlPatterns: [/sf-toolbar/i, /Symfony/i, /symfony/i],
+    },
+  },
+  {
+    name: "Koa",
+    category: "Web Framework",
+    patterns: {
+      headers: { "x-powered-by": /^koa$/i },
+    },
+  },
+  {
+    name: "Phoenix Framework",
+    category: "Web Framework",
+    patterns: {
+      htmlPatterns: [/phoenix framework/i, /phx-/i],
+      scriptUrls: [/phoenix/i, /phx\.min\.js/i],
+    },
+  },
+  {
+    name: "Fresh",
+    category: "Web Framework",
+    patterns: {
+      htmlPatterns: [/id="__FRSH_TWIND"/i, /id="__FRSH_STYLE"/i, /id="__FRSH_STATE"/i, /fresh\.deno\.dev/i],
+    },
+  },
+  {
+    name: "Blazor",
+    category: "Web Framework",
+    patterns: {
+      scriptUrls: [/blazor\.server\.js/i, /blazor\.webassembly\.js/i, /blazor\.host\.min\.js/i],
+      htmlPatterns: [/blazor/i, /_framework\/blazor/i],
+    },
+  },
+  {
+    name: "Qwik",
+    category: "Web Framework",
+    patterns: {
+      htmlPatterns: [/q:version/i, /qwik/i, /qwik\.builder\.io/i],
+      scriptUrls: [/qwik/i],
+    },
+  },
+  {
+    name: "TanStack Start",
+    category: "Web Framework",
+    patterns: {
+      htmlPatterns: [/__TSS_START_OPTIONS__/i, /tanstack.*start/i],
+      scriptUrls: [/tanstack.*start/i, /@tanstack\/start/i],
+    },
+  },
+  {
+    name: "SolidStart",
+    category: "Web Framework",
+    patterns: {
+      htmlPatterns: [/_\$HY\.init/i, /solid-start/i, /solidstart/i],
+      scriptUrls: [/solid-start/i, /solidstart/i],
     },
   },
 

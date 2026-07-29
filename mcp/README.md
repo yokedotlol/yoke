@@ -98,6 +98,35 @@ Side-by-side comparison of two domains across all scoring categories.
 Input: { "domain1": "stripe.com", "domain2": "square.com" }
 ```
 
+### `yoke_diff` — zero-storage monitoring
+
+Compare current scan to a baseline you keep locally. You store `baseline.json`, we fetch fresh, we diff. No domain list ever touches Yoke servers — your agent is the scheduler.
+
+Client-side watch list stays yours:
+
+```json
+// watch.json you keep in Claude/Cursor
+[
+  { "domain": "example.com", "baseline": { /* previous yoke_analyze output */ } }
+]
+```
+
+Usage:
+
+```
+Input: { "domain": "example.com", "baseline": { /* previous result */ }, "force": false }
+Output: markdown change report + JSON { composite {before,after,delta}, axis_deltas, added, resolved, worsened, fixes }
+```
+
+Fix snippets included for regressions (HSTS, CSP, X-Frame-Options, etc.):
+
+```
+- hsts_missing: Add header: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+- csp_missing: Add header: Content-Security-Policy: default-src 'self'; ...
+```
+
+Pattern: run `yoke_score_summary` daily via MCP, save baseline locally, call `yoke_diff` to get only what dropped + copy/paste fix. Zero KV writes on Yoke side, aggregate counters only — fits the `.lol` privacy rule.
+
 ## Scoring Axes
 
 | Axis | Weight | What it measures |

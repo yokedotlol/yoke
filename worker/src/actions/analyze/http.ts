@@ -168,7 +168,7 @@ export function detectTechStack(headers: Record<string, string>, html: string): 
               break;
             }
           }
-        } else if (fp.versionExtract.source === "script") {
+        } else if (fp.versionExtract.source === "script" || fp.versionExtract.source === "html") {
           const vMatch = html.match(fp.versionExtract.pattern);
           if (vMatch?.[1]) version = vMatch[1];
         }

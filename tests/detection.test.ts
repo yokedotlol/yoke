@@ -320,3 +320,59 @@ describe("Tailwind CSS Content Mention", () => {
     expect(result.find((r) => r.name === "Tailwind CSS")).toBeDefined();
   });
 });
+
+// ─── EmDash CMS Detection (v0.1.0) ─────────────────────────────────────
+
+describe("EmDash Detection", () => {
+  it("should detect EmDash from /_emdash/admin link", () => {
+    const html = '<a href="/_emdash/admin">Admin</a>';
+    const result = detectTechStack({}, html);
+    const cms = result.find((r) => r.name === "EmDash");
+    expect(cms).toBeDefined();
+    expect(cms?.category).toBe("CMS");
+  });
+
+  it("should detect EmDash from /_emdash/api media url", () => {
+    const html = '<img src="/_emdash/api/media/file/abc123" />';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "EmDash")).toBeDefined();
+  });
+
+  it("should detect EmDash from data-emdash-ref attribute", () => {
+    const html = '<div data-emdash-ref="posts:123">content</div>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "EmDash")).toBeDefined();
+  });
+
+  it("should detect EmDash from emdash-toolbar", () => {
+    const html = '<div id="emdash-toolbar" data-edit-mode="true"></div>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "EmDash")).toBeDefined();
+  });
+
+  it("should detect EmDash from emdash CSS class", () => {
+    const html = '<div class="emdash-table-wrapper"><table class="emdash-table"></table></div>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "EmDash")).toBeDefined();
+  });
+
+  it("should detect EmDash from @emdash-cms script", () => {
+    const html = '<script type="module">import { initForms } from "@emdash-cms/plugin-forms/client"</script>';
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "EmDash")).toBeDefined();
+  });
+
+  it("should detect EmDash version from HTML when present", () => {
+    const html = '<!-- EmDash v0.1.0 --><a href="/_emdash/admin">Admin</a>';
+    const result = detectTechStack({}, html);
+    const cms = result.find((r) => r.name === "EmDash");
+    expect(cms).toBeDefined();
+    expect(cms?.version).toBe("0.1.0");
+  });
+
+  it("should NOT detect EmDash from generic mention of em dash character", () => {
+    const html = "<p>Use an em dash — like this — for breaks.</p>";
+    const result = detectTechStack({}, html);
+    expect(result.find((r) => r.name === "EmDash")).toBeUndefined();
+  });
+});
