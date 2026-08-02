@@ -69,8 +69,10 @@ Rate limits: 20 analyses/hr per IP (cached results don't count). [Full API docs 
 |--------|------|-------------|
 | `GET` | `/:domain` | Full analysis (JSON) |
 | `POST` | `/api/analyze` | Analysis (JSON or SSE via `Accept: text/event-stream`) |
+| `GET` | `/api/quick/:domain` | Quick analysis — raw probe data, 5m cache (GET alias for curl) |
 | `POST` | `/api/compare` | Side-by-side domain comparison |
 | `POST` | `/api/subdomains` | CT log subdomain discovery |
+| `GET` | `/api/subdomains?domain=` | GET alias — same as POST, 1h cache |
 | `POST` | `/api/subdomain-scan` | Active subdomain enumeration |
 | `POST` | `/api/ai-analysis` | AI deep analysis (Cross-Signal Insights) |
 | `GET` | `/api/scoring` | Scoring methodology + full signal registry |
