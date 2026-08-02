@@ -31,7 +31,7 @@ export interface Env {
   SHARE_SECRET?: string;
   /** KV namespace for reference data (retire.js DB, third-party patterns, etc.) */
   REFERENCE_DATA: KVNamespace;
-  /** Analysis cache TTL override in hours (default: 1) */
+  /** Analysis cache TTL override in hours (default: 24) */
   CACHE_TTL_HOURS?: string;
   /** Rate limit backend: "do" (Durable Object) or "d1". Default: "do" when the
    *  RATE_LIMITER binding is present, else "d1". Set to "d1" to force the D1

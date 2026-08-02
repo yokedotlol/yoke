@@ -283,11 +283,11 @@ export default function CliPage() {
 
           <div>
             <p style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "var(--dim)", marginBottom: 8 }}>
-              AI analysis (requires{" "}
+              AI analysis (optional BYO{" "}
               <a href="https://openrouter.ai/" target="_blank" rel="noopener" style={{ color: "var(--accent)" }}>
                 OpenRouter
               </a>{" "}
-              API key):
+              key, or shared key / 10hr free):
             </p>
             <CopyBlock
               code={`yoke ai --setup          # one-time: set your API key
