@@ -52,7 +52,7 @@ const tools: Tool[] = [
       "Full DNS record enumeration, DNSSEC validation, propagation checks, reverse lookups, and zone transfer detection.",
     website: "https://ns.lol",
     cli: "brew install yokedotlol/tap/ns",
-    docs: "https://ns.lol/docs",
+    docs: "https://ns.lol/api/docs",
     github: "https://github.com/yokedotlol/ns-lol",
   },
   {
