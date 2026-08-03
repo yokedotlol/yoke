@@ -24,7 +24,7 @@ const tools: Tool[] = [
     accent: "#58a6ff",
     tagline: "Free Domain Intelligence & OSINT",
     description:
-      "Comprehensive domain analysis — 160+ scoring signals across 6 axes (security, speed, foundations, reputation, discoverability, email). The hub that ties everything together.",
+      "Comprehensive domain analysis — 160 scoring signals across 6 axes (security, speed, foundations, reputation, discoverability, email). The hub that ties everything together.",
     website: "https://yoke.lol",
     cli: "brew install yokedotlol/tap/yoke",
     docs: "https://yoke.lol/docs",
@@ -318,7 +318,7 @@ export default function ToolsPage() {
         />
         <P style={{ margin: 0 }}>
           <strong style={{ color: "var(--text)" }}>yoke.lol</strong> is the hub — comprehensive domain intelligence
-          across 160+ scoring signals. The satellite tools (<strong style={{ color: "var(--text)" }}>certs</strong>,{" "}
+          across 160 scoring signals. The satellite tools (<strong style={{ color: "var(--text)" }}>certs</strong>,{" "}
           <strong style={{ color: "var(--text)" }}>ns</strong>, <strong style={{ color: "var(--text)" }}>xhttp</strong>,{" "}
           <strong style={{ color: "var(--text)" }}>vrfy</strong>) go deeper on TLS, DNS, HTTP, and email respectively.
           Scan on yoke, then drill down.
