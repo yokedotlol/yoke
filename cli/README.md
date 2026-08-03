@@ -84,12 +84,12 @@ yoke compare github.com gitlab.com
 ### AI Analysis
 
 ```bash
-# AI-powered analysis (requires OpenRouter key)
+# AI-powered analysis (optional BYO key, or shared key / 10hr free)
 yoke ai stripe.com
 yoke ai stripe.com --model openai/gpt-4o
 ```
 
-Privacy note: domain scans send domain names to yoke.lol or the satellite APIs listed below. `yoke ai` stores your OpenRouter key locally in `~/.yoke.toml`, sends it to Yoke only for that AI request, and Yoke passes it through to OpenRouter without logging or storing it. Point `YOKE_BASE_URL` or `yoke config --set-base-url` at a self-hosted instance if you need full control.
+Without a key you still get shared-key AI analysis (10/hr free, same as the web UI). With your own key you get unlimited access, model selection, and prompt editing. `yoke ai` stores your OpenRouter key locally in `~/.yoke.toml`, sends it to Yoke only for that AI request, and Yoke passes it through to OpenRouter without logging or storing it. Point `YOKE_BASE_URL` or `yoke config --set-base-url` at a self-hosted instance if you need full control.
 
 ### CI/CD Gate
 
