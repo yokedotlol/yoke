@@ -250,6 +250,13 @@ export async function checkWellKnownEndpoints(domain: string): Promise<WellKnown
     { path: "/.well-known/ai-catalog.json", name: "AI Catalog (ARD)" },
     { path: "/.well-known/oauth-protected-resource", name: "OAuth Protected Resource (RFC 9728)" },
     { path: "/.well-known/api-catalog", name: "API Catalog (RFC 9727)" },
+    // ── Agent Capability Declarations (2026-08 new) ──────────
+    { path: "/agents.txt", name: "Agents.txt (Capability Declaration)" },
+    { path: "/.well-known/agents.json", name: "Agents.json (IANA #73)" },
+    { path: "/llms.txt", name: "LLMs.txt (root)" },
+    { path: "/.well-known/llms.txt", name: "LLMs.txt (well-known)" },
+    { path: "/.well-known/ai", name: "AI Discovery (Rootz, IANA #80 provisional)" },
+    { path: "/.well-known/ai-plugin.json", name: "AI Plugin (ChatGPT plugins)" },
   ];
 
   const ua =
