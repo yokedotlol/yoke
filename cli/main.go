@@ -995,6 +995,7 @@ func main() {
 		Long: accent.Render("Yoke") + " — domain intelligence from your terminal\n\n" +
 			"Analyze any domain instantly: DNS, SSL, WHOIS, security headers,\n" +
 			"tech stack, performance, breaches, and more.\n\n" +
+			"You can always self-host if you need privacy. Set YOKE_BASE_URL or yoke config --set-base-url.\n\n" +
 			dim.Render("https://yoke.lol"),
 		Version: version,
 		Args: func(cmd *cobra.Command, args []string) error {
