@@ -255,7 +255,7 @@ export async function checkWellKnownEndpoints(domain: string): Promise<WellKnown
     { path: "/.well-known/agents.json", name: "Agents.json (IANA #73)" },
     { path: "/llms.txt", name: "LLMs.txt (root)" },
     { path: "/.well-known/llms.txt", name: "LLMs.txt (well-known)" },
-    { path: "/.well-known/ai", name: "AI Discovery (Rootz, IANA #80 provisional)" },
+    { path: "/.well-known/ai", name: "AI Discovery (Rootz, IANA #80 rejected - too generic, see #80 feedback)" },
     { path: "/.well-known/ai-plugin.json", name: "AI Plugin (ChatGPT plugins)" },
   ];
 
