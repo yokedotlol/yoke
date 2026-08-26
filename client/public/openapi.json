@@ -1,0 +1,1110 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "yoke.lol",
+    "version": "1.0.0",
+    "description": "Free domain intelligence & OSINT tool — 160 signals scored across 6 axes (Security, Speed, Foundations, Reputation, Discoverability, Email). No auth required for public endpoints. Cached results skip rate limits. Source: https://github.com/yokedotlol/yoke — MIT licensed.",
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/yokedotlol/yoke/blob/main/LICENSE"
+    },
+    "contact": {
+      "name": "yoke.lol",
+      "url": "https://yoke.lol",
+      "email": "hello@yoke.lol"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://yoke.lol",
+      "description": "Production"
+    }
+  ],
+  "tags": [
+    {
+      "name": "analysis",
+      "description": "Core domain intelligence"
+    },
+    {
+      "name": "quick",
+      "description": "Lightweight probe — no scoring"
+    },
+    {
+      "name": "subdomains",
+      "description": "Subdomain discovery"
+    },
+    {
+      "name": "enrichment",
+      "description": "Company, news, social, reverse-IP, availability"
+    },
+    {
+      "name": "ai",
+      "description": "LLM-powered analysis"
+    },
+    {
+      "name": "badge",
+      "description": "Embeddable score badges"
+    },
+    {
+      "name": "utility",
+      "description": "Health, stats, scoring methodology, docs"
+    },
+    {
+      "name": "share",
+      "description": "Share cards and PDF reports"
+    }
+  ],
+  "paths": {
+    "/{domain}": {
+      "get": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Full domain analysis via content negotiation",
+        "description": "Enter a domain as a path (e.g., /stripe.com). Browsers get HTML, curl/API clients get JSON via Accept header or ?pretty. 20 req/hr per IP. Cache hits free.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "stripe.com"
+          },
+          {
+            "name": "pretty",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Pretty-print JSON"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full analysis result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "422": {
+            "description": "NXDOMAIN"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "OpenAPI 3.1 specification",
+        "description": "Machine-readable API description for agent discovery.",
+        "responses": {
+          "200": {
+            "description": "OpenAPI JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/openapi.json": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "OpenAPI spec alias",
+        "responses": {
+          "200": {
+            "description": "OpenAPI JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/docs": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "API documentation",
+        "description": "HTML for browsers, JSON for Accept: application/json",
+        "responses": {
+          "200": {
+            "description": "Docs"
+          }
+        }
+      }
+    },
+    "/api/analyze": {
+      "post": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Full domain analysis",
+        "description": "Supports SSE streaming when Accept: text/event-stream. 20 req/hr. Cache hits don't count.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string",
+                    "example": "example.com"
+                  },
+                  "force": {
+                    "type": "boolean",
+                    "description": "Bypass cache"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Analysis result or SSE stream",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResult"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/compare": {
+      "post": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Compare two domains",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain1",
+                  "domain2"
+                ],
+                "properties": {
+                  "domain1": {
+                    "type": "string"
+                  },
+                  "domain2": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comparison result"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/subdomains": {
+      "get": {
+        "tags": [
+          "subdomains"
+        ],
+        "summary": "Subdomain enumeration (GET)",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "example.com"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subdomain list"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "subdomains"
+        ],
+        "summary": "Subdomain enumeration via CT logs",
+        "description": "1h cache, cache hits skip RL. 30 req/hr.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Subdomain list"
+          }
+        }
+      }
+    },
+    "/api/subdomain-scan": {
+      "post": {
+        "tags": [
+          "subdomains"
+        ],
+        "summary": "Active subdomain DNS scan",
+        "description": "Resolves discovered subdomains. 24h cache.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scan result"
+          }
+        }
+      }
+    },
+    "/api/suggestions": {
+      "post": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Domain suggestions",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Suggestions"
+          }
+        }
+      }
+    },
+    "/api/quick/{domain}": {
+      "get": {
+        "tags": [
+          "quick"
+        ],
+        "summary": "Quick scan — fast DNS + HTTP probe",
+        "description": "No scoring. Returns in ~1-3s. 5 min cache. Shares /api/analyze rate-limit bucket.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "example.com"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quick probe data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai-analysis": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "AI-powered domain analysis",
+        "description": "6 expert personas. BYO OpenRouter key via X-OpenRouter-Key header.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  },
+                  "stream": {
+                    "type": "boolean"
+                  },
+                  "model": {
+                    "type": "string",
+                    "description": "OpenRouter model id"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-OpenRouter-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "BYO OpenRouter API key"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AI analysis (JSON or SSE)"
+          }
+        }
+      }
+    },
+    "/api/ai-prompt": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Get assembled AI prompt",
+        "description": "Returns prompt without LLM call. Domain must have been analyzed first. 20 req/hr.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prompt object"
+          },
+          "400": {
+            "description": "Not analyzed yet"
+          }
+        }
+      }
+    },
+    "/api/company": {
+      "post": {
+        "tags": [
+          "enrichment"
+        ],
+        "summary": "Company enrichment",
+        "description": "Wikidata, Brandfetch, Crunchbase. 24h cache.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  },
+                  "force": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Company info"
+          }
+        }
+      }
+    },
+    "/api/news": {
+      "post": {
+        "tags": [
+          "enrichment"
+        ],
+        "summary": "Recent news",
+        "description": "4h cache.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "News articles"
+          }
+        }
+      }
+    },
+    "/api/social": {
+      "post": {
+        "tags": [
+          "enrichment"
+        ],
+        "summary": "Social account discovery",
+        "description": "24h cache.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Social accounts"
+          }
+        }
+      }
+    },
+    "/api/reverse-ip": {
+      "post": {
+        "tags": [
+          "enrichment"
+        ],
+        "summary": "Reverse IP lookup",
+        "description": "24h cache keyed by IP.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ip"
+                ],
+                "properties": {
+                  "ip": {
+                    "type": "string",
+                    "example": "1.2.3.4"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Domains on IP"
+          }
+        }
+      }
+    },
+    "/api/availability": {
+      "post": {
+        "tags": [
+          "enrichment"
+        ],
+        "summary": "Global availability check",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Availability regions"
+          }
+        }
+      }
+    },
+    "/api/js-audit": {
+      "get": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Deep JS vulnerability scan (GET)",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JS audit result"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Deep JS vulnerability scan (POST)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "domain"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JS audit result"
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "Health check",
+        "description": "Public basic status; X-Admin-Key returns detailed error metrics.",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "Aggregate scan statistics",
+        "description": "15 min KV cache. Total scans, unique domains, 24h, tier distribution.",
+        "responses": {
+          "200": {
+            "description": "Stats"
+          }
+        }
+      }
+    },
+    "/api/scoring": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "Scoring methodology",
+        "description": "Transparent weights, thresholds, severity bands.",
+        "responses": {
+          "200": {
+            "description": "Scoring config"
+          }
+        }
+      }
+    },
+    "/api/share-sign": {
+      "post": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Sign a share card payload",
+        "responses": {
+          "200": {
+            "description": "Signed token"
+          }
+        }
+      }
+    },
+    "/api/track-tab": {
+      "post": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "Track tab view",
+        "description": "Anonymous aggregated analytics. Daily UPSERT.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "tab"
+                ],
+                "properties": {
+                  "tab": {
+                    "type": "string"
+                  },
+                  "domain": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/badge/{domain}.svg": {
+      "get": {
+        "tags": [
+          "badge"
+        ],
+        "summary": "SVG badge",
+        "description": "Embeddable SVG. ?axis=security|speed|foundations|reputation|discoverability|email & ?label=Custom & ?style=flat-square. Cache: scored 1h, neutral 60s.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "example.com"
+          },
+          {
+            "name": "axis",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "security",
+                "speed",
+                "foundations",
+                "reputation",
+                "discoverability",
+                "email"
+              ]
+            }
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "style",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "flat",
+                "flat-square"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SVG",
+            "content": {
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/badge/{domain}.json": {
+      "get": {
+        "tags": [
+          "badge"
+        ],
+        "summary": "Shields.io endpoint JSON",
+        "description": "Use with https://img.shields.io/endpoint?url=... Same query params as SVG.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "axis",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "security",
+                "speed",
+                "foundations",
+                "reputation",
+                "discoverability",
+                "email"
+              ]
+            }
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shields JSON"
+          }
+        }
+      }
+    },
+    "/report/{domain}": {
+      "get": {
+        "tags": [
+          "share"
+        ],
+        "summary": "PDF report download",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/ai-catalog.json": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "ARD ai-catalog",
+        "description": "Agentic Resource Discovery catalog.",
+        "responses": {
+          "200": {
+            "description": "ai-catalog"
+          }
+        }
+      }
+    },
+    "/.well-known/security.txt": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "security.txt",
+        "responses": {
+          "200": {
+            "description": "text"
+          }
+        }
+      }
+    },
+    "/robots.txt": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "robots.txt",
+        "responses": {
+          "200": {
+            "description": "text"
+          }
+        }
+      }
+    },
+    "/sitemap.xml": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "sitemap.xml",
+        "responses": {
+          "200": {
+            "description": "xml"
+          }
+        }
+      }
+    },
+    "/llms.txt": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "llms.txt",
+        "responses": {
+          "200": {
+            "description": "text"
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "tags": [
+          "utility"
+        ],
+        "summary": "Status page",
+        "responses": {
+          "200": {
+            "description": "HTML"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalysisResult": {
+        "type": "object",
+        "description": "Full yoke.lol domain analysis result — 160 signals, 6 axes",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "example": "stripe.com"
+          },
+          "analyzed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "domain_score": {
+            "type": "object",
+            "properties": {
+              "composite": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "Excellent",
+                  "Strong",
+                  "Moderate",
+                  "Weak",
+                  "Critical"
+                ]
+              },
+              "axes": {
+                "type": "object",
+                "description": "6 axis scores"
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limited",
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "X-RateLimit-Remaining": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

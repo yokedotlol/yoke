@@ -1,11 +1,23 @@
 // Static content routes: well-known files, robots, sitemap, llms.txt, manifest, status
 
 import { CORS_HEADERS } from "../helpers";
+import { openApiSpec } from "../openapi";
 import { renderStatusPage } from "../status-page";
 import type { RouteContext } from "./shared";
 
 export function handle(rc: RouteContext): Response | Promise<Response> | null {
   const { url, path, method, env, baseUrl, host, brand } = rc;
+
+  // OpenAPI 3.1 spec — primary discovery document for agents (ora.ai, etc.)
+  if (method === "GET" && (path === "/openapi.json" || path === "/api/openapi.json")) {
+    return new Response(JSON.stringify(openApiSpec, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "public, max-age=3600",
+        ...CORS_HEADERS,
+      },
+    });
+  }
 
   // ── MTA-STS policy file (served from mta-sts.yoke.lol) ──────────
   if (url.hostname === "mta-sts.yoke.lol" && path === "/.well-known/mta-sts.txt") {
@@ -70,7 +82,7 @@ export function handle(rc: RouteContext): Response | Promise<Response> | null {
           identifier: `urn:air:${host}:api:domain-analysis`,
           displayName: `${brand.name} REST API`,
           type: "application/openapi+json",
-          url: `${baseUrl}/api/docs`,
+          url: `${baseUrl}/openapi.json`,
           description: "Public JSON API for domain analysis — 18 endpoints, no auth required. Cached results are free.",
           representativeQueries: [
             "get the DNS records for a domain",
