@@ -23,6 +23,11 @@ const CHECK_DOCS: Record<string, { url: string; label: string }> = {
   "ANS record (_ans.)": { url: "https://agentnetworkspec.org/", label: "ANS specification" },
   "DNS-AID record (_agents.)": { url: "https://agentnetworkspec.org/", label: "ANS specification" },
   "agent.json endpoint": { url: "https://agentnetworkspec.org/", label: "ANS specification" },
+  "ARD ai-catalog.json": { url: "https://github.com/ARD-protocol/ard-spec", label: "ARD spec" },
+  "ARD Trust Manifest": { url: "https://github.com/ARD-protocol/ard-spec", label: "ARD Trust Manifest" },
+  "OpenAPI via ARD": { url: "https://spec.openapis.org/oas/v3.1.0.html", label: "OpenAPI 3.1" },
+  "MCP Server Card": { url: "https://modelcontextprotocol.io/", label: "MCP spec" },
+  "x402 payments": { url: "https://www.x402.org/", label: "x402 payments" },
 };
 
 export function AiReadinessPanel({ data }: { data: AnalysisResult }) {

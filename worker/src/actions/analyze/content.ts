@@ -1042,6 +1042,20 @@ export function calculateAiReadiness(
     checks.push({ name: "ARD Trust Manifest", passed: hasTrustManifest, points: hasTrustManifest ? 5 : 0 });
   }
 
+  // OpenAPI + MCP via ARD (Ora Discovery alignment)
+  const hasOpenApiArd = !!aiCatalog?.entryTypes.includes("application/openapi+json");
+  checks.push({ name: "OpenAPI via ARD", passed: hasOpenApiArd, points: hasOpenApiArd ? 10 : 0 });
+
+  const hasMcpCard = !!aiCatalog?.entryTypes.includes("application/mcp-server-card+json");
+  checks.push({ name: "MCP Server Card", passed: hasMcpCard, points: hasMcpCard ? 10 : 0 });
+
+  // x402 payment support (future — bonus, 0 if absent to avoid penalizing free tiers)
+  const hasX402 =
+    html.includes("x402") ||
+    html.includes("402 Payment Required") ||
+    !!aiCatalog?.entryTypes.some((t) => t.includes("x402") || t.includes("payment"));
+  checks.push({ name: "x402 payments", passed: hasX402, points: hasX402 ? 5 : 0 });
+
   // ANS / DNS-AID agent discovery (bonus — above base max)
   const hasAns = !!ansResult?.ans_found;
   checks.push({ name: "ANS record (_ans.)", passed: hasAns, points: hasAns ? 10 : 0 });
@@ -1052,7 +1066,7 @@ export function calculateAiReadiness(
   const hasAgentJson = !!ansResult?.agent_json_found;
   checks.push({ name: "agent.json endpoint", passed: hasAgentJson, points: hasAgentJson ? 5 : 0 });
 
-  const maxScore = 100; // base max — ANS checks are bonus above 100
+  const maxScore = 100; // base max — ARD bonus checks (MCP/OpenAPI/x402/ANS) are bonus above 100
   const score = Math.max(
     0,
     checks.reduce((sum, c) => sum + c.points, 0),
