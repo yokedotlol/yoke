@@ -9,7 +9,10 @@ export function handle(rc: RouteContext): Response | Promise<Response> | null {
   const { url, path, method, env, baseUrl, host, brand } = rc;
 
   // OpenAPI 3.1 spec — primary discovery document for agents (ora.ai, etc.)
-  if (method === "GET" && (path === "/openapi.json" || path === "/api/openapi.json")) {
+  if (
+    method === "GET" &&
+    (path === "/openapi.json" || path === "/api/openapi.json" || path === "/.well-known/openapi.json")
+  ) {
     return new Response(JSON.stringify(openApiSpec, null, 2), {
       headers: {
         "Content-Type": "application/json; charset=utf-8",
@@ -101,6 +104,133 @@ export function handle(rc: RouteContext): Response | Promise<Response> | null {
     });
   }
 
+  // API Catalog (RFC 9727) — alternate discovery path for Ora + other crawlers
+  if (method === "GET" && (path === "/.well-known/api-catalog" || path === "/.well-known/api-catalog.json")) {
+    const catalog = {
+      apis: [
+        {
+          name: `${brand.name} REST API`,
+          description: "Public JSON API for domain analysis — 18 endpoints, no auth required.",
+          url: `${baseUrl}/openapi.json`,
+          spec_url: `${baseUrl}/openapi.json`,
+          documentation_url: `${baseUrl}/api/docs`,
+        },
+      ],
+    };
+    return new Response(JSON.stringify(catalog, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "public, max-age=86400",
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
+  // MCP manifest — for Ora mcp-well-known-discovery + mcp-server checks
+  if (method === "GET" && (path === "/.well-known/mcp.json" || path === "/.well-known/mcp/manifest.json")) {
+    const manifest = {
+      name: `${brand.name} MCP Server`,
+      version: "1.0.0",
+      description:
+        "Domain intelligence MCP server — analyze security, speed, SEO, email auth, reputation, and tech stack.",
+      url: "https://www.npmjs.com/package/@yokedotlol/mcp-server",
+      transport: { type: "stdio", command: "npx", args: ["-y", "@yokedotlol/mcp-server"] },
+      capabilities: ["yoke_analyze", "yoke_score_summary", "yoke_compare"],
+      homepage: baseUrl,
+    };
+    return new Response(JSON.stringify(manifest, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "public, max-age=86400",
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
+  // MCP Server Card — SEP-2127 style
+  if (
+    method === "GET" &&
+    (path === "/.well-known/mcp/server-card.json" ||
+      path === "/.well-known/mcp/server-cards.json" ||
+      path === "/.well-known/mcp.json/server-card" ||
+      path === "/mcp/server-card.json")
+  ) {
+    const card = {
+      name: `${brand.name} Domain Intelligence`,
+      displayName: `${brand.name} MCP Server`,
+      description: "Domain intelligence MCP server — 160 signals scored across 6 axes.",
+      url: "https://www.npmjs.com/package/@yokedotlol/mcp-server",
+      version: "1.0.0",
+      capabilities: {
+        tools: [
+          {
+            name: "yoke_analyze",
+            description: "Analyze a domain across security, performance, SEO, email, reputation, and tech stack",
+          },
+          { name: "yoke_score_summary", description: "Get overall score summary for a domain" },
+          { name: "yoke_compare", description: "Compare scores for two domains" },
+        ],
+      },
+      homepage: baseUrl,
+      author: { name: "Yoke", url: baseUrl },
+    };
+    return new Response(JSON.stringify(card, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "public, max-age=86400",
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
+  // Agent Skills Index — Ora agent-skills-index checks
+  if (method === "GET" && path === "/.well-known/agent-skills/index.json") {
+    const index = {
+      skills: [
+        {
+          name: "yoke-analyze",
+          description: "Analyze any domain for security, performance, SEO, email auth, and tech stack",
+          url: `${baseUrl}/api/docs`,
+          version: "1.0.0",
+        },
+      ],
+    };
+    return new Response(JSON.stringify(index, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "public, max-age=86400",
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
+  // A2A Agent Card — Ora a2a-agent-card check
+  if (
+    method === "GET" &&
+    (path === "/.well-known/agent-card.json" ||
+      path === "/agent-card.json" ||
+      path === "/.well-known/a2a/agent-card.json" ||
+      path === "/a2a/agent-card.json")
+  ) {
+    const card = {
+      name: brand.name,
+      displayName: `${brand.name} Domain Intelligence`,
+      description: "Free domain intelligence tool. Analyze any domain instantly across 160 signals.",
+      url: baseUrl,
+      version: "1.0.0",
+      capabilities: ["domain_analysis", "security_audit", "performance_check"],
+      homepage: baseUrl,
+      provider: { name: "Yoke", url: baseUrl },
+    };
+    return new Response(JSON.stringify(card, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "public, max-age=86400",
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
   if (method === "GET" && path === "/robots.txt") {
     return new Response(`User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${baseUrl}/sitemap.xml`, {
       headers: { "Content-Type": "text/plain", "Cache-Control": "public, max-age=86400", ...CORS_HEADERS },
@@ -109,7 +239,7 @@ export function handle(rc: RouteContext): Response | Promise<Response> | null {
 
   if (method === "GET" && path === "/sitemap.xml") {
     return new Response(
-      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${baseUrl}</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>${baseUrl}/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n  <url><loc>${baseUrl}/api/docs</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>\n  <url><loc>${baseUrl}/status</loc><changefreq>hourly</changefreq><priority>0.5</priority></url>\n  <url><loc>${baseUrl}/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>\n  <url><loc>${baseUrl}/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>\n</urlset>`,
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${baseUrl}</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>${baseUrl}/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n  <url><loc>${baseUrl}/api/docs</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>\n  <url><loc>${baseUrl}/openapi.json</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>\n  <url><loc>${baseUrl}/.well-known/ai-catalog.json</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>\n  <url><loc>${baseUrl}/status</loc><changefreq>hourly</changefreq><priority>0.5</priority></url>\n  <url><loc>${baseUrl}/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>\n  <url><loc>${baseUrl}/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>\n</urlset>`,
       {
         headers: {
           "Content-Type": "application/xml;charset=UTF-8",
@@ -122,7 +252,7 @@ export function handle(rc: RouteContext): Response | Promise<Response> | null {
 
   if (method === "GET" && path === "/llms.txt") {
     return new Response(
-      `# ${brand.name} — Free Domain Intelligence & OSINT Tool\n\n> ${brand.name} is a free, open-source domain intelligence tool at ${baseUrl}\n\n## What ${brand.name} Does\n\n${brand.name} provides instant, comprehensive analysis of any internet domain. Enter a domain name and get detailed intelligence across security, infrastructure, technology, performance, and business dimensions.\n\n## Key Capabilities\n\n- DNS Analysis: A, AAAA, MX, NS, TXT, CNAME, SOA records with DNSSEC validation\n- SSL/TLS: Certificate details, chain validation, TLS configuration grading, CAA records\n- WHOIS/RDAP: Registrar, registration and expiry dates, domain age\n- Security Audit: HTTP security headers, cookie security\n- Data Breaches: HIBP breach detection with time-decay scoring\n- Threat Intelligence: Shodan port/vulnerability data, GreyNoise IP classification\n- Technology Detection: Frameworks, CMS, CDN, WAF, deep WordPress fingerprinting\n- Email Authentication: SPF, DKIM, DMARC validation\n- Performance: Google PageSpeed, Core Web Vitals (mobile-first 60/40 blend), compression\n- Certificate Transparency: CT log monitoring for subdomain discovery\n- Business Intelligence: Company enrichment via Wikidata, Brandfetch, Crunchbase\n- AI Analysis: LLM-powered analysis from 6 expert personas\n\n## Free JSON API\n\nNo authentication required.\n\ncurl -s https://${host}/stripe.com | jq\ncurl -s "https://${host}/stripe.com?pretty"\ncurl -s https://${host}/stripe.com | jq '.ssl'\n\n## Links\n\n- Web UI: ${baseUrl}\n- API Docs: ${baseUrl}/api/docs\n- Source: ${brand.repoUrl}\n- License: MIT`,
+      `# ${brand.name} — Free Domain Intelligence & OSINT Tool\n\n> ${brand.name} is a free, open-source domain intelligence tool at ${baseUrl}\n\n## What ${brand.name} Does\n\n${brand.name} provides instant, comprehensive analysis of any internet domain. Enter a domain name and get detailed intelligence across security, infrastructure, technology, performance, and business dimensions.\n\n## Key Capabilities\n\n- DNS Analysis: A, AAAA, MX, NS, TXT, CNAME, SOA records with DNSSEC validation\n- SSL/TLS: Certificate details, chain validation, TLS configuration grading, CAA records\n- WHOIS/RDAP: Registrar, registration and expiry dates, domain age\n- Security Audit: HTTP security headers, cookie security\n- Data Breaches: HIBP breach detection with time-decay scoring\n- Threat Intelligence: Shodan port/vulnerability data, GreyNoise IP classification\n- Technology Detection: Frameworks, CMS, CDN, WAF, deep WordPress fingerprinting\n- Email Authentication: SPF, DKIM, DMARC validation\n- Performance: Google PageSpeed, Core Web Vitals (mobile-first 60/40 blend), compression\n- Certificate Transparency: CT log monitoring for subdomain discovery\n- Business Intelligence: Company enrichment via Wikidata, Brandfetch, Crunchbase\n- AI Analysis: LLM-powered analysis from 6 expert personas\n\n## Free JSON API\n\nNo authentication required.\n\n- OpenAPI spec: ${baseUrl}/openapi.json\n- AI Catalog (ARD): ${baseUrl}/.well-known/ai-catalog.json\n- API Catalog (RFC 9727): ${baseUrl}/.well-known/api-catalog\n- MCP Server: https://www.npmjs.com/package/@yokedotlol/mcp-server\n\ncurl -s https://${host}/stripe.com | jq\ncurl -s "https://${host}/stripe.com?pretty"\ncurl -s https://${host}/stripe.com | jq '.ssl'\n\n## Links\n\n- Web UI: ${baseUrl}\n- API Docs: ${baseUrl}/api/docs\n- OpenAPI: ${baseUrl}/openapi.json\n- Source: ${brand.repoUrl}\n- License: MIT`,
       {
         headers: {
           "Content-Type": "text/plain;charset=UTF-8",
