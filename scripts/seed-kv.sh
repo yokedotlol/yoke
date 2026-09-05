@@ -26,20 +26,34 @@ do_retire_js() {
   echo "=== Fetching retire.js vulnerability database ==="
   local tmpfile="/tmp/retirejs-db.json"
   
-  # Canonical source first, fork as fallback
-  curl -sSL "https://raw.githubusercontent.com/RetireJS/retire.js/master/repository/jsrepository.json" \
-    -o "$tmpfile" 2>/dev/null || {
-    echo "⚠️  Canonical repo failed — trying fork"
-    curl -sSL "https://raw.githubusercontent.com/nicksam112/retire.js/master/repository/jsrepository.json" \
-      -o "$tmpfile" || { echo "❌ All retire.js sources failed"; return 1; }
-  }
-  
-  # Validate it's valid JSON
-  if ! python3 -c "import json; json.load(open('$tmpfile'))" 2>/dev/null; then
-    if ! node -e "JSON.parse(require('fs').readFileSync('$tmpfile','utf8'))" 2>/dev/null; then
-      echo "❌ Downloaded file is not valid JSON"
-      return 1
-    fi
+  # Fetch the canonical generated database. Fail on HTTP errors so an error page
+  # can never reach KV as reference data.
+  curl -fsSL "https://raw.githubusercontent.com/RetireJS/retire.js/master/repository/jsrepository.json" \
+    -o "$tmpfile" || { echo "❌ retire.js source fetch failed"; return 1; }
+
+  # Validate the object shape, not just JSON syntax. Each library entry must
+  # provide extractors and a vulnerability list.
+  if ! python3 - "$tmpfile" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+
+if not isinstance(data, dict) or not data:
+    raise ValueError("retire.js database must be a non-empty object")
+
+for name, entry in data.items():
+    if not isinstance(entry, dict):
+        raise ValueError(f"{name}: entry must be an object")
+    if not isinstance(entry.get("extractors"), dict):
+        raise ValueError(f"{name}: missing extractors object")
+    if not isinstance(entry.get("vulnerabilities"), list):
+        raise ValueError(f"{name}: missing vulnerabilities list")
+PY
+  then
+    echo "❌ Downloaded retire.js database has an invalid structure"
+    return 1
   fi
   
   local size=$(wc -c < "$tmpfile" | tr -d ' ')
