@@ -38,7 +38,7 @@ export async function handleScheduled(_event: ScheduledEvent, env: Env, ctx: Exe
     logWarn("[yoke:cron] budget flush failed", { error: e instanceof Error ? e.message : String(e) });
   }
 
-  // Lightweight cleanup: prune stale rate-limit / error / request_meta rows.
+  // Lightweight cleanup: prune stale rate-limit, error, and aggregate request rows.
   try {
     await pruneOldRows(env);
   } catch (e) {

@@ -145,7 +145,7 @@ npx wrangler d1 execute yoke-stats --file=worker/migrations/0003_badge_domains.s
 ```bash
 npx wrangler secret put SHARE_SECRET       # HMAC key for share URLs (openssl rand -hex 32)
 npx wrangler secret put ADMIN_KEY          # Admin endpoint auth (openssl rand -hex 32)
-npx wrangler secret put IP_HASH_SALT       # GDPR-safe IP hashing salt (openssl rand -hex 32)
+npx wrangler secret put IP_HASH_SALT       # Rate-limit hash salt (openssl rand -hex 32)
 ```
 
 **Recommended:**
@@ -670,7 +670,7 @@ Every Yoke instance — managed or self-hosted — ships with these protections 
 - **HMAC-SHA256 signed share URLs** — share cards can't be forged.
 - **Admin auth** — `/usage`, `/api/cleanup`, `/api/cache` behind HTTP Basic auth with timing-safe comparison.
 - **Cache-aware rate limiting** — cached results don't count against per-IP limits.
-- **IP hashing** — user IPs are hashed before storage. Rate-limit keys use a secret-salted stable SHA-256 hash for sliding-window counters, while anonymous visitor analytics use a separate daily-rotating hash. No raw IPs are persisted by Yoke.
+- **IP hashing** — rate-limit keys use a secret-salted stable SHA-256 hash for short-lived sliding-window counters. Operational analytics are stored only as hourly aggregates and contain no IP hash or per-request identifier. No raw IPs are persisted by Yoke.
 
 ### What Self-Hosters Don't Get (vs. Cloudflare)
 
@@ -753,7 +753,7 @@ Set via `npx wrangler secret put` (Cloudflare), `.env` (Docker), or workerd conf
 |----------|----------|-------------|
 | `SHARE_SECRET` | **Yes** | HMAC key for share card URLs |
 | `ADMIN_KEY` | **Yes** | Protects admin endpoints |
-| `IP_HASH_SALT` | **Yes** | Secret salt for GDPR-safe IP hashing |
+| `IP_HASH_SALT` | **Yes** | Secret salt for pseudonymous rate-limit keys |
 | `BASE_URL` | Recommended | Instance URL for self-analysis + share cards |
 | `SELF_DOMAINS` | Recommended | Comma-separated list of your instance's domains (default: yoke.lol) |
 | `OPENROUTER_API_KEY` | Recommended | AI Analysis (Cross-Signal Insights) |
@@ -774,7 +774,7 @@ Set via `npx wrangler secret put` (Cloudflare), `.env` (Docker), or workerd conf
 | `HIDE_EXTENSION` | Optional | White-label: remove extension link |
 | `HIDE_CLI` | Optional | White-label: remove CLI link |
 | `FEEDBACK_URL` | Optional | White-label: custom feedback URL |
-| `DISABLE_ANALYTICS` | Optional | Set `true` to skip anonymous request analytics: endpoint counters, tab views, and request metadata. Rate limiting and product score history are unaffected |
+| `DISABLE_ANALYTICS` | Optional | Set `true` to skip anonymous analytics: endpoint counters, tab views, and aggregate request counters. Rate limiting and product score history are unaffected |
 
 ---
 
@@ -835,12 +835,14 @@ Point the Yoke CLI at your instance:
 brew install yokedotlol/tap/yoke
 # or: go install github.com/yokedotlol/yoke/cli@latest
 
-# Configure
-yoke config set base_url https://YOUR_DOMAIN
+# Configure the main analysis, comparison, and AI commands
+yoke config --set-base-url https://YOUR_DOMAIN
 
 # Test
 yoke stripe.com
 ```
+
+The dedicated `dns`, `headers`, and `tls` commands still query the public ns.lol, xhttp.lol, and certs.lol services.
 
 ---
 

@@ -41,7 +41,7 @@ export default function PrivacyPage() {
         <BookOpen size={24} /> Privacy Policy
       </h1>
       <p style={{ color: "var(--dim)", fontSize: "0.85rem", marginBottom: "2rem" }}>
-        <strong>Last updated:</strong> June 2026
+        <strong>Last updated:</strong> September 2026
       </p>
 
       <Section title="What We Collect">
@@ -65,12 +65,8 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="Anonymous Analytics">
-        <p>Yoke collects anonymous, aggregated request metadata to operate the service:</p>
+        <p>Yoke keeps hourly aggregate counters to operate the service:</p>
         <ul style={{ paddingLeft: "1.5rem", margin: "0.75rem 0" }}>
-          <li>
-            <strong>Visitor hash</strong> — a secret-salted, daily-rotating SHA-256 hash of your IP address, for unique
-            visitor counting
-          </li>
           <li>
             <strong>Country code</strong> — derived from Cloudflare's{" "}
             <code style={{ background: "var(--surface)", padding: "2px 6px", borderRadius: 4, fontSize: "0.9em" }}>
@@ -79,19 +75,23 @@ export default function PrivacyPage() {
             header (2-letter code only, no geolocation)
           </li>
           <li>
-            <strong>Client type</strong> — whether the request came from a browser, CLI, API client, or extension
+            <strong>Client type</strong> — whether requests came from a browser, CLI, API client, or extension
           </li>
           <li>
-            <strong>Request metadata</strong> — endpoint, HTTP status code, response latency
+            <strong>Operational totals</strong> — request counts, endpoint, HTTP status code, and total response latency
           </li>
         </ul>
-        <p>None of this is linked to an identity. There are no user accounts, sessions, or tracking pixels.</p>
+        <p>
+          These counters contain no IP address or hash, requested domain, request timestamp, or other per-request
+          identifier. There are no user accounts, sessions, or tracking pixels.
+        </p>
       </Section>
 
       <Section title="Caching">
         <p>
-          Analysis results are cached for up to 24 hours to improve performance. Cached data includes only publicly
-          available DNS, WHOIS, SSL, and HTTP header information about the domains you analyze.
+          Analysis results are cached for up to 24 hours to improve performance. Cached results contain public
+          technical, registration, security, performance, reputation, and business information about the domains you
+          analyze.
         </p>
       </Section>
 
@@ -119,6 +119,11 @@ export default function PrivacyPage() {
             <strong>In flight:</strong> When you run an AI analysis, your key is sent to Yoke's server as part of the
             request. The server passes it through to OpenRouter to fulfill the API call, then discards it. We don't log
             or store your key at any point — it exists in memory only for the duration of that single request.
+          </li>
+          <li>
+            <strong>Custom prompts:</strong> If you edit the AI prompt in the browser or configure one in the CLI, that
+            prompt is sent through Yoke to OpenRouter with the request. Yoke does not log or store it; the browser copy
+            stays in localStorage and the CLI copy stays in ~/.yoke.toml or the prompt file you selected.
           </li>
           <li>
             <strong>Removal:</strong> In the browser, click "Remove key" in the Advanced panel or clear your browser's
@@ -183,9 +188,9 @@ export default function PrivacyPage() {
 
       <Section title="GDPR">
         <p>
-          Yoke does not store personal data as defined under GDPR. IP addresses are pseudonymized via SHA-256 with a
-          server-side secret salt before storage and cannot be reversed. No cookies, accounts, or tracking identifiers
-          are used. If you have questions about data handling,{" "}
+          Yoke does not store raw IP addresses. Short-lived rate-limit keys are pseudonymized via SHA-256 with a
+          server-side secret salt before storage and are deleted within hours. Aggregate analytics contain no IP hash or
+          other tracking identifier. No cookies or accounts are used. If you have questions about data handling,{" "}
           <a href="https://github.com/yokedotlol/yoke/issues" style={{ color: "var(--accent)" }}>
             open an issue
           </a>

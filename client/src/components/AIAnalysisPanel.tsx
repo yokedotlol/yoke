@@ -100,17 +100,20 @@ function saveModel(model: string) {
     /* noop */
   }
 }
-function getCustomPrompt(): string {
+function customPromptKey(domain: string): string {
+  return `${CUSTOM_PROMPT_KEY}:${domain}`;
+}
+function getCustomPrompt(domain: string): string {
   try {
-    return localStorage.getItem(CUSTOM_PROMPT_KEY) || "";
+    return localStorage.getItem(customPromptKey(domain)) || "";
   } catch {
     return "";
   }
 }
-function saveCustomPrompt(prompt: string) {
+function saveCustomPrompt(domain: string, prompt: string) {
   try {
-    if (prompt) localStorage.setItem(CUSTOM_PROMPT_KEY, prompt);
-    else localStorage.removeItem(CUSTOM_PROMPT_KEY);
+    if (prompt) localStorage.setItem(customPromptKey(domain), prompt);
+    else localStorage.removeItem(customPromptKey(domain));
   } catch {
     /* noop */
   }
@@ -136,10 +139,12 @@ function AdvancedSettings({
   domain,
   onKeyChange,
   onModelChange,
+  onPromptChange,
 }: {
   domain: string;
   onKeyChange: (key: string) => void;
   onModelChange: (model: string) => void;
+  onPromptChange: () => void;
 }) {
   const [open, setOpen] = useState(getSettingsOpen);
   const [keyValue, setKeyValue] = useState(getSavedKey);
@@ -182,7 +187,7 @@ function AdvancedSettings({
         const data = (await res.json()) as { system: string; user: string };
         const fullPrompt = `${data.system}\n\n---\n\n${data.user}`;
         setDefaultPrompt(fullPrompt);
-        const custom = getCustomPrompt();
+        const custom = getCustomPrompt(domain);
         setPromptText(custom || fullPrompt);
         setPromptEdited(!!custom);
       }
@@ -215,13 +220,15 @@ function AdvancedSettings({
   const handlePromptChange = (newText: string) => {
     setPromptText(newText);
     setPromptEdited(newText !== defaultPrompt);
-    saveCustomPrompt(newText === defaultPrompt ? "" : newText);
+    saveCustomPrompt(domain, newText === defaultPrompt ? "" : newText);
+    onPromptChange();
   };
 
   const handlePromptReset = () => {
     setPromptText(defaultPrompt);
     setPromptEdited(false);
-    saveCustomPrompt("");
+    saveCustomPrompt(domain, "");
+    onPromptChange();
   };
 
   const handlePromptCopy = async () => {
@@ -1132,6 +1139,8 @@ export function AIAnalysisPanel({
 
       const bodyObj: Record<string, unknown> = { domain, stream: true };
       if (savedKey && selectedModel) bodyObj.model = selectedModel;
+      const customPrompt = getCustomPrompt(domain);
+      if (savedKey && customPrompt) bodyObj.custom_prompt = customPrompt;
 
       let res: Response | null = null;
       const maxRetries = 3;
@@ -1295,13 +1304,19 @@ export function AIAnalysisPanel({
     }
   };
 
-  const handleModelChange = (model: string) => {
-    setSelectedModel(model);
+  const resetInsights = () => {
     setInsightsResult(null);
+    setAnalysisMetadata(null);
     setStreamingText("");
     setStreamProgress(0);
     delete _insightsCache[domain];
+    delete _metadataCache[domain];
     delete _inFlightStreams[domain];
+  };
+
+  const handleModelChange = (model: string) => {
+    setSelectedModel(model);
+    resetInsights();
   };
 
   // Rate limited
@@ -1313,7 +1328,12 @@ export function AIAnalysisPanel({
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       {/* Advanced Settings */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "-8px" }}>
-        <AdvancedSettings domain={domain} onKeyChange={handleKeyChange} onModelChange={handleModelChange} />
+        <AdvancedSettings
+          domain={domain}
+          onKeyChange={handleKeyChange}
+          onModelChange={handleModelChange}
+          onPromptChange={resetInsights}
+        />
       </div>
 
       {/* 1. Score Breakdown (deterministic) */}

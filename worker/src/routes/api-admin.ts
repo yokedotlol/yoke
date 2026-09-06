@@ -377,22 +377,21 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     } catch (e) {
       results.api_errors = `error: ${e instanceof Error ? e.message : String(e)}`;
     }
-    // request_meta: enforce retention (default 90 days) — previously unbounded.
+    // Aggregate request counters: enforce retention (default 90 days).
     try {
       const retentionDays = requestMetaRetentionDays(env);
-      const rmCutoffDay = new Date(Date.now() - retentionDays * 86400000).toISOString().slice(0, 10);
-      const rmRes = await env.STATS_DB.prepare("DELETE FROM request_meta WHERE day < ?").bind(rmCutoffDay).run();
-      const rmDomainRes = await env.STATS_DB.prepare(
-        "UPDATE request_meta SET domain = NULL WHERE domain IS NOT NULL",
-      ).run();
-      results.request_meta = `${rmRes.meta?.changes ?? "?"} rows deleted (>${retentionDays} days old); ${rmDomainRes.meta?.changes ?? "?"} legacy domain values cleared`;
+      const cutoffDay = new Date(Date.now() - retentionDays * 86400000).toISOString().slice(0, 10);
+      const aggregateRes = await env.STATS_DB.prepare("DELETE FROM request_aggregates WHERE day < ?")
+        .bind(cutoffDay)
+        .run();
+      results.request_aggregates = `${aggregateRes.meta?.changes ?? "?"} rows deleted (>${retentionDays} days old)`;
     } catch (e) {
-      results.request_meta = `error: ${e instanceof Error ? e.message : String(e)}`;
+      results.request_aggregates = `error: ${e instanceof Error ? e.message : String(e)}`;
     }
     try {
       await cleanupPrivacyResidue(env);
       results.privacy_residue =
-        "legacy recent/showcase KV keys deleted; request_meta/api_errors domains cleared; old domain_lookups dropped; tab_views aggregate schema enforced";
+        "legacy recent/showcase KV keys and request_meta table deleted; api_errors domains cleared; old domain_lookups dropped; aggregate schemas enforced";
     } catch (e) {
       results.privacy_residue = `error: ${e instanceof Error ? e.message : String(e)}`;
     }

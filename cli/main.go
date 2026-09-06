@@ -995,7 +995,8 @@ func main() {
 		Long: accent.Render("Yoke") + " — domain intelligence from your terminal\n\n" +
 			"Analyze any domain instantly: DNS, SSL, WHOIS, security headers,\n" +
 			"tech stack, performance, breaches, and more.\n\n" +
-			"You can always self-host if you need privacy. Set YOKE_BASE_URL or yoke config --set-base-url.\n\n" +
+			"Self-host the main analysis, comparison, and AI API with YOKE_BASE_URL or yoke config --set-base-url.\n" +
+			"The dns, headers, and tls commands use the public ns.lol, xhttp.lol, and certs.lol services.\n\n" +
 			dim.Render("https://yoke.lol"),
 		Version: version,
 		Args: func(cmd *cobra.Command, args []string) error {

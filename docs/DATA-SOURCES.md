@@ -8,16 +8,23 @@ Yoke pulls data from a variety of third-party services to build its domain intel
 
 | Service | What Yoke Uses It For | Terms / License | Link |
 |---------|----------------------|-----------------|------|
-| **Google PageSpeed Insights** | Core Web Vitals, performance scores, and Lighthouse audits | [Google APIs ToS](https://developers.google.com/terms) — free, no key required | [developers.google.com/speed](https://developers.google.com/speed/pagespeed/insights/) |
+| **Analyzed website** | HTTP responses, redirects, headers, page content, technology signals, legal pages, and well-known files | Website operator's terms | Submitted domain |
+| **Google PageSpeed Insights** | Lighthouse performance audits | [Google APIs ToS](https://developers.google.com/terms) | [developers.google.com/speed](https://developers.google.com/speed/pagespeed/insights/) |
+| **Chrome UX Report** | Public field Core Web Vitals for the analyzed origin | [Google APIs ToS](https://developers.google.com/terms) | [developer.chrome.com/docs/crux](https://developer.chrome.com/docs/crux) |
 | **Yoke Fly Probe** | Direct TLS handshake, cipher enumeration, OCSP stapling, CT SCTs, forward secrecy, HTTP content fallback | Self-hosted (MIT) | Self-hosted on Fly.io |
 | **Have I Been Pwned** | Data breach exposure lookups for domains | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — attribution required | [haveibeenpwned.com](https://haveibeenpwned.com) |
 | **crt.sh** | Certificate Transparency log searches | Public, no key required | [crt.sh](https://crt.sh) |
 | **Cert Spotter (SSLMate)** | Certificate Transparency monitoring | Free tier, no key required | [sslmate.com/certspotter](https://sslmate.com/certspotter) |
 | **Shodan InternetDB** | Open port and known-vulnerability lookups | Free public API, no key required | [internetdb.shodan.io](https://internetdb.shodan.io) |
 | **GreyNoise** | Internet background noise and scanner classification | [Community API](https://docs.greynoise.io/docs/using-the-greynoise-community-api) — free, rate-limited | [greynoise.io](https://greynoise.io) |
-| **Google Public DNS** | DNS record resolution (via DNS-over-HTTPS) | [Google APIs ToS](https://developers.google.com/terms) — free, no key required | [dns.google](https://dns.google) |
+| **Google Public DNS** | DNS record resolution and DNS blocklist lookups (via DNS-over-HTTPS) | [Google APIs ToS](https://developers.google.com/terms) — free, no key required | [dns.google](https://dns.google) |
+| **Cloudflare DNS** | DNS resolution and availability comparison (via DNS-over-HTTPS) | [Cloudflare Terms](https://www.cloudflare.com/terms/) | [cloudflare.com/application-services/products/dns](https://www.cloudflare.com/application-services/products/dns/) |
+| **AdGuard DNS** | Resolver availability comparison (via DNS-over-HTTPS) | [AdGuard Terms](https://adguard.com/en/eula.html) | [adguard-dns.io](https://adguard-dns.io/) |
+| **NextDNS** | Resolver availability comparison (via DNS-over-HTTPS) | [NextDNS Terms](https://nextdns.io/terms) | [nextdns.io](https://nextdns.io/) |
+| **Spamhaus ZEN, Barracuda, and SpamCop** | Public DNS blocklist checks for resolved IP addresses | Provider terms | [spamhaus.org](https://www.spamhaus.org/), [barracudacentral.org](https://www.barracudacentral.org/), [spamcop.net](https://www.spamcop.net/) |
 | **WhoisFreaks** | WHOIS registration data lookups | API key required, free tier available | [whoisfreaks.com](https://whoisfreaks.com) |
-| **Google RDAP** | Domain registration data via the RDAP protocol | Public RDAP protocol, no key required | [Google Registry](https://pubapi.registry.google/rdap) |
+| **IANA RDAP bootstrap and registry RDAP services** | Locate and query the authoritative registration service for each TLD | Public RDAP protocol | [data.iana.org/rdap](https://data.iana.org/rdap/) |
+| **Google Registry RDAP** | Domain registration data for Google-operated TLDs | Public RDAP protocol, no key required | [Google Registry](https://pubapi.registry.google/rdap) |
 | **Cloudflare API** | Domain availability checks | [Cloudflare ToS](https://www.cloudflare.com/terms/) — API key required | [cloudflare.com](https://www.cloudflare.com) |
 | **Tranco** | Domain popularity ranking | Research use, [citation requested](https://tranco-list.eu/about) | [tranco-list.eu](https://tranco-list.eu) |
 | **Brandfetch** | Brand logos and visual identity | [Brand Search API](https://docs.brandfetch.com/) — free up to 500K req/mo, no key required | [brandfetch.com](https://brandfetch.com) |
@@ -27,6 +34,8 @@ Yoke pulls data from a variety of third-party services to build its domain intel
 | **Wayback Machine** | Historical snapshot availability via the Internet Archive | Free public API | [web.archive.org](https://web.archive.org) |
 | **HackerTarget** | Supplementary reconnaissance lookups | Free tier, rate-limited | [hackertarget.com](https://hackertarget.com) |
 | **ipwho.is** | IP geolocation (HTTPS fallback, used by both Worker and Fly proxy) | Free, no key required | [ipwho.is](https://ipwho.is) |
+| **RIPEstat** | ASN, announced-prefix, routing visibility, and BGP update data | [RIPE NCC Terms](https://www.ripe.net/about-us/legal/ripe-ncc-terms-and-conditions/) | [stat.ripe.net](https://stat.ripe.net/) |
+| **Downdetector and IsItDownRightNow** | Check whether a public outage-status page exists for the analyzed service | Provider terms | [downdetector.com](https://downdetector.com/), [isitdownrightnow.com](https://www.isitdownrightnow.com/) |
 | **OpenRouter** | LLM inference proxy (powers AI-generated analysis) | [OpenRouter ToS](https://openrouter.context/terms) — BYO key or platform key | [openrouter.ai](https://openrouter.ai) |
 | **check-host.net** | Global HTTP availability probes from 20+ worldwide locations (relayed via Fly proxy) | Free public API | [check-host.net](https://check-host.net) |
 | **MaxMind GeoLite2** | Local IP geolocation database (city, country, ASN/ISP) used in Fly proxy | [GeoLite2 EULA](https://www.maxmind.com/en/geolite2/eula) — attribution required | [maxmind.com](https://www.maxmind.com/en/geolite2/signup) |
@@ -34,6 +43,10 @@ Yoke pulls data from a variety of third-party services to build its domain intel
 | **OpenStreetMap** | Base map data underlying CARTO tiles | [ODbL](https://opendatacommons.org/licenses/odbl/) — attribution required | [openstreetmap.org](https://www.openstreetmap.org) |
 | **Crunchbase** | Company and startup data enrichment | [Crunchbase ToS](https://about.crunchbase.com/terms-of-service/) — public data | [crunchbase.com](https://www.crunchbase.com) |
 | **Google News RSS** | Recent news articles mentioning analyzed domains | [Google ToS](https://policies.google.com/terms) — RSS feed, results cached 4h | [news.google.com](https://news.google.com) |
+| **Bing News RSS** | Fallback source for recent news articles | [Microsoft Services Agreement](https://www.microsoft.com/servicesagreement) | [bing.com/news](https://www.bing.com/news) |
+| **Hacker News via Algolia** | Public Hacker News stories mentioning the analyzed domain | [Algolia Terms](https://www.algolia.com/policies/terms/) | [hn.algolia.com](https://hn.algolia.com/) |
+| **GitHub, GitLab, LinkedIn, Facebook, Instagram, and X** | Public profile-presence checks based on the domain's name | Provider terms | Public profile pages |
+| **ns.lol, xhttp.lol, and certs.lol** | The `yoke dns`, `yoke headers`, and `yoke tls` CLI commands send the requested domain or host to these public APIs; `YOKE_BASE_URL` does not redirect them | [Privacy pages](https://yoke.lol/tools) | [yoke.lol/tools](https://yoke.lol/tools) |
 
 ---
 

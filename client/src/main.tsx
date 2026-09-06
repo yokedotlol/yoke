@@ -5,6 +5,7 @@ import { App } from "./App";
 import AboutPage from "./components/AboutPage";
 import CliPage from "./components/CliPage";
 import DocsPage from "./components/DocsPage";
+import FamilyFooter from "./components/FamilyFooter";
 import PrivacyPage from "./components/PrivacyPage";
 import TermsPage from "./components/TermsPage";
 import ToolsPage from "./components/ToolsPage";
@@ -53,12 +54,26 @@ if (!rootEl) {
 /** Route static pages before App to avoid hooks-order violations in App. */
 function Router() {
   const path = window.location.pathname;
-  if (path === "/cli") return <CliPage />;
-  if (path === "/about") return <AboutPage />;
-  if (path === "/docs") return <DocsPage />;
-  if (path === "/privacy") return <PrivacyPage />;
-  if (path === "/terms") return <TermsPage />;
-  if (path === "/tools") return <ToolsPage />;
+  const pages: Record<string, React.ReactNode> = {
+    "/cli": <CliPage />,
+    "/about": <AboutPage />,
+    "/docs": <DocsPage />,
+    "/privacy": <PrivacyPage />,
+    "/terms": <TermsPage />,
+    "/tools": <ToolsPage />,
+  };
+  const staticPage = pages[path];
+
+  if (staticPage) {
+    return (
+      <>
+        {staticPage}
+        <footer className="footer">
+          <FamilyFooter />
+        </footer>
+      </>
+    );
+  }
   return <App />;
 }
 

@@ -219,7 +219,10 @@ function extractPromptContext(data: Record<string, unknown>): {
   return { archetype, signalIds };
 }
 
-export function buildAIPrompt(analysisData: Record<string, unknown>): { system: string; user: string } {
+export function buildAIPrompt(
+  analysisData: Record<string, unknown>,
+  customPrompt?: string,
+): { system: string; user: string } {
   const sanitized = sanitizeForLLM(analysisData);
 
   const { archetype, signalIds } = extractPromptContext(analysisData);
@@ -241,7 +244,17 @@ export function buildAIPrompt(analysisData: Record<string, unknown>): { system: 
   }
 
   const userMessage = `<domain_data>\n${JSON.stringify(sanitized, null, 0)}\n</domain_data>\n\nAnalyze this domain and provide your structured assessment.`;
-  return { system, user: userMessage };
+  const custom = customPrompt?.trim().slice(0, 100_000);
+  if (!custom) return { system, user: userMessage };
+
+  const separator = "\n\n---\n\n";
+  const separatorIndex = custom.indexOf(separator);
+  if (separatorIndex === -1) return { system, user: custom };
+
+  return {
+    system: custom.slice(0, separatorIndex).trim() || system,
+    user: custom.slice(separatorIndex + separator.length).trim() || userMessage,
+  };
 }
 
 // ─── OpenRouter API Call ────────────────────────────────────────────
@@ -270,8 +283,9 @@ async function callOpenRouter(
   analysisData: Record<string, unknown>,
   referer?: string,
   model?: string,
+  customPrompt?: string,
 ): Promise<AIAnalysisResult> {
-  const { system, user } = buildAIPrompt(analysisData);
+  const { system, user } = buildAIPrompt(analysisData, customPrompt);
   const useModel = model || DEFAULT_MODEL;
 
   const maxRetries = 3;
@@ -456,8 +470,9 @@ function streamOpenRouter(
   analysisData: Record<string, unknown>,
   referer?: string,
   model?: string,
+  customPrompt?: string,
 ): { stream: ReadableStream; fullContent: Promise<string> } {
-  const { system, user } = buildAIPrompt(analysisData);
+  const { system, user } = buildAIPrompt(analysisData, customPrompt);
   const useModel = model || DEFAULT_MODEL;
   let resolveContent: (v: string) => void;
   let rejectContent: (e: Error) => void;
@@ -617,7 +632,14 @@ function parseAIContent(content: string): AIAnalysisResult | null {
 export async function getAIAnalysis(
   domain: string,
   env: Env,
-  options?: { clientIP?: string; stream?: boolean; ctx?: ExecutionContext; byoKey?: string; byoModel?: string },
+  options?: {
+    clientIP?: string;
+    stream?: boolean;
+    ctx?: ExecutionContext;
+    byoKey?: string;
+    byoModel?: string;
+    customPrompt?: string;
+  },
 ): Promise<Response> {
   const normalized = normalizeDomain(domain);
   const clientIP = options?.clientIP || "unknown";
@@ -625,6 +647,7 @@ export async function getAIAnalysis(
   // BYO key passthrough — use client's key when provided, fall back to platform key
   const apiKey = options?.byoKey || env.OPENROUTER_API_KEY;
   const model = options?.byoModel || DEFAULT_MODEL;
+  const customPrompt = options?.customPrompt?.trim().slice(0, 100_000) || undefined;
   const isByoKey = !!options?.byoKey;
 
   // Must have either platform key or BYO key
@@ -656,8 +679,8 @@ export async function getAIAnalysis(
     });
   }
 
-  // Content-keyed AI cache: hash the analysis input so cache auto-invalidates when signals change
-  const inputHash = await hashAnalysisInput(analysisCache);
+  // Content-keyed AI cache: invalidate when signals, model, or user instructions change.
+  const inputHash = await hashAnalysisInput({ analysisCache, model, customPrompt: customPrompt || "" });
   const aiCacheType = `ai_analysis:${inputHash}`;
 
   // Check cache — serve if signals haven't changed (TTL is just a safety net)
@@ -678,7 +701,7 @@ export async function getAIAnalysis(
     // Per-IP rate limit
     const ipBlock = await checkAIRateLimit(env.RATE_LIMITER, clientIP, "ai-analysis", AI_HOURLY_LIMIT);
     if (ipBlock) {
-      const { system, user } = buildAIPrompt(analysisCache);
+      const { system, user } = buildAIPrompt(analysisCache, customPrompt);
       const diyPrompt = `${system}\n\n---\n\n${user}`;
       return new Response(
         JSON.stringify({
@@ -729,7 +752,13 @@ export async function getAIAnalysis(
 
   // ─── Streaming path ────────────────────────────────────────────────
   if (wantStream) {
-    const { stream, fullContent } = streamOpenRouter(apiKey as string, analysisCache, env.BASE_URL, model);
+    const { stream, fullContent } = streamOpenRouter(
+      apiKey as string,
+      analysisCache,
+      env.BASE_URL,
+      model,
+      customPrompt,
+    );
 
     // Cache the assembled result after stream completes (fire-and-forget)
     const cachePromise = fullContent
@@ -767,7 +796,7 @@ export async function getAIAnalysis(
 
   // ─── Non-streaming path (fallback) ─────────────────────────────────
   try {
-    const result = await callOpenRouter(apiKey as string, analysisCache, env.BASE_URL, model);
+    const result = await callOpenRouter(apiKey as string, analysisCache, env.BASE_URL, model, customPrompt);
 
     const responseData: CachedAIResult = {
       result,

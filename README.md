@@ -97,11 +97,11 @@ yoke score stripe.com             # Quick score
 yoke compare github.com gitlab.com  # Side-by-side
 yoke ai stripe.com                # AI analysis
 
-# Point at your own instance
+# Point main analysis, comparison, and AI commands at your own instance
 yoke config --set-base-url https://your-instance.com
 ```
 
-The CLI auto-checks for updates via `X-Yoke-Min-Client` header.
+The dedicated `dns`, `headers`, and `tls` commands query the public ns.lol, xhttp.lol, and certs.lol services. The CLI auto-checks for updates via `X-Yoke-Min-Client` header.
 
 ## Chrome Extension
 

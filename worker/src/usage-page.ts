@@ -93,7 +93,6 @@ export async function renderUsagePage(
   const es = stats.error_stats;
 
   // Request analytics charts
-  const maxVisitors = Math.max(...rq.visitors_per_day.map((d) => d.count), 1);
   const maxDomains = Math.max(...rq.domains_per_day.map((d) => d.count), 1);
   const maxRequests = Math.max(...rq.requests_per_day.map((d) => d.count), 1);
   const maxHourly = Math.max(...rq.by_hour, 1);
@@ -167,11 +166,6 @@ export async function renderUsagePage(
   <div class="card">
     <div class="cl">Total Requests</div>
     <div class="cv" style="color:var(--accent)">${n(rq.total_requests || stats.total)}</div>
-  </div>
-  <div class="card">
-    <div class="cl">Unique Visitors</div>
-    <div class="cv" style="color:var(--cyan)">${n(rq.unique_visitors)}</div>
-    <div class="cs">daily-hashed, no IPs</div>
   </div>
   <div class="card">
     <div class="cl">Unique Domains</div>
@@ -259,17 +253,6 @@ ${
     </div>
   </div>
   <div>
-    <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem">Unique Visitors / Day</div>
-    <div class="chart">
-      ${rq.visitors_per_day
-        .map((d) => {
-          const pct = Math.max((d.count / maxVisitors) * 100, 3);
-          return `<div class="bar" style="height:${pct}%;background:var(--cyan)"><span class="tip">${d.date.slice(5)} · ${n(d.count)}</span></div>`;
-        })
-        .join("")}
-    </div>
-  </div>
-  <div>
     <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem">Unique Domains / Day</div>
     <div class="chart">
       ${rq.domains_per_day
@@ -318,7 +301,7 @@ ${
           <div style="flex:1;height:5px;background:var(--border);border-radius:2px;overflow:hidden">
             <div style="height:100%;width:${pct}%;background:var(--cyan);border-radius:2px"></div>
           </div>
-          <span style="font-size:0.65rem;color:var(--muted)">${n(c.requests)} / ${n(c.visitors)}v</span>
+          <span style="font-size:0.65rem;color:var(--muted)">${n(c.requests)}</span>
         </div>`;
               })
               .join("")
@@ -611,7 +594,7 @@ ${
 }
 
 <footer>
-  <a href="/api/usage">JSON API</a> · <a href="/status">Status</a> · <a href="/api/cleanup">Run Cleanup</a> · All data aggregated — no IPs, no PII stored
+  <a href="/api/usage">JSON API</a> · <a href="/status">Status</a> · <a href="/api/cleanup">Run Cleanup</a> · <a href="https://certs.lol">certs</a> · <a href="https://ns.lol">ns</a> · <a href="https://xhttp.lol">xhttp</a> · <a href="https://vrfy.lol">vrfy</a> · All data aggregated — no IPs, no PII stored
 </footer>
 </body>
 </html>`;

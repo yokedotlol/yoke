@@ -174,7 +174,7 @@ const html = `<!DOCTYPE html>
       <noscript>
         <header role="banner"><nav aria-label="Main"><a href="/">Yoke</a></nav></header>
         <main id="main-content"><h1>Yoke — Domain Intelligence</h1><p>JavaScript is required to use Yoke. Please enable JavaScript in your browser settings.</p></main>
-        <footer role="contentinfo"><p>&copy; 2026 Yoke</p><nav aria-label="Legal"><a href="/about">About</a> | <a href="/privacy">Privacy Policy</a> | <a href="/terms">Terms of Service</a></nav></footer>
+        <footer role="contentinfo"><p>&copy; 2026 Yoke</p><nav aria-label="Legal"><a href="/about">About</a> | <a href="/privacy">Privacy Policy</a> | <a href="/terms">Terms of Service</a></nav><nav aria-label="Yoke tools"><a href="https://certs.lol">certs</a> | <a href="https://ns.lol">ns</a> | <a href="https://xhttp.lol">xhttp</a> | <a href="https://vrfy.lol">vrfy</a></nav></footer>
       </noscript>
       <!-- CLS skeleton: matches full landing page layout to prevent layout shift when React mounts -->
       <div id="shell" aria-hidden="true" style="min-height:100vh;background:var(--bg,#0f1419);padding:24px 24px 48px">

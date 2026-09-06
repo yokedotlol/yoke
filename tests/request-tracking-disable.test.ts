@@ -57,7 +57,7 @@ function waitUntilCtx(promises: Promise<unknown>[]): ExecutionContext {
 }
 
 describe("request tracking analytics opt-out", () => {
-  it("does not schedule or write request metadata when DISABLE_ANALYTICS is set", () => {
+  it("does not schedule or write request counters when DISABLE_ANALYTICS is set", () => {
     const captured = { sql: [], runs: [], batches: 0 } satisfies CapturedDb;
     const waitUntil: Promise<unknown>[] = [];
     const env = {
@@ -79,7 +79,7 @@ describe("request tracking analytics opt-out", () => {
     expect(captured.batches).toBe(0);
   });
 
-  it("stores request metadata without retaining analyzed domains when analytics are enabled", async () => {
+  it("stores only aggregate request counters when analytics are enabled", async () => {
     const captured = { sql: [], runs: [], batches: 0 } satisfies CapturedDb;
     const waitUntil: Promise<unknown>[] = [];
     const env = {
@@ -103,14 +103,16 @@ describe("request tracking analytics opt-out", () => {
     expect(waitUntil).toHaveLength(1);
     await Promise.all(waitUntil);
 
-    const insert = captured.runs.find((r) => r.sql.startsWith("INSERT INTO request_meta"));
+    const insert = captured.runs.find((r) => r.sql.startsWith("INSERT INTO request_aggregates"));
     expect(insert).toBeDefined();
-    expect(insert?.binds[3]).toBe("analyze");
-    expect(insert?.binds[4]).toBe(null);
-    expect(insert?.binds[5]).toBe("cli");
-    expect(insert?.binds[6]).toBe("US");
-    expect(insert?.binds[7]).toBe(200);
-    expect(insert?.binds[8]).toBe(12);
-    expect(typeof insert?.binds[9]).toBe("string");
+    expect(insert?.binds).toHaveLength(7);
+    expect(insert?.binds[2]).toBe("analyze");
+    expect(insert?.binds[3]).toBe("cli");
+    expect(insert?.binds[4]).toBe("US");
+    expect(insert?.binds[5]).toBe(200);
+    expect(insert?.binds[6]).toBe(12);
+    expect(insert?.binds).not.toContain("example.com");
+    expect(insert?.binds).not.toContain("203.0.113.10");
+    expect(captured.runs.some((r) => r.sql === "DROP TABLE IF EXISTS request_meta")).toBe(true);
   });
 });

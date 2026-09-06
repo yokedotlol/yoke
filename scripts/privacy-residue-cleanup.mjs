@@ -106,17 +106,19 @@ for (const row of targetTables) {
   summary.d1.dropped_tables.push(row.name);
 }
 
-for (const table of ['request_meta', 'api_errors']) {
-  const exists = await tableExists(table);
-  const cols = exists ? await columns(table) : [];
-  if (exists && cols.includes('domain')) {
-    const before = await countWhere(table, 'domain IS NOT NULL');
-    await d1(`UPDATE ${table} SET domain = NULL WHERE domain IS NOT NULL`);
-    const after = await countWhere(table, 'domain IS NOT NULL');
-    summary.d1[table] = { domain_values_before: before, domain_values_after: after };
-  } else {
-    summary.d1[table] = { present: exists, domain_column: cols.includes('domain') };
-  }
+const requestMetaExists = await tableExists('request_meta');
+if (requestMetaExists) await d1('DROP TABLE IF EXISTS request_meta');
+summary.d1.request_meta = { present_before: requestMetaExists, present_after: await tableExists('request_meta') };
+
+const apiErrorsExists = await tableExists('api_errors');
+const apiErrorColumns = apiErrorsExists ? await columns('api_errors') : [];
+if (apiErrorsExists && apiErrorColumns.includes('domain')) {
+  const before = await countWhere('api_errors', 'domain IS NOT NULL');
+  await d1('UPDATE api_errors SET domain = NULL WHERE domain IS NOT NULL');
+  const after = await countWhere('api_errors', 'domain IS NOT NULL');
+  summary.d1.api_errors = { domain_values_before: before, domain_values_after: after };
+} else {
+  summary.d1.api_errors = { present: apiErrorsExists, domain_column: apiErrorColumns.includes('domain') };
 }
 
 const tabExists = await tableExists('tab_views');
@@ -137,11 +139,13 @@ if (tabExists) {
 summary.verified.no_target_tables =
   (await d1("SELECT COUNT(*) AS c FROM sqlite_master WHERE type = 'table' AND (name = 'domain_lookups' OR name LIKE '%top%domain%')"))[0].c === 0;
 
-for (const table of ['request_meta', 'api_errors']) {
-  const exists = await tableExists(table);
-  const cols = exists ? await columns(table) : [];
-  summary.verified[`${table}_domain_null`] = !exists || !cols.includes('domain') || (await countWhere(table, 'domain IS NOT NULL')) === 0;
-}
+summary.verified.request_meta_removed = !(await tableExists('request_meta'));
+const finalApiErrorsExists = await tableExists('api_errors');
+const finalApiErrorCols = finalApiErrorsExists ? await columns('api_errors') : [];
+summary.verified.api_errors_domain_null =
+  !finalApiErrorsExists ||
+  !finalApiErrorCols.includes('domain') ||
+  (await countWhere('api_errors', 'domain IS NOT NULL')) === 0;
 
 const finalTabCols = (await tableExists('tab_views')) ? await columns('tab_views') : [];
 summary.verified.tab_views_aggregate_only = finalTabCols.length === 0 || (!finalTabCols.includes('domain') && finalTabCols.includes('tab') && finalTabCols.includes('day') && finalTabCols.includes('views'));

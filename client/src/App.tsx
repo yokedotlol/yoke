@@ -5,6 +5,7 @@ import { CurlBar } from "./components/CurlShowcase";
 import { AXIS_TO_TAB, DomainScore } from "./components/DomainScore";
 import { DomainSignals, ExternalTools } from "./components/DomainSignals";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import FamilyFooter from "./components/FamilyFooter";
 import { NotRegisteredBanner } from "./components/NotRegisteredBanner";
 import { SkeletonPanel } from "./components/Panel";
 import { type PanelDef, PanelGrid } from "./components/PanelLayout";
@@ -1257,23 +1258,7 @@ export function App() {
           <span className="dot"> · </span>
           <a href="/terms">terms</a>
         </nav>
-        <div className="footer-family">
-          <a href="https://certs.lol" target="_blank" rel="noopener noreferrer">
-            certs
-          </a>
-          <span className="dot"> · </span>
-          <a href="https://ns.lol" target="_blank" rel="noopener noreferrer">
-            ns
-          </a>
-          <span className="dot"> · </span>
-          <a href="https://xhttp.lol" target="_blank" rel="noopener noreferrer">
-            xhttp
-          </a>
-          <span className="dot"> · </span>
-          <a href="https://vrfy.lol" target="_blank" rel="noopener noreferrer">
-            vrfy
-          </a>
-        </div>
+        <FamilyFooter />
         <a
           href={`/${window.location.hostname}`}
           className="yoke-badge"

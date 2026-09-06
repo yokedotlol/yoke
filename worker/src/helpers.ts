@@ -47,7 +47,7 @@ export interface Env {
   BADGE_REFRESH_INTERVAL_HRS?: string;
   /** Days after which a badge is served as "stale — re-scan". Default: 30. */
   BADGE_STALE_DAYS?: string;
-  /** Retention window (days) for request_meta rows in the cleanup path. Default: 90. */
+  /** Retention window (days) for aggregate request-counter rows. Default: 90. */
   REQUEST_META_RETENTION_DAYS?: string;
   /** Comma-separated list of self-hosted domain names (for self-fetch bypass). Defaults to yoke.lol. */
   SELF_DOMAINS?: string;
@@ -68,7 +68,7 @@ export interface Env {
   HIDE_CLI?: string;
   /** Set "true" to hide GitHub repo links in footer */
   HIDE_GITHUB?: string;
-  /** Set "true" to disable anonymous request analytics: endpoint counters, tab views, and request metadata. */
+  /** Set "true" to disable anonymous analytics: endpoint counters, tab views, and aggregate request counters. */
   DISABLE_ANALYTICS?: string;
   /** Execution context for ctx.waitUntil — set per-request from the Worker fetch handler */
   _ctx?: ExecutionContext;

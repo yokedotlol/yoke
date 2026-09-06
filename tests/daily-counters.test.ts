@@ -182,11 +182,11 @@ describe("daily_counters", () => {
     expect(db.endpointUsage.size).toBe(0);
   });
 
-  it("pruneOldRows deletes request_meta past the retention window", async () => {
+  it("pruneOldRows deletes aggregate request counters past the retention window", async () => {
     const captured = { deletes: [] as string[], updates: [] as string[], creates: [] as string[] };
     const env = { STATS_DB: memoryD1(captured), REQUEST_META_RETENTION_DAYS: "90" } as unknown as Env;
     await pruneOldRows(env);
-    expect(captured.deletes.some((s) => s.includes("DELETE FROM request_meta"))).toBe(true);
+    expect(captured.deletes.some((s) => s.includes("DELETE FROM request_aggregates"))).toBe(true);
     expect(captured.deletes.some((s) => s.includes("DELETE FROM endpoint_rate_limits"))).toBe(true);
   });
 
@@ -203,12 +203,8 @@ describe("daily_counters", () => {
 
     expect(deletedKeys).toEqual(expect.arrayContaining(["recent:index", "showcase:index"]));
     expect(db.droppedTables.has("domain_lookups")).toBe(true);
-    expect(captured.updates).toEqual(
-      expect.arrayContaining([
-        "UPDATE api_errors SET domain = NULL WHERE domain IS NOT NULL",
-        "UPDATE request_meta SET domain = NULL WHERE domain IS NOT NULL",
-      ]),
-    );
+    expect(captured.updates).toContain("UPDATE api_errors SET domain = NULL WHERE domain IS NOT NULL");
+    expect(db.droppedTables.has("request_meta")).toBe(true);
     expect(captured.creates.some((s) => s.includes("CREATE TABLE IF NOT EXISTS tab_views"))).toBe(true);
   });
 });

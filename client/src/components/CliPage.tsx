@@ -351,7 +351,7 @@ cat domains.txt | yoke check --min-grade B  # batch CI gate`}
             ["yoke ai --setup", "Configure OpenRouter API key"],
             ["cat domains.txt | yoke fast", "Batch processing via stdin pipe"],
             ["yoke config", "Show current configuration"],
-            ["yoke config --set-base-url <url>", "Point to self-hosted instance"],
+            ["yoke config --set-base-url <url>", "Point main API commands to a self-hosted instance"],
             ["yoke config --set-prompt <file>", "Custom AI prompt from file"],
             ['yoke config --set-prompt-inline "..."', "Custom AI prompt inline"],
           ].map(([cmd, desc], i, arr) => (
@@ -435,11 +435,11 @@ go build -o yoke .
       >
         🌐 <strong style={{ color: "var(--accent)" }}>Privacy:</strong> This CLI queries the yoke.lol API and its
         satellite services (certs.lol, ns.lol, xhttp.lol) to analyze domains. Domain scans send the domain name only. If
-        you run <code style={{ color: "var(--text)" }}>yoke ai</code> with a BYO OpenRouter key, the key is stored
-        locally in <code style={{ color: "var(--text)" }}>~/.yoke.toml</code>, sent to Yoke for that AI request, passed
-        through to OpenRouter, then discarded without logging or storage. No accounts, no tracking.{" "}
+        you run <code style={{ color: "var(--text)" }}>yoke ai</code> with a BYO OpenRouter key, the key and any custom
+        prompt are stored locally in <code style={{ color: "var(--text)" }}>~/.yoke.toml</code>, sent to Yoke for that
+        AI request, passed through to OpenRouter, then discarded without logging or storage. No accounts, no tracking.{" "}
         <a href="https://github.com/yokedotlol/yoke" target="_blank" rel="noopener" style={{ color: "var(--accent)" }}>
-          You can always self-host if you need privacy.
+          Self-host the main Yoke service if you need control over those requests.
         </a>
       </div>
 
@@ -454,7 +454,9 @@ go build -o yoke .
             marginBottom: 12,
           }}
         >
-          Yoke is open source. Deploy your own Worker and point the CLI at it:
+          Yoke is open source. Deploy your own Worker and point the CLI's main analysis, comparison, and AI requests at
+          it. The dedicated dns, headers, and tls commands still query the public ns.lol, xhttp.lol, and certs.lol
+          services:
         </p>
         <CopyBlock
           code={`# Deploy the API/web app to Cloudflare Workers

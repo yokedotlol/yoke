@@ -141,3 +141,46 @@ describe("GET /{domain} curl/JSON rate limiting", () => {
     expect(seen).not.toContain("/api/analyze");
   });
 });
+
+describe("POST /api/compare rate limiting", () => {
+  function compareReq(): Request {
+    return new Request("https://yoke.lol/api/compare", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "cf-connecting-ip": "203.0.113.7" },
+      body: JSON.stringify({ domain1: "stripe.com", domain2: "shopify.com" }),
+    });
+  }
+
+  it("skips rate limiting when both analyses are cached", async () => {
+    const seen: string[] = [];
+    const env = {
+      STATS_DB: stubD1(),
+      REFERENCE_DATA: stubKV({
+        ...freshAnalysisCache("stripe.com"),
+        ...freshAnalysisCache("shopify.com"),
+      }),
+      ASSETS: stubAssets(),
+      BASE_URL: "https://yoke.lol",
+      RATE_LIMITER: stubRateLimiter({ block: true, seen }),
+    } as unknown as Env;
+
+    const resp = await worker.fetch(compareReq(), env);
+    expect(resp.status).toBe(200);
+    expect(seen).not.toContain("/api/compare");
+  });
+
+  it("rate limits when either analysis is not cached", async () => {
+    const seen: string[] = [];
+    const env = {
+      STATS_DB: stubD1(),
+      REFERENCE_DATA: stubKV(freshAnalysisCache("stripe.com")),
+      ASSETS: stubAssets(),
+      BASE_URL: "https://yoke.lol",
+      RATE_LIMITER: stubRateLimiter({ block: true, seen }),
+    } as unknown as Env;
+
+    const resp = await worker.fetch(compareReq(), env);
+    expect(resp.status).toBe(429);
+    expect(seen).toContain("/api/compare");
+  });
+});

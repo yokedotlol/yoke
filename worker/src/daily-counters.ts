@@ -181,7 +181,7 @@ export async function cleanupPrivacyResidue(env: Env): Promise<void> {
 
   await safeRun("DROP TABLE IF EXISTS domain_lookups");
   await safeRun("UPDATE api_errors SET domain = NULL WHERE domain IS NOT NULL");
-  await safeRun("UPDATE request_meta SET domain = NULL WHERE domain IS NOT NULL");
+  await safeRun("DROP TABLE IF EXISTS request_meta");
 
   // The old tab_views shape was one row per tab click and included a domain
   // column. The current shape is aggregate-only: one row per (tab, day).
@@ -203,9 +203,9 @@ export async function cleanupPrivacyResidue(env: Env): Promise<void> {
 }
 
 /**
- * Lightweight cleanup run on the hourly cron. Prunes expired rate-limit and
- * error rows, enforces request_meta retention, and removes historical privacy
- * residue. Best-effort — never throws.
+ * Lightweight cleanup run on the hourly cron. Prunes expired rate-limit,
+ * error, and aggregate request rows, and removes historical privacy residue.
+ * Best-effort — never throws.
  */
 export async function pruneOldRows(env: Env): Promise<void> {
   const db = env.STATS_DB;
@@ -231,11 +231,11 @@ export async function pruneOldRows(env: Env): Promise<void> {
   await safeRun("DELETE FROM ai_domain_rate_limits WHERE ts < ?", cutoff1d);
   await safeRun("DELETE FROM endpoint_rate_limits WHERE ts < ?", cutoff1d);
   await safeRun("DELETE FROM api_errors WHERE ts < ?", cutoff7d);
-  await safeRun("DELETE FROM request_meta WHERE day < ?", rmCutoffDay);
+  await safeRun("DELETE FROM request_aggregates WHERE day < ?", rmCutoffDay);
   await cleanupPrivacyResidue(env);
 }
 
-/** Resolve request_meta retention (days) from env, defaulting to 90. */
+/** Resolve aggregate request-counter retention (days) from the legacy-compatible env name, defaulting to 90. */
 export function requestMetaRetentionDays(env: Env): number {
   const parsed = env.REQUEST_META_RETENTION_DAYS ? Number.parseInt(env.REQUEST_META_RETENTION_DAYS, 10) : Number.NaN;
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 90;

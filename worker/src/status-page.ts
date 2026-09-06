@@ -154,7 +154,7 @@ export async function renderStatusPage(
     ${rows}
     <footer>
       <span>Updated ${escHtml(data.generated_at)} · Errors auto-prune after 7 days</span>
-      <span>${uptimeUrl ? `<a href="${escHtml(uptimeUrl)}">Uptime History</a> · ` : ""}<a href="${baseUrl}">${escHtml(new URL(baseUrl).hostname)}</a>${repoUrl ? ` · <a href="${escHtml(repoUrl)}">Source</a>` : ""}</span>
+      <span>${uptimeUrl ? `<a href="${escHtml(uptimeUrl)}">Uptime History</a> · ` : ""}<a href="${baseUrl}">${escHtml(new URL(baseUrl).hostname)}</a>${repoUrl ? ` · <a href="${escHtml(repoUrl)}">Source</a>` : ""} · <a href="https://certs.lol">certs</a> · <a href="https://ns.lol">ns</a> · <a href="https://xhttp.lol">xhttp</a> · <a href="https://vrfy.lol">vrfy</a></span>
     </footer>
   </div>
 </body>

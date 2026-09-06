@@ -21,6 +21,18 @@ import {
   timingSafeEq,
 } from "./shared";
 
+async function hasFreshAnalysisCache(env: RouteContext["env"], domain: string): Promise<boolean> {
+  if (!env.REFERENCE_DATA) return false;
+  try {
+    const raw = await env.REFERENCE_DATA.get(`cache:analysis:${domain}`, "text");
+    if (!raw) return false;
+    const envelope = JSON.parse(raw) as { cached_at: number };
+    return Date.now() - envelope.cached_at < getAnalysisCacheTtlMs(env);
+  } catch {
+    return false;
+  }
+}
+
 export async function handle(rc: RouteContext): Promise<Response | null> {
   const { request, url, path, method, env, clientIP, track: _track } = rc;
 
@@ -34,18 +46,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     const skipCache = body.force === true;
 
     // Cache hits don't consume rate-limit credit — only fresh analyses count
-    let isCached = false;
-    if (!skipCache && env.REFERENCE_DATA) {
-      try {
-        const raw = await env.REFERENCE_DATA.get(`cache:analysis:${domain}`, "text");
-        if (raw) {
-          const envelope = JSON.parse(raw) as { cached_at: number };
-          isCached = Date.now() - envelope.cached_at < getAnalysisCacheTtlMs(env);
-        }
-      } catch {
-        /* cache probe failure → fall through to normal rate limiting */
-      }
-    }
+    const isCached = !skipCache && (await hasFreshAnalysisCache(env, domain));
 
     const adminBypass = env.ADMIN_KEY && timingSafeEq(request.headers.get("X-Admin-Key") ?? "", env.ADMIN_KEY);
     const rl =
@@ -93,16 +94,22 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
   // POST /api/compare
   if (method === "POST" && path === "/api/compare") {
-    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/compare", env);
-    if (rl.blocked) {
-      _track("compare", 429);
-      return rl.blocked;
-    }
+    // Parse and validate first so fully cached comparisons don't consume rate-limit credit.
     const body = await parseBody<{ domain1?: string; domain2?: string }>(request);
     if (!body.domain1 || !body.domain2) return jsonError("domain1 and domain2 are required", "MISSING_DOMAIN", 400);
     const d1 = cleanDomain(body.domain1);
     const d2 = cleanDomain(body.domain2);
     if (!d1 || !d2) return jsonError("Invalid domain format", "INVALID_DOMAIN", 400);
+
+    const [d1Cached, d2Cached] = await Promise.all([hasFreshAnalysisCache(env, d1), hasFreshAnalysisCache(env, d2)]);
+    const rl =
+      d1Cached && d2Cached
+        ? { blocked: null, headers: {}, record: rateLimitNoop }
+        : await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/compare", env);
+    if (rl.blocked) {
+      _track("compare", 429);
+      return rl.blocked;
+    }
     recordEndpointHit(env, "compare");
     const resp = await compareDomains({ domain1: d1, domain2: d2 }, env);
     _track("compare", resp.status, d1);
