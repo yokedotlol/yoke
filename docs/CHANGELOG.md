@@ -4,12 +4,21 @@ All notable changes to Yoke are documented here.
 
 > **Scope:** This changelog tracks the **Service (Worker + Client)** version. The CLI and MCP Server version independently via their own release tags (`cli/vX.Y.Z` and `mcp/vX.Y.Z`).
 
-## [2.4.0] — 2026-06-12
+## [Unreleased]
 
-### Bug Fixes
+### Fixed
 - **Aggregate-only request telemetry** — replaced per-request metadata rows and daily visitor hashes with hourly counters, and removes the legacy request table during cleanup.
 - **Cached comparisons skip rate limits** — `/api/compare` now bypasses rate-limit credit when both analysis results are already cached.
 - **Custom AI prompts honored** — browser and CLI prompt overrides now reach the selected model, and AI cache keys include the model and prompt.
+
+### Documentation
+- **CLI privacy and self-hosting accuracy** — disclosed custom-prompt transit, clarified that the dedicated satellite commands are not redirected by `YOKE_BASE_URL`, and reconciled the external data-source list with the code.
+- **Consistent family navigation** — added the satellite links to Yoke's static, status, usage, API docs, and no-JavaScript surfaces.
+- **Migration** — added `0007_request_aggregates.sql` for self-hosters.
+
+## [2.4.0] — 2026-06-12
+
+### Bug Fixes
 - **SSE stream resilience** — streaming analysis now handles mid-stream reader failures gracefully, shows a usable error instead of a raw browser `TypeError`, and suppresses late errors after the `done` event.
 - **Google Analytics false positive tightened** — GA detection now requires a real `gtag('config', ...)` call instead of matching arbitrary `gtag` function names.
 
@@ -18,8 +27,6 @@ All notable changes to Yoke are documented here.
 - **RateLimiterDO coverage** — added tests for sliding windows, persisted state across Durable Object eviction, garbage collection, and independent IP/endpoint buckets.
 
 ### Documentation
-- **CLI privacy and self-hosting accuracy** — disclosed custom-prompt transit, clarified that the dedicated satellite commands are not redirected by `YOKE_BASE_URL`, and reconciled the external data-source list with the code.
-- **Consistent family navigation** — added the satellite links to Yoke's static, status, usage, API docs, and no-JavaScript surfaces.
 - **Version bump** — service packages and README badge updated to 2.4.0.
 - **708 tests passing.**
 
@@ -50,7 +57,7 @@ All notable changes to Yoke are documented here.
 
 ### Self-Hosting
 - **Docker DO rate limiter** — Durable Object rate limiter support added to Docker Compose setup.
-- **Migrations** — `0003_badge_domains.sql` (yoke-stats), `0004_drop_domain_cache.sql` (yoke-cache), `0005_daily_counters.sql` (yoke-stats), `0006_tab_views_daily.sql` (yoke-stats), `0007_request_aggregates.sql` (yoke-stats).
+- **Migrations** — `0003_badge_domains.sql` (yoke-stats), `0004_drop_domain_cache.sql` (yoke-cache), `0005_daily_counters.sql` (yoke-stats), `0006_tab_views_daily.sql` (yoke-stats).
 
 ### Other
 - **SPA-aware legal page detection** — sitemap + body-match heuristics for legal/privacy/terms pages.
