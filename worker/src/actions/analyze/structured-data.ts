@@ -51,7 +51,19 @@ const SCHEMA_SPECS: Record<string, SchemaSpec> = {
   },
   Product: {
     required: ["name"],
-    recommended: ["description", "image", "offers", "brand", "sku", "review", "aggregateRating", "category"],
+    // schema.org 9.0 (Jul 2026) added size + pattern to Product
+    recommended: [
+      "description",
+      "image",
+      "offers",
+      "brand",
+      "sku",
+      "review",
+      "aggregateRating",
+      "category",
+      "size",
+      "pattern",
+    ],
   },
   Article: {
     required: ["headline", "author", "datePublished"],
@@ -129,6 +141,23 @@ const SCHEMA_SPECS: Record<string, SchemaSpec> = {
   JobPosting: {
     required: ["title", "description", "datePosted", "hiringOrganization"],
     recommended: ["validThrough", "employmentType", "jobLocation", "baseSalary", "applicantLocationRequirements"],
+  },
+  // schema.org 9.0 (Jul 2026) new types
+  Quiz: {
+    required: ["name"],
+    recommended: ["description", "about", "assesses", "educationalLevel", "hasPart"],
+  },
+  BoatTerminal: {
+    required: ["name"],
+    recommended: ["address", "geo", "url", "telephone", "description"],
+  },
+  BoatReservation: {
+    required: ["name"],
+    recommended: ["underName", "reservationStatus", "bookingTime", "provider"],
+  },
+  BoatTrip: {
+    required: ["name"],
+    recommended: ["departureBoatTerminal", "arrivalBoatTerminal", "provider", "itinerary", "description"],
   },
 };
 

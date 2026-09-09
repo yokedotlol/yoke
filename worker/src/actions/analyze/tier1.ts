@@ -257,6 +257,9 @@ export async function checkWellKnownEndpoints(domain: string): Promise<WellKnown
     { path: "/.well-known/llms.txt", name: "LLMs.txt (well-known)" },
     { path: "/.well-known/ai", name: "AI Discovery (Rootz, IANA #80 rejected - too generic, see #80 feedback)" },
     { path: "/.well-known/ai-plugin.json", name: "AI Plugin (ChatGPT plugins)" },
+    // ── 2026-09 additions: competing discovery conventions (probe generically, parse tolerantly) ──
+    { path: "/.well-known/mcp-server", name: "MCP Server Discovery (draft-serra-mcp-discovery-uri, exp 2026-09-25)" },
+    { path: "/.well-known/agent.json", name: "ADP Agent Discovery (draft-pro-adp-agent-discovery, Layer 2 metadata)" },
   ];
 
   const ua =

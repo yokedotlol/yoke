@@ -77,6 +77,15 @@ export const fingerprints: Fingerprint[] = [
     versionExtract: { source: "meta", pattern: /Ghost\s+([\d.]+)/i },
   },
   {
+    name: "EmDash CMS",
+    category: "CMS",
+    patterns: {
+      // Verified 2026-09-09: blog.cloudflare.com (migrated to EmDash Aug 2026)
+      // serves media via /_emdash/api/media/... paths
+      htmlPatterns: [/\/_emdash\//i],
+    },
+  },
+  {
     name: "Webflow",
     category: "CMS",
     patterns: {

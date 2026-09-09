@@ -192,6 +192,8 @@ const KNOWN_PLUGINS: Record<string, { name: string; category: string }> = {
   "header-footer-elementor": { name: "Elementor Header & Footer Builder", category: "Page Builder" },
   "astra-addon": { name: "Astra Pro", category: "Theme" },
   "solid-security": { name: "Solid Security (iThemes)", category: "Security" },
+  // 2026-09-09: Hostinger Tools (#21 by active installs, 3M+, bundled with Hostinger hosting)
+  hostinger: { name: "Hostinger Tools", category: "Hosting" },
 };
 
 // ─── Known theme database ───────────────────────────────────────────

@@ -6,6 +6,12 @@ All notable changes to Yoke are documented here.
 
 ## [Unreleased]
 
+### Added
+- **EmDash CMS fingerprint** — detects Cloudflare's Astro-based edge CMS via `/_emdash/` media paths (verified on blog.cloudflare.com).
+- **schema.org 9.0 structured-data specs** — `Quiz`, `BoatTerminal`, `BoatReservation`, `BoatTrip` validations; `Product` gains `size` + `pattern` recommended fields.
+- **Hostinger Tools WordPress plugin** — named detection for the #21 plugin by active installs (3M+, bundled with Hostinger hosting).
+- **Agent-discovery probes** — `_agent` TXT (AID v=aid1 convention) added to underscored-DNS probes; `/.well-known/mcp-server` (draft-serra) + `/.well-known/agent.json` (ADP v1.1) added to well-known endpoint probes (17 → 19).
+
 ### Fixed
 - **Aggregate-only request telemetry** — replaced per-request metadata rows and daily visitor hashes with hourly counters, and removes the legacy request table during cleanup.
 - **Cached comparisons skip rate limits** — `/api/compare` now bypasses rate-limit credit when both analysis results are already cached.

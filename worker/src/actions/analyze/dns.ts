@@ -72,11 +72,13 @@ export async function checkDns(domain: string): Promise<DnsRecord[]> {
 
   // Agent discovery records (ANS + DNS-AID subdomains) — skip if wildcard DNS detected
   // Also detect RFC 10023 _for-sale (commercial intent, first underscored commercial record)
+  // 2026-09-09: added _agent (AID convention, v=aid1 TXT per agentcommunity/bunsdev, v1.1)
   if (!hasWildcardDns) {
     const agentQueries = [
       { prefix: "_ans", label: "TXT" },
       { prefix: "_agents", label: "TXT" },
       { prefix: "_agentid", label: "TXT" },
+      { prefix: "_agent", label: "TXT" },
       { prefix: "_for-sale", label: "TXT" },
     ].map(async ({ prefix, label }) => {
       try {
