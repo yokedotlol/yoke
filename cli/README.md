@@ -257,6 +257,15 @@ yoke config --show-ai-hint
 - **BYO AI key** — use your own OpenRouter key with configurable model and prompt
 - **Shell completions** — Bash, Zsh, Fish, and PowerShell
 
+## Privacy
+
+This CLI queries the yoke.lol API and its satellite services (certs.lol, ns.lol, xhttp.lol)
+to analyze domains. Domain scans send the domain name only. If you run `yoke ai` with a
+BYO OpenRouter key, the key and any custom prompt are stored locally in `~/.yoke.toml`,
+sent to Yoke for that AI request, passed through to OpenRouter, then discarded without
+logging or storage. No accounts, no tracking. Self-host the main Yoke service
+(`YOKE_BASE_URL` or config) if you need control over those requests.
+
 ## Development
 
 ```bash

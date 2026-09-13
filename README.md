@@ -220,6 +220,15 @@ Start with **[CLAUDE.md](CLAUDE.md)** for technical context. The **[.context/](.
 
 The **[.context/reviews/](.context/reviews/)** directory contains a 20-panel expert review system you can run with any AI agent harness — see [.context/reviews/README.md](.context/reviews/README.md).
 
+## Privacy
+
+Scans send the domain name only to the Yoke API and satellite services
+(certs.lol, ns.lol, xhttp.lol). A BYO OpenRouter key (for `yoke ai`) is stored
+locally in `~/.yoke.toml`, passed through to OpenRouter for that request, then
+discarded without logging or storage. No accounts, no tracking. Operational
+counters are aggregate only — no per-request domains, emails, or IPs are
+retained. See the [full privacy policy](https://yoke.lol/privacy).
+
 ## Family
 
 Part of the [.lol developer tools](https://yoke.lol) family:
