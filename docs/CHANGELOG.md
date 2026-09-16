@@ -7,6 +7,10 @@ All notable changes to Yoke are documented here.
 ## [Unreleased]
 
 ### Added
+- **schema.org 30.1 structured-data specs** — `DigitalProductPassport`, `EnvironmentalProductDeclaration`, `DeclarationOfConformity` validations; `Product` gains EU DPP recommended fields (`hasDigitalProductPassport`, `authorizedRepresentative`, `importer`, `recycledContentPercentage`, `substanceOfConcern`) + retail-feed fields (`consumerNotice`, `isOftenBoughtWith`, `specification`).
+- **Rybbit privacy-respecting analytics** — open-source cookieless analytics (`rybbit.io`) added to third-party script detection.
+- **MCP registry auth probe** — `/.well-known/mcp-registry-auth` (IANA filing #68, official MCP registry) added to well-known endpoint probes (19 → 20).
+- **Agent.json label correction** — agents.txt/agents.json IANA filings #72-#77 were rejected 2026-03-16; probe kept, label corrected.
 - **EmDash CMS fingerprint** — detects Cloudflare's Astro-based edge CMS via `/_emdash/` media paths (verified on blog.cloudflare.com).
 - **schema.org 9.0 structured-data specs** — `Quiz`, `BoatTerminal`, `BoatReservation`, `BoatTrip` validations; `Product` gains `size` + `pattern` recommended fields.
 - **Hostinger Tools WordPress plugin** — named detection for the #21 plugin by active installs (3M+, bundled with Hostinger hosting).

@@ -52,6 +52,7 @@ const SCHEMA_SPECS: Record<string, SchemaSpec> = {
   Product: {
     required: ["name"],
     // schema.org 9.0 (Jul 2026) added size + pattern to Product
+    // schema.org 30.1 (2026-09-16) added EU DPP + retail-feed vocabulary
     recommended: [
       "description",
       "image",
@@ -63,6 +64,14 @@ const SCHEMA_SPECS: Record<string, SchemaSpec> = {
       "category",
       "size",
       "pattern",
+      "hasDigitalProductPassport",
+      "authorizedRepresentative",
+      "importer",
+      "recycledContentPercentage",
+      "substanceOfConcern",
+      "consumerNotice",
+      "isOftenBoughtWith",
+      "specification",
     ],
   },
   Article: {
@@ -158,6 +167,19 @@ const SCHEMA_SPECS: Record<string, SchemaSpec> = {
   BoatTrip: {
     required: ["name"],
     recommended: ["departureBoatTerminal", "arrivalBoatTerminal", "provider", "itinerary", "description"],
+  },
+  // schema.org 30.1 (2026-09-16) EU Digital Product Passport vocabulary
+  DigitalProductPassport: {
+    required: [],
+    recommended: ["name", "description", "url", "identifier"],
+  },
+  EnvironmentalProductDeclaration: {
+    required: [],
+    recommended: ["name", "description", "url", "certificationStatus", "issuedBy", "validThrough"],
+  },
+  DeclarationOfConformity: {
+    required: [],
+    recommended: ["name", "description", "url", "certificationStatus", "issuedBy", "validThrough"],
   },
 };
 

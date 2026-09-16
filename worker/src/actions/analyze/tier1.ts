@@ -250,9 +250,9 @@ export async function checkWellKnownEndpoints(domain: string): Promise<WellKnown
     { path: "/.well-known/ai-catalog.json", name: "AI Catalog (ARD)" },
     { path: "/.well-known/oauth-protected-resource", name: "OAuth Protected Resource (RFC 9728)" },
     { path: "/.well-known/api-catalog", name: "API Catalog (RFC 9727)" },
-    // ── Agent Capability Declarations (2026-08 new) ──────────
+    // ── Agent Capability Declarations (2026-08 new; IANA filings #72-#77 rejected 2026-03-16 "generic name", probe anyway) ──────────
     { path: "/agents.txt", name: "Agents.txt (Capability Declaration)" },
-    { path: "/.well-known/agents.json", name: "Agents.json (IANA #73)" },
+    { path: "/.well-known/agents.json", name: "Agents.json (Capability Declaration)" },
     { path: "/llms.txt", name: "LLMs.txt (root)" },
     { path: "/.well-known/llms.txt", name: "LLMs.txt (well-known)" },
     { path: "/.well-known/ai", name: "AI Discovery (Rootz, IANA #80 rejected - too generic, see #80 feedback)" },
@@ -260,6 +260,10 @@ export async function checkWellKnownEndpoints(domain: string): Promise<WellKnown
     // ── 2026-09 additions: competing discovery conventions (probe generically, parse tolerantly) ──
     { path: "/.well-known/mcp-server", name: "MCP Server Discovery (draft-serra-mcp-discovery-uri, exp 2026-09-25)" },
     { path: "/.well-known/agent.json", name: "ADP Agent Discovery (draft-pro-adp-agent-discovery, Layer 2 metadata)" },
+    {
+      path: "/.well-known/mcp-registry-auth",
+      name: "MCP Registry Auth (IANA #68, official MCP registry filing, open)",
+    },
   ];
 
   const ua =

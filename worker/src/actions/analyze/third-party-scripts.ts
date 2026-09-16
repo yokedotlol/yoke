@@ -68,6 +68,7 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
       /simple-analytics/i,
       /pirsch\.io/i,
       /tinyanalytics\.io/i,
+      /rybbit\.io/i,
     ],
   },
   {
