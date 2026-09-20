@@ -48,6 +48,6 @@ Embeddable shields-style domain score badges:
 
 Badges refresh lazily on-view (demand-gated): cold-start is a pure read, already-analyzed domains refresh after `BADGE_REFRESH_INTERVAL_HRS` (under the global budget), and a badge older than `BADGE_STALE_DAYS` — or one whose cached SSL cert `notAfter` has passed — demotes to a neutral "stale — re-scan". The old timer-based pre-warm sweep and its `POST /api/admin/badge-sweep` endpoint were removed.
 
-KV key: `badge:<domain>` (48h TTL, ~200 bytes). D1 table: `badge_domains` (tracks requested domains). Badge cache is written as a side effect of every analysis via `finalizeResult()` in `worker/src/actions/analyze/finalize.ts`.
+KV key: `badge:<domain>` (48h TTL, ~200 bytes). Badge cache is written as a side effect of every analysis via `finalizeResult()` in `worker/src/actions/analyze/finalize.ts`. (The old `badge_domains` D1 tracking table was removed Sep 2026 — no per-domain request lists are retained.)
 
 Post-analysis enrichment (share_url, pdf_url, badge_url, percentiles, badge cache write) is centralized in `finalizeResult()` — never duplicate across code paths. See `.context/GOTCHAS.md`.

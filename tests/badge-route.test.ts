@@ -214,8 +214,8 @@ describe("Badge Routes", () => {
     });
   });
 
-  describe("badge_domains tracking", () => {
-    it("records the domain with INSERT OR IGNORE and no per-hit UPDATE", async () => {
+  describe("badge_domains tracking (removed Sep 2026)", () => {
+    it("writes nothing to badge_domains — no D1 tracking writes on badge views", async () => {
       const queries: string[] = [];
       // Capturing D1 stub: record every prepared SQL string.
       const result = {
@@ -256,10 +256,7 @@ describe("Badge Routes", () => {
       await new Promise((r) => setTimeout(r, 0));
 
       const trackQuery = queries.find((q) => q.includes("badge_domains"));
-      expect(trackQuery).toBeTruthy();
-      expect(trackQuery).toContain("INSERT OR IGNORE INTO badge_domains");
-      expect(trackQuery).not.toContain("ON CONFLICT");
-      expect(trackQuery).not.toContain("request_count + 1");
+      expect(trackQuery).toBeUndefined();
     });
   });
 

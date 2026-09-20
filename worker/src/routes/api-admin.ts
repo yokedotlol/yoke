@@ -395,18 +395,10 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     } catch (e) {
       results.privacy_residue = `error: ${e instanceof Error ? e.message : String(e)}`;
     }
-    // badge_domains: prune pre-#12 cold-start junk. Since #12, cold-starts no
-    // longer seed badge_domains and the cron no longer sweeps it, but stale rows
-    // for domains that were never actually analyzed (no domain_scores row) may
-    // linger. Delete those — keep rows that correspond to a real analysis.
-    try {
-      const bdRes = await env.STATS_DB.prepare(
-        "DELETE FROM badge_domains WHERE domain NOT IN (SELECT domain FROM domain_scores)",
-      ).run();
-      results.badge_domains = `${bdRes.meta?.changes ?? "?"} unanalyzed (cold-start) rows deleted`;
-    } catch (e) {
-      results.badge_domains = `error: ${e instanceof Error ? e.message : String(e)}`;
-    }
+    // badge_domains removed Sep 2026 (privacy drift): the table retained raw
+    // requested domains with no active consumer (badge pre-warm sweep was
+    // deleted). Production data is purged by scripts/privacy-residue-cleanup.mjs.
+    results.badge_domains = "table dropped by privacy-residue-cleanup (code writes removed Sep 2026)";
     return adminJson({ ok: true, cleaned_at: new Date().toISOString(), results });
   }
 

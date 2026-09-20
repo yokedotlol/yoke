@@ -82,7 +82,7 @@ yoke/
 ### Storage
 
 - **KV** (`REFERENCE_DATA`) — all caching. Domain results, recent lookups, AI analysis, subdomain scans, badge cache (`badge:<domain>`). TTL-based expiry.
-- **D1** (`yoke-stats`) — durable stats only. Rate limits, endpoint usage, domain scores, daily snapshots, tab analytics, badge domain tracking (`badge_domains` table).
+- **D1** (`yoke-stats`) — durable stats only. Rate limits, endpoint usage, domain scores, daily snapshots, tab analytics.
 
 ## Adding a New Analysis Check
 

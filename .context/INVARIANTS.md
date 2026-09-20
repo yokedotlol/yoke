@@ -64,8 +64,8 @@
 
 ## Security & Operations
 
-- [ ] **No raw user IPs in storage.** All user IP addresses must be hashed via `hashIp()` (SHA-256 + secret salt) or `hashVisitor()` (SHA-256 + secret salt + daily rotation) before being written to any D1 table, KV key, or log. Server IPs from DNS lookups are public data and exempt.
-  - _Verify:_ `grep -n 'cf-connecting-ip' worker/src/index.ts worker/src/actions/*.ts` — every extraction must be wrapped in `await hashIp(...)` before storage. `request-tracking.ts` uses `hashVisitor()` which adds daily rotation for analytics uniqueness.
+- [ ] **No raw user IPs in storage.** All user IP addresses must be hashed via `hashIp()` (SHA-256 + secret salt) before being written to any D1 table, KV key, or log. Server IPs from DNS lookups are public data and exempt.
+  - _Verify:_ `grep -n 'cf-connecting-ip' worker/src/index.ts worker/src/actions/*.ts` — every extraction must be wrapped in `await hashIp(...)` before storage. Request analytics (`worker/src/request-tracking.ts`) store only hourly aggregates (day/hour/endpoint/client_type/country/status) with no IPs at all.
 
 - [ ] **API responses include X-Yoke-Version header.**
   - _Verify:_ `curl -sI https://yoke.lol/api/health | grep X-Yoke-Version`.
@@ -128,7 +128,7 @@
 - [ ] **Cache hits must not incur D1 writes.** The `record()` deferred-write pattern must be skipped for cached responses.
   - _Verify:_ In api-core.ts, `record()` is only called when `!cached`.
 
-- [ ] **Badge requests are read-only at the edge.** `/badge/*` endpoints read from KV cache only. D1 writes for `badge_domains` tracking happen via `backgroundWork()`, never synchronously.
+- [ ] **Badge requests are read-only at the edge.** `/badge/*` endpoints read from KV cache only. No D1 writes happen on badge views (the `badge_domains` tracking table was removed Sep 2026).
   - _Verify:_ Badge handler does not `await` any D1 operation in the response path.
 
 - [ ] **Fly proxy has zero public endpoints.** Every route requires `FLY_AUTH_SECRET` auth.

@@ -136,9 +136,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     // Resolve score: specific axis or composite
     const { score, tier } = resolveScore(cached, axisParam);
 
-    // Track badge domain (non-blocking) — only for already-analyzed domains.
-    trackBadgeDomain(domain, env);
-
     if (dotJson) {
       return shieldsJson(label, score, tier, cached.analyzedAt);
     }
@@ -159,7 +156,6 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
 
     // Write badge cache in the background so next request is fast
     backgroundWork(env, writeBadgeCache(domain, fromAnalysis, env));
-    trackBadgeDomain(domain, env);
 
     // Refresh-on-view: already analyzed, so a demand-driven refresh is allowed.
     if (age > refreshMs) {
@@ -174,8 +170,8 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   }
 
   // True cold start — no badge cache, no analysis cache. PURE READ:
-  // serve a neutral "no recent scans" badge. Do NOT trigger analysis and do NOT
-  // seed badge_domains — a crafted badge URL must not provoke an expensive scan.
+  // serve a neutral "no recent scans" badge. Do NOT trigger analysis —
+  // a crafted badge URL must not provoke an expensive scan.
   if (dotJson) {
     return shieldsJson(label, null, null, null);
   }
@@ -284,52 +280,6 @@ function triggerBackgroundAnalysis(domain: string, env: Env): void {
           domain,
           error: e instanceof Error ? e.message : String(e),
         });
-      }
-    })(),
-  );
-}
-
-/** Track domain in badge_domains D1 table (non-blocking, self-healing).
- *
- *  Uses INSERT OR IGNORE — records each domain once on first-seen only. The
- *  previous per-hit `ON CONFLICT … DO UPDATE` (bumping last_requested /
- *  request_count on every badge request) was removed because:
- *    (a) it was a D1 write on the hot path — the expensive op per badge hit; and
- *    (b) it was already inaccurate once badges are edge-cached (cached hits
- *        never reach the origin), so the counts under-reported real traffic.
- *  Real usage analytics should come from Cloudflare Analytics / logs instead.
- *  The badge sweep only needs the domain list, not live per-hit counts. */
-function trackBadgeDomain(domain: string, env: Env): void {
-  backgroundWork(
-    env,
-    (async () => {
-      if (!env.STATS_DB) return;
-      const now = new Date().toISOString();
-      try {
-        await env.STATS_DB.prepare(
-          `INSERT OR IGNORE INTO badge_domains (domain, first_requested, last_requested, request_count)
-           VALUES (?, ?, ?, 1)`,
-        )
-          .bind(domain, now, now)
-          .run();
-      } catch (e) {
-        // Self-healing: create table if it doesn't exist
-        const msg = e instanceof Error ? e.message : String(e);
-        if (msg.includes("no such table")) {
-          try {
-            await env.STATS_DB.exec(
-              `CREATE TABLE IF NOT EXISTS badge_domains (domain TEXT PRIMARY KEY, first_requested TEXT NOT NULL, last_requested TEXT NOT NULL, request_count INTEGER DEFAULT 1)`,
-            );
-            await env.STATS_DB.prepare(
-              `INSERT OR IGNORE INTO badge_domains (domain, first_requested, last_requested, request_count)
-               VALUES (?, ?, ?, 1)`,
-            )
-              .bind(domain, now, now)
-              .run();
-          } catch {
-            logWarn("[yoke:badge] Failed to create badge_domains table", { domain });
-          }
-        }
       }
     })(),
   );

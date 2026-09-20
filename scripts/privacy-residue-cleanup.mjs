@@ -110,6 +110,13 @@ const requestMetaExists = await tableExists('request_meta');
 if (requestMetaExists) await d1('DROP TABLE IF EXISTS request_meta');
 summary.d1.request_meta = { present_before: requestMetaExists, present_after: await tableExists('request_meta') };
 
+// badge_domains (Sep 2026 drift fix): retained raw requested domains with no
+// active consumer — the badge pre-warm sweep that read it was removed, and
+// api-badge.ts no longer writes to it. Drop the table outright.
+const badgeDomainsExists = await tableExists('badge_domains');
+if (badgeDomainsExists) await d1('DROP TABLE IF EXISTS badge_domains');
+summary.d1.badge_domains = { present_before: badgeDomainsExists, present_after: await tableExists('badge_domains') };
+
 const apiErrorsExists = await tableExists('api_errors');
 const apiErrorColumns = apiErrorsExists ? await columns('api_errors') : [];
 if (apiErrorsExists && apiErrorColumns.includes('domain')) {
@@ -140,6 +147,7 @@ summary.verified.no_target_tables =
   (await d1("SELECT COUNT(*) AS c FROM sqlite_master WHERE type = 'table' AND (name = 'domain_lookups' OR name LIKE '%top%domain%')"))[0].c === 0;
 
 summary.verified.request_meta_removed = !(await tableExists('request_meta'));
+summary.verified.badge_domains_removed = !(await tableExists('badge_domains'));
 const finalApiErrorsExists = await tableExists('api_errors');
 const finalApiErrorCols = finalApiErrorsExists ? await columns('api_errors') : [];
 summary.verified.api_errors_domain_null =

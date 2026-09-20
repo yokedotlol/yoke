@@ -2,6 +2,11 @@
 -- Apply with:
 --   npx wrangler d1 execute yoke-stats --file=worker/migrations/0003_badge_domains.sql
 --
+-- SUPERSEDED Sep 2026 (privacy drift fix): badge_domains retained raw requested
+-- domains with no active consumer — the badge pre-warm sweep that read it was
+-- removed and api-badge.ts no longer writes to it. Production data is purged
+-- by scripts/privacy-residue-cleanup.mjs (DROPs the table). Do not re-create.
+--
 -- Tracks every domain a badge has ever been requested for, so the hourly badge
 -- sweep (worker/src/scheduled.ts) can pre-warm their KV badge caches.
 --

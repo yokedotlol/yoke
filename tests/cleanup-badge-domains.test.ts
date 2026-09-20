@@ -1,5 +1,7 @@
-// GET /api/cleanup badge_domains prune — verifies the cleanup path DELETEs
-// cold-start junk rows (badge_domains with no matching domain_scores row).
+// GET /api/cleanup badge_domains report — the table was removed Sep 2026
+// (privacy drift fix: retained raw requested domains with no active consumer).
+// The endpoint no longer issues badge_domains D1 statements; production data
+// is purged by scripts/privacy-residue-cleanup.mjs (DROPs the table).
 
 import { webcrypto } from "node:crypto";
 import type { Env } from "@worker/helpers";
@@ -56,8 +58,8 @@ function authedCleanupReq(adminKey: string): Request {
   });
 }
 
-describe("GET /api/cleanup badge_domains prune", () => {
-  it("DELETEs badge_domains rows with no matching domain_scores row", async () => {
+describe("GET /api/cleanup badge_domains report", () => {
+  it("issues no badge_domains D1 statements and reports the table was dropped", async () => {
     const executed: string[] = [];
     const env = {
       STATS_DB: recordingD1(executed),
@@ -71,10 +73,8 @@ describe("GET /api/cleanup badge_domains prune", () => {
     const data = (await resp.json()) as { ok: boolean; results: Record<string, string> };
     expect(data.ok).toBe(true);
 
-    const prune = executed.find((s) => s.startsWith("DELETE FROM badge_domains"));
-    expect(prune).toBeDefined();
-    // Only prune rows that were never analyzed (no domain_scores row).
-    expect(prune).toContain("NOT IN (SELECT domain FROM domain_scores)");
-    expect(data.results.badge_domains).toContain("rows deleted");
+    const badgeStmt = executed.find((s) => s.includes("badge_domains"));
+    expect(badgeStmt).toBeUndefined();
+    expect(data.results.badge_domains).toContain("dropped");
   });
 });
