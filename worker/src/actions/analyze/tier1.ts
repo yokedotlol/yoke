@@ -245,9 +245,13 @@ export async function checkWellKnownEndpoints(domain: string): Promise<WellKnown
     // ── Agent Identity / Web Bot Auth / MCP (2026 additions) ──────────
     { path: "/.well-known/http-message-signatures-directory", name: "Web Bot Auth Directory (RFC 9421)" },
     { path: "/.well-known/mcp/server-cards.json", name: "MCP Server Cards (SEP-2127)" },
+    { path: "/.well-known/mcp/catalog.json", name: "MCP Catalog (SEP-2127 canonical)" },
     { path: "/.well-known/mcp.json", name: "MCP Discovery" },
     { path: "/.well-known/agent-card.json", name: "A2A Agent Card" },
     { path: "/.well-known/ai-catalog.json", name: "AI Catalog (ARD)" },
+    { path: "/ard.json", name: "ARD Catalog (alternate spelling)" },
+    { path: "/.well-known/ard.json", name: "ARD Catalog (alternate spelling, well-known)" },
+    { path: "/.well-known/x402", name: "x402 Payment Manifest (bare; IANA _x402 registered 2026-08-11)" },
     { path: "/.well-known/oauth-protected-resource", name: "OAuth Protected Resource (RFC 9728)" },
     { path: "/.well-known/api-catalog", name: "API Catalog (RFC 9727)" },
     // ── Agent Capability Declarations (2026-08 new; IANA filings #72-#77 rejected 2026-03-16 "generic name", probe anyway) ──────────
@@ -258,7 +262,10 @@ export async function checkWellKnownEndpoints(domain: string): Promise<WellKnown
     { path: "/.well-known/ai", name: "AI Discovery (Rootz, IANA #80 rejected - too generic, see #80 feedback)" },
     { path: "/.well-known/ai-plugin.json", name: "AI Plugin (ChatGPT plugins)" },
     // ── 2026-09 additions: competing discovery conventions (probe generically, parse tolerantly) ──
-    { path: "/.well-known/mcp-server", name: "MCP Server Discovery (draft-serra-mcp-discovery-uri, exp 2026-09-25)" },
+    {
+      path: "/.well-known/mcp-server",
+      name: "MCP Server Discovery (draft-serra-mcp-discovery-uri, lapsed 2026-09-25 — probe kept)",
+    },
     { path: "/.well-known/agent.json", name: "ADP Agent Discovery (draft-pro-adp-agent-discovery, Layer 2 metadata)" },
     {
       path: "/.well-known/mcp-registry-auth",

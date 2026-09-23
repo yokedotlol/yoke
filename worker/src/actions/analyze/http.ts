@@ -50,6 +50,18 @@ export function auditSecurityHeaders(headers: Record<string, string>): { audit: 
     // Situational — shown for awareness, zero scoring weight
     { name: "X-XSS-Protection", key: "x-xss-protection", weight: 0, recommend: "Deprecated — modern CSP is preferred" },
     {
+      name: "RateLimit",
+      key: "ratelimit",
+      weight: 0,
+      recommend: "Present on API endpoints per draft-ietf-httpapi-ratelimit-headers-11 (RFC 9651 structured fields)",
+    },
+    {
+      name: "RateLimit-Policy",
+      key: "ratelimit-policy",
+      weight: 0,
+      recommend: "Present on API endpoints per draft-ietf-httpapi-ratelimit-headers-11 (replaces legacy X-RateLimit-*)",
+    },
+    {
       name: "Cross-Origin-Opener-Policy",
       key: "cross-origin-opener-policy",
       weight: 0,

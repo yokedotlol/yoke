@@ -7,6 +7,9 @@ All notable changes to Yoke are documented here.
 ## [Unreleased]
 
 ### Added
+- **Well-known probe expansion (20 → 24)** — `/.well-known/mcp/catalog.json` (SEP-2127 canonical catalog path), `/ard.json` + `/.well-known/ard.json` (ARD alternate spelling, 157 publishers per neuronto census), `/.well-known/x402` (bare x402 payment manifest; `/.well-known/x402` outnumbers `/.well-known/x402.json` 902-to-80).
+- **_x402 TXT probe** — IANA underscored registry entry (registered 2026-08-11; now draft-jeftovic-x402-dns-discovery-00).
+- **RateLimit header awareness** — `RateLimit` + `RateLimit-Policy` (draft-ietf-httpapi-ratelimit-headers-11, RFC 9651 structured fields) added to the security-header audit as zero-weight situational checks.
 - **schema.org 30.1 structured-data specs** — `DigitalProductPassport`, `EnvironmentalProductDeclaration`, `DeclarationOfConformity` validations; `Product` gains EU DPP recommended fields (`hasDigitalProductPassport`, `authorizedRepresentative`, `importer`, `recycledContentPercentage`, `substanceOfConcern`) + retail-feed fields (`consumerNotice`, `isOftenBoughtWith`, `specification`).
 - **Rybbit privacy-respecting analytics** — open-source cookieless analytics (`rybbit.io`) added to third-party script detection.
 - **MCP registry auth probe** — `/.well-known/mcp-registry-auth` (IANA filing #68, official MCP registry) added to well-known endpoint probes (19 → 20).
