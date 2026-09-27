@@ -223,7 +223,7 @@ export const openApiSpec = {
       post: {
         tags: ["ai"],
         summary: "Get assembled AI prompt",
-        description: "Returns prompt without LLM call. Domain must have been analyzed first. 20 req/hr.",
+        description: "Returns prompt without LLM call. Domain must have been analyzed first. 10 req/hr.",
         requestBody: {
           required: true,
           content: {

@@ -37,7 +37,7 @@ Sites are auto-classified into 7 archetypes (commerce, content, application, cor
 | Area | Highlights |
 |------|-----------|
 | **DNS** | A/AAAA/MX/NS/TXT/CNAME/CAA/SOA, TTLs, provider detection |
-| **WHOIS / RDAP** | 4-tier resolution (RDAP → IANA → WhoisFreaks → raw), registrar, dates, age |
+| **WHOIS / RDAP** | 3-tier resolution (RDAP → IANA bootstrap → WhoisFreaks), registrar, dates, age |
 | **SSL/TLS** | Grade, issuer, protocols, key exchange, OCSP, CT logs, SSL Labs deep link |
 | **Security Headers** | CSP, HSTS, X-Frame-Options, Permissions-Policy, Referrer-Policy, cookie audit |
 | **Email Auth** | SPF, DKIM, DMARC, BIMI, MTA-STS, TLS-RPT |
@@ -45,9 +45,9 @@ Sites are auto-classified into 7 archetypes (commerce, content, application, cor
 | **Tech Stack** | 250+ fingerprints — CMS, frameworks, CDNs, analytics, 25+ cookie consent platforms |
 | **WordPress** | Version, theme, 100+ plugins, page builder, hosting |
 | **Breaches** | HIBP lookup with time-decay severity weighting |
-| **Subdomains** | 130 curated prefixes + CT log discovery via CertSpotter |
+| **Subdomains** | 150+ curated prefixes + CT log discovery via CertSpotter |
 | **Accessibility** | 9 WCAG quick checks (labels, alt text, contrast, headings, landmarks) |
-| **Network** | Global availability, TCP timing, BGP routing, WAF detection (29 providers) |
+| **Network** | Global availability, TCP timing, BGP routing, WAF detection (16 providers) |
 | **Company** | Wikidata + Brandfetch + Crunchbase enrichment, stock ticker |
 | **AI Analysis** | Score Waterfall (deterministic) + Cross-Signal Insights (LLM, DeepSeek V3) |
 
