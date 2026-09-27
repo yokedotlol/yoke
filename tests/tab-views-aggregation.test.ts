@@ -96,7 +96,7 @@ describe("tab_views daily aggregation", () => {
     const db = memoryD1(captured);
     const env = { STATS_DB: db, REFERENCE_DATA: stubKV() } as Env;
 
-    const resp = await worker.fetch(trackReq("dns"), env);
+    const resp = await worker.fetch(trackReq("overview"), env);
     expect(resp.status).toBe(200);
 
     const insertSql = captured.sql.find((s) => s.startsWith("INSERT INTO tab_views"));
@@ -113,9 +113,9 @@ describe("tab_views daily aggregation", () => {
     const db = memoryD1(captured) as D1Database & { _tab: Map<string, number> };
     const env = { STATS_DB: db, REFERENCE_DATA: stubKV() } as Env;
 
-    await worker.fetch(trackReq("ssl"), env);
-    await worker.fetch(trackReq("ssl"), env);
-    await worker.fetch(trackReq("ssl"), env);
+    await worker.fetch(trackReq("security"), env);
+    await worker.fetch(trackReq("security"), env);
+    await worker.fetch(trackReq("security"), env);
 
     // One row, count 3 — not three rows.
     expect(db._tab.size).toBe(1);
@@ -127,14 +127,14 @@ describe("tab_views daily aggregation", () => {
     const db = memoryD1(captured) as D1Database & { _tab: Map<string, number> };
     const env = { STATS_DB: db, REFERENCE_DATA: stubKV() } as Env;
 
-    await worker.fetch(trackReq("dns"), env);
-    await worker.fetch(trackReq("dns"), env);
-    await worker.fetch(trackReq("ssl"), env);
+    await worker.fetch(trackReq("overview"), env);
+    await worker.fetch(trackReq("overview"), env);
+    await worker.fetch(trackReq("security"), env);
 
     const stats = await getUsageStats(db, 30);
     expect(stats.tab_views).toBeDefined();
-    expect(stats.tab_views?.dns).toBe(2);
-    expect(stats.tab_views?.ssl).toBe(1);
+    expect(stats.tab_views?.overview).toBe(2);
+    expect(stats.tab_views?.security).toBe(1);
 
     const readSql = captured.sql.find((s) => s.includes("FROM tab_views"));
     expect(readSql).toContain("SUM(views)");
@@ -154,5 +154,18 @@ describe("tab_views daily aggregation", () => {
       env,
     );
     expect(resp.status).toBe(400);
+  });
+
+  it("ignores unknown tab IDs instead of tracking them (privacy allowlist)", async () => {
+    const captured = { sql: [] as string[] };
+    const db = memoryD1(captured) as D1Database & { _tab: Map<string, number> };
+    const env = { STATS_DB: db, REFERENCE_DATA: stubKV() } as Env;
+
+    const resp = await worker.fetch(trackReq("attacker@example.com"), env);
+    expect(resp.status).toBe(200);
+    // No write: unknown tab values must never become stats keys.
+    const insertSql = captured.sql.find((s) => s.startsWith("INSERT INTO tab_views"));
+    expect(insertSql).toBeUndefined();
+    expect(db._tab.size).toBe(0);
   });
 });

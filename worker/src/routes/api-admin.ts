@@ -158,12 +158,28 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
   // Daily-aggregated: one row per (tab, day) incremented via UPSERT, mirroring
   // endpoint_usage. The old per-call INSERT was a write-amp hole (one row per
   // tab click); we only ever read aggregate counts, so per-event rows were waste.
+  // Tab must be a known client tab ID — arbitrary values would become unbounded
+  // stats keys carrying user-controlled input into analytics.
+  const KNOWN_TABS = new Set([
+    "overview",
+    "security",
+    "foundations",
+    "speed",
+    "reputation",
+    "discoverability",
+    "email",
+    "insights",
+  ]);
   if (method === "POST" && path === "/api/track-tab") {
     if (!env.STATS_DB || env.DISABLE_ANALYTICS) return json({ ok: true });
     const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/track-tab", env);
     if (rl.blocked) return rl.blocked;
     const body = await parseBody<{ domain?: string; tab?: string }>(request);
     if (!body.tab) return jsonError("tab required", "MISSING_TAB", 400);
+    // Unknown tab IDs are ignored, not tracked — arbitrary values would
+    // become unbounded stats keys carrying user-controlled input into
+    // analytics.
+    if (!KNOWN_TABS.has(body.tab)) return json({ ok: true });
     const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const upsertSql = `INSERT INTO tab_views (tab, day, views) VALUES (?, ?, 1)
        ON CONFLICT(tab, day) DO UPDATE SET views = views + 1`;
