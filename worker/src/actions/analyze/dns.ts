@@ -73,13 +73,16 @@ export async function checkDns(domain: string): Promise<DnsRecord[]> {
   // Agent discovery records (ANS + DNS-AID subdomains) — skip if wildcard DNS detected
   // Also detect RFC 10023 _for-sale (commercial intent, first underscored commercial record)
   // 2026-09-09: added _agent (AID convention, v=aid1 TXT per agentcommunity/bunsdev, v1.1)
-  // 2026-09-23: added _x402 (IANA underscored registry, registered 2026-08-11; draft-jeftovic-x402-dns-discovery-00)
+  // 2026-09-23: added _x402 (IANA underscored registry, registered 2026-08-11; x402 DNS drafts lapsed — registry stands)
+  // 2026-09-30: added _index._agents (DNS-AID entry point, draft-mozleywilliams-dnsop-dnsaid, Standards Track, dnsop WG;
+  //   spec uses SVCB params, probed generically as TXT like the other agent records)
   if (!hasWildcardDns) {
     const agentQueries = [
       { prefix: "_ans", label: "TXT" },
       { prefix: "_agents", label: "TXT" },
       { prefix: "_agentid", label: "TXT" },
       { prefix: "_agent", label: "TXT" },
+      { prefix: "_index._agents", label: "TXT" },
       { prefix: "_x402", label: "TXT" },
       { prefix: "_for-sale", label: "TXT" },
     ].map(async ({ prefix, label }) => {

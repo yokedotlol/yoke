@@ -2378,4 +2378,17 @@ export const fingerprints: Fingerprint[] = [
       htmlPatterns: [/airtable\.com\/embed/i, /airtable\.com\/shrink/i],
     },
   },
+
+  // ─── AI Agent Interfaces ──────────────────────────────────────────────
+  {
+    name: "WebMCP",
+    category: "AI Agent",
+    patterns: {
+      // 2026-09-30: W3C WebML CG proposal (draft spec Sep 15, 2026) — modelContext.registerTool() /
+      // data-webmcp-* attrs, gated by Permissions-Policy: tools. Deployed: Shopify (all storefronts),
+      // Cloudflare one-toggle, WordPress Playground 16-tool proxy, ChatGPT desktop browser
+      headers: { "permissions-policy": /(^|[;,])\s*tools\b/i },
+      htmlPatterns: [/data-webmcp-/i, /navigator\.modelContext/i, /\bregisterTool\s*\(/i],
+    },
+  },
 ];

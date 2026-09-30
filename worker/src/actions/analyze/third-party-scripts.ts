@@ -69,6 +69,7 @@ const CATEGORY_PATTERNS: CategoryPattern[] = [
       /pirsch\.io/i,
       /tinyanalytics\.io/i,
       /rybbit\.io/i,
+      /flowsery\.com/i, // 2026-09-30: verified — Flowsery, privacy-first GA alternative (EU, cookie-free, _fs_vid cookie)
     ],
   },
   {

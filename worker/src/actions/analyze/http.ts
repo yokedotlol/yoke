@@ -62,6 +62,13 @@ export function auditSecurityHeaders(headers: Record<string, string>): { audit: 
       recommend: "Present on API endpoints per draft-ietf-httpapi-ratelimit-headers-11 (replaces legacy X-RateLimit-*)",
     },
     {
+      name: "Content-Signal",
+      key: "content-signal",
+      weight: 0,
+      recommend:
+        "Declare AI/training usage intent per contentsignals.org (search=, ai-input=, ai-train=); Cloudflare default search=yes, ai-train=no",
+    },
+    {
       name: "Cross-Origin-Opener-Policy",
       key: "cross-origin-opener-policy",
       weight: 0,
