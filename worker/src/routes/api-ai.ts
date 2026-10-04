@@ -2,7 +2,7 @@
 import { buildAIPrompt, getAIAnalysis } from "../actions/ai-analysis";
 import { recordEndpointHit } from "../analysis-budget";
 import { cleanDomain, getAnalysisCacheTtlMs, getFromCache } from "../helpers";
-import { addHeaders, checkRateLimitAuto, json, jsonError, parseBody, type RouteContext } from "./shared";
+import { json, jsonError, parseBody, type RouteContext } from "./shared";
 
 export async function handle(rc: RouteContext): Promise<Response | null> {
   const { request, path, method, env, ctx, clientIP, track: _track } = rc;
@@ -44,10 +44,10 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
     return aiResp;
   }
 
-  // POST /api/ai-prompt — returns the assembled prompt for the prompt editor (no LLM call)
+  // POST /api/ai-prompt — returns the assembled prompt for the prompt editor (no LLM call).
+  // This handler only reads the cached analysis — no fresh computation — so per the
+  // fleet rule (cache hits skip rate limits) it does not consume rate-limit credit.
   if (method === "POST" && path === "/api/ai-prompt") {
-    const rl = await checkRateLimitAuto(env.STATS_DB, clientIP, "/api/ai-prompt", env);
-    if (rl.blocked) return rl.blocked;
     const body = await parseBody<{ domain?: string }>(request);
     if (!body.domain || typeof body.domain !== "string") return jsonError("domain is required", "MISSING_DOMAIN", 400);
     const domain = cleanDomain(body.domain);
@@ -63,7 +63,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
       return jsonError("Domain not yet analyzed. Run a standard analysis first.", "NOT_ANALYZED", 400);
     }
     const prompt = buildAIPrompt(analysisCache);
-    return addHeaders(json(prompt), rl.headers);
+    return json(prompt);
   }
 
   return null; // not handled

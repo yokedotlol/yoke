@@ -47,16 +47,17 @@ export default function PrivacyPage() {
       <Section title="What We Collect">
         <p>
           When you analyze a domain, we collect the domain name you submit. We do not use cookies, trackers, or
-          fingerprinting. No accounts, no emails, no personal information.
+          fingerprinting. No accounts, no emails, no personal information. The web UI loads fonts from Google Fonts,
+          which receives your IP address when the font stylesheet is fetched.
         </p>
       </Section>
 
       <Section title="Rate Limiting & IP Handling">
         <p>
           To prevent abuse, Yoke enforces per-IP rate limits. Your IP address is{" "}
-          <strong>never stored in raw form</strong>. Instead, we immediately hash it using SHA-256 with a secret salt.
-          The resulting hash is used only to count requests within a rate-limit window — it cannot be reversed to
-          recover your IP address.
+          <strong>never stored in raw form</strong>. Instead, we immediately hash it using SHA-256 with a server-side
+          salt (set <code>IP_HASH_SALT</code> on self-hosted instances). The resulting hash is truncated and used only
+          to count requests within a rate-limit window.
         </p>
         <p>
           Rate-limit records are automatically cleaned up within hours. No raw IP addresses are written to any database
@@ -89,9 +90,9 @@ export default function PrivacyPage() {
 
       <Section title="Caching">
         <p>
-          Analysis results are cached for up to 24 hours to improve performance. Cached results contain public
-          technical, registration, security, performance, reputation, and business information about the domains you
-          analyze.
+          Analysis results are cached for up to 24 hours to improve performance (badge scores for up to 48 hours).
+          Cached results contain public technical, registration, security, performance, reputation, and business
+          information about the domains you analyze.
         </p>
       </Section>
 
@@ -181,16 +182,16 @@ export default function PrivacyPage() {
       <Section title="Data Retention">
         <p>
           Rate-limit hashes are cleaned up automatically within hours. Analytics data is retained for 90 days in
-          aggregate form but contains no personal identifiers. Domain analysis results are cached for up to 24 hours.
-          Domain scores and scan history are retained to power percentile rankings.
+          aggregate form but contains no personal identifiers. Domain analysis results are cached for up to 24 hours
+          (badge scores up to 48 hours). Domain scores and scan history are retained to power percentile rankings.
         </p>
       </Section>
 
       <Section title="GDPR">
         <p>
           Yoke does not store raw IP addresses. Short-lived rate-limit keys are pseudonymized via SHA-256 with a
-          server-side secret salt before storage and are deleted within hours. Aggregate analytics contain no IP hash or
-          other tracking identifier. No cookies or accounts are used. If you have questions about data handling,{" "}
+          server-side salt before storage and are deleted within hours. Aggregate analytics contain no IP hash or other
+          tracking identifier. No cookies or accounts are used. If you have questions about data handling,{" "}
           <a href="https://github.com/yokedotlol/yoke/issues" style={{ color: "var(--accent)" }}>
             open an issue
           </a>

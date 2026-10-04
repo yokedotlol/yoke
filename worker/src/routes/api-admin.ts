@@ -638,9 +638,9 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
         },
         "POST /api/ai-analysis": {
           description:
-            "AI-powered domain analysis from 6 expert personas. Requires OpenRouter API key via X-OpenRouter-Key header or server-side config.",
+            "AI-powered domain analysis from 6 expert personas. Uses the shared service key (10/hr per IP), or your own OpenRouter key via X-OpenRouter-Key header — a key is required to customize the model or prompt.",
           body: '{"domain": "example.com", "model": "optional-model-id"}',
-          rate_limit: "none (API-key gated)",
+          rate_limit: "10 req/hr (shared key)",
         },
         "POST /api/company": {
           description: "Company/business info via Wikidata, Brandfetch, Crunchbase",
@@ -702,7 +702,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
         },
       },
       rate_limiting: {
-        note: "Rate limits are per-IP, per-endpoint. Cached responses (analysis results served from cache) do not count against rate limits — only requests that trigger fresh computation are counted. Self-hosted instances have no rate limits.",
+        note: "Rate limits are per-IP, per-endpoint. Cached responses (analysis results served from cache) do not count against rate limits — only requests that trigger fresh computation are counted. Self-hosted instances enforce the same per-IP limits when rate-limit storage is configured. A global daily analysis budget also applies and can return 429 (BUDGET_EXCEEDED) when reached.",
         headers: ["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
       },
       examples: {

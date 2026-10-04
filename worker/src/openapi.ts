@@ -196,7 +196,8 @@ export const openApiSpec = {
       post: {
         tags: ["ai"],
         summary: "AI-powered domain analysis",
-        description: "6 expert personas. BYO OpenRouter key via X-OpenRouter-Key header.",
+        description:
+          "6 expert personas. Shared service key (10/hr per IP), or BYO OpenRouter key via X-OpenRouter-Key header (required to customize model or prompt).",
         requestBody: {
           required: true,
           content: {
@@ -223,7 +224,8 @@ export const openApiSpec = {
       post: {
         tags: ["ai"],
         summary: "Get assembled AI prompt",
-        description: "Returns prompt without LLM call. Domain must have been analyzed first. 10 req/hr.",
+        description:
+          "Returns prompt without LLM call. Domain must have been analyzed first. Cache-only read — does not consume rate-limit credit.",
         requestBody: {
           required: true,
           content: {
