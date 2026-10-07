@@ -2387,8 +2387,10 @@ export const fingerprints: Fingerprint[] = [
       // 2026-09-30: W3C WebML CG proposal (draft spec Sep 15, 2026) — modelContext.registerTool() /
       // data-webmcp-* attrs, gated by Permissions-Policy: tools. Deployed: Shopify (all storefronts),
       // Cloudflare one-toggle, WordPress Playground 16-tool proxy, ChatGPT desktop browser
+      // 2026-10-07: spec-canonical surface is document.modelContext; navigator.modelContext is legacy
+      // (earlier Chrome builds / MCP-B polyfill). Match both.
       headers: { "permissions-policy": /(^|[;,])\s*tools\b/i },
-      htmlPatterns: [/data-webmcp-/i, /navigator\.modelContext/i, /\bregisterTool\s*\(/i],
+      htmlPatterns: [/data-webmcp-/i, /document\.modelContext/i, /navigator\.modelContext/i, /\bregisterTool\s*\(/i],
     },
   },
 ];
