@@ -291,7 +291,7 @@ export default function AboutPage() {
           <strong style={{ color: "var(--text)" }}>User-Agent strings:</strong>
         </P>
         <P>Our primary scanner identifies as a standard Chrome browser:</P>
-        <CodeBlock code="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" />
+        <CodeBlock code="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" />
 
         <P style={{ marginTop: 16 }}>For some probes (network health, news, social), we use:</P>
         <CodeBlock code="Mozilla/5.0 (compatible; Yoke/1.0; +https://github.com/yokedotlol/yoke)" />

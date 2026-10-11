@@ -125,7 +125,7 @@ Fix snippets included for regressions (HSTS, CSP, X-Frame-Options, etc.):
 - csp_missing: Add header: Content-Security-Policy: default-src 'self'; ...
 ```
 
-Pattern: run `yoke_score_summary` daily via MCP, save baseline locally, call `yoke_diff` to get only what dropped + copy/paste fix. Zero KV writes on Yoke side, aggregate counters only — fits the `.lol` privacy rule.
+Pattern: run `yoke_score_summary` daily via MCP, save baseline locally, call `yoke_diff` to get only what dropped + copy/paste fix. No watchlist or baseline storage on Yoke side — the one domain you diff is analyzed and cached like a normal `yoke_analyze` call.
 
 ## Scoring Axes
 

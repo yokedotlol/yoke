@@ -24,7 +24,7 @@ Privacy note: analyzed domains are sent to the .lol APIs listed above. The exten
 - **Satellite API integration** — direct reads from xhttp.lol, ns.lol, and certs.lol with links to the full Yoke report.
 - **Short-lived local cache** — keeps recent API results in memory so switching tabs is fast.
 - **Local history** — stores up to 20 recently analyzed domains in browser local storage.
-- **Minimal permissions** — uses `activeTab`, `sidePanel`, `storage`, and host access for the .lol APIs.
+- **Minimal permissions** — uses `activeTab`, `sidePanel`, `storage`, `contextMenus`, and host access for the .lol APIs.
 
 ## Screenshots
 

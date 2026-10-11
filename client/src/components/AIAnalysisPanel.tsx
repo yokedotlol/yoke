@@ -1452,7 +1452,11 @@ export function AIAnalysisPanel({
         {/* Model attribution */}
         {insightsResult && (
           <span style={{ fontSize: "9px", color: "var(--dim)", fontStyle: "italic" }}>
-            Analysis by DeepSeek V3 via{" "}
+            Analysis by{" "}
+            {getSavedKey()
+              ? AVAILABLE_MODELS.find((m) => m.id === selectedModel)?.label || selectedModel
+              : "DeepSeek V3"}{" "}
+            via{" "}
             <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" style={{ color: "var(--dim)" }}>
               OpenRouter
             </a>

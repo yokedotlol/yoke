@@ -111,7 +111,7 @@ Click the Yoke icon on any site to open a side panel with full analysis. To load
 
 ## MCP Server
 
-For AI coding agents. 3 tools: `yoke_analyze`, `yoke_score_summary`, `yoke_compare`.
+For AI coding agents. 4 tools: `yoke_analyze`, `yoke_score_summary`, `yoke_compare`, `yoke_diff`.
 
 ```bash
 npm install -g @yokedotlol/mcp-server

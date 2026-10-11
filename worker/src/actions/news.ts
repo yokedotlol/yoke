@@ -119,6 +119,6 @@ export async function getNews(kv: KVNamespace, rawDomain: string, statsDb?: D1Da
   }
 
   const result = { google_news: googleNews, hacker_news: hackerNews };
-  await setCache(kv, domain, "news", result, 60 * 60 * 1000);
+  await setCache(kv, domain, "news", result, 4 * 60 * 60 * 1000);
   return { ...result, cached: false };
 }

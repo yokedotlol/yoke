@@ -663,7 +663,7 @@ On Cloudflare Workers, Cloudflare's edge provides the first three layers automat
 
 Every Yoke instance — managed or self-hosted — ships with these protections built into the Worker code:
 
-- **Per-IP rate limiting** — configurable per-endpoint limits stored in D1 (default: 20 analyses/hr, 20 compares/hr, 15 subdomain scans/hr, 30 availability checks/hr). Set to `0` to disable.
+- **Per-IP rate limiting** — configurable per-endpoint limits stored in a Durable Object by default (D1 fallback when `RATE_LIMITER` is unbound or `RATE_LIMIT_BACKEND=d1`) (default: 20 analyses/hr, 20 compares/hr, 15 subdomain scans/hr, 30 availability checks/hr). Set to `0` to disable.
 - **SSRF protection** — all outbound fetches are checked against private/reserved IP ranges. Redirect chains are followed manually with SSRF checks at each hop.
 - **CORS policy** — `Access-Control-Allow-Origin: *` for GET/POST/OPTIONS (public API by design). Admin endpoints require Basic auth.
 - **Content-Security-Policy** — `frame-ancestors 'self'` prevents clickjacking.
