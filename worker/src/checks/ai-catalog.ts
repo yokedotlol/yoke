@@ -19,33 +19,19 @@ const DEFAULT: AiCatalogResult = {
   hasTrustManifest: false,
 };
 
-async function checkAiCatalog(domain: string, instanceHost?: string): Promise<AiCatalogResult> {
-  // Self-analysis bypass: CF Workers can't fetch their own zone
-  if (instanceHost && domain === instanceHost) {
-    return {
-      found: true,
-      specVersion: "1.0",
-      entryCount: 2,
-      entryTypes: ["application/mcp-server-card+json", "application/openapi+json"],
-      hasHost: true,
-      hasTrustManifest: false,
-    };
-  }
-
+async function fetchCatalog(url: string): Promise<AiCatalogResult | null> {
   try {
-    const resp = await fetchWithTimeout(`https://${domain}/.well-known/ai-catalog.json`, {
-      timeout: 5000,
-    });
-    if (!resp.ok) return { ...DEFAULT };
+    const resp = await fetchWithTimeout(url, { timeout: 5000 });
+    if (!resp.ok) return null;
 
     const contentType = resp.headers.get("content-type") ?? "";
-    if (!contentType.includes("json") && !contentType.includes("text")) return { ...DEFAULT };
+    if (!contentType.includes("json") && !contentType.includes("text")) return null;
 
     const text = await resp.text();
-    if (text.length > 100_000) return { ...DEFAULT }; // guard against absurdly large responses
+    if (text.length > 100_000) return null; // guard against absurdly large responses
 
     const data = JSON.parse(text);
-    if (!data || typeof data !== "object") return { ...DEFAULT };
+    if (!data || typeof data !== "object") return null;
 
     const entries = Array.isArray(data.entries) ? data.entries : [];
     const types: string[] = Array.from(
@@ -67,8 +53,33 @@ async function checkAiCatalog(domain: string, instanceHost?: string): Promise<Ai
       hasTrustManifest: hasTrust,
     };
   } catch {
-    return { ...DEFAULT };
+    return null;
   }
+}
+
+async function checkAiCatalog(domain: string, instanceHost?: string): Promise<AiCatalogResult> {
+  // Self-analysis bypass: CF Workers can't fetch their own zone
+  if (instanceHost && domain === instanceHost) {
+    return {
+      found: true,
+      specVersion: "1.0",
+      entryCount: 2,
+      entryTypes: ["application/mcp-server-card+json", "application/openapi+json"],
+      hasHost: true,
+      hasTrustManifest: false,
+    };
+  }
+
+  // ARD spec v0.91 (2026-08-26): /.well-known/ard.json is canonical;
+  // /.well-known/ai-catalog.json is the predecessor path consumers may
+  // additionally consult. Try canonical first, fall back to predecessor.
+  const canonical = await fetchCatalog(`https://${domain}/.well-known/ard.json`);
+  if (canonical) return canonical;
+
+  const predecessor = await fetchCatalog(`https://${domain}/.well-known/ai-catalog.json`);
+  if (predecessor) return predecessor;
+
+  return { ...DEFAULT };
 }
 
 export const aiCatalogCheck: Check = {

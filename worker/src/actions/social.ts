@@ -154,6 +154,13 @@ export async function getSocialAccounts(kv: KVNamespace, rawDomain: string, env?
       pattern: /https?:\/\/([a-zA-Z0-9_-]+)\.substack\.com(?:[/?#]|$)/gi,
       selfDomain: "substack.com",
     },
+    {
+      // 2026-10-14: verified across multiple independent link-in-bio pages
+      // (app.vylitworld.com/<username>); platform launched Apr 15, 2026.
+      platform: "Vylit",
+      pattern: /https?:\/\/app\.vylitworld\.com\/([a-zA-Z0-9._-]+)(?:[/?#]|$)/gi,
+      selfDomain: "vylitworld.com",
+    },
   ];
 
   // Determine the base domain being analyzed (to skip self-referencing links)

@@ -56,8 +56,9 @@ export function handle(rc: RouteContext): Response | Promise<Response> | null {
     );
   }
 
-  // ARD ai-catalog.json — Agentic Resource Discovery (https://agenticresourcediscovery.org)
-  if (method === "GET" && path === "/.well-known/ai-catalog.json") {
+  // ARD catalog — Agentic Resource Discovery (https://agenticresourcediscovery.org)
+  // Spec v0.91: /.well-known/ard.json is canonical; ai-catalog.json is the predecessor path.
+  if (method === "GET" && (path === "/.well-known/ai-catalog.json" || path === "/.well-known/ard.json")) {
     const catalog = {
       specVersion: "1.0",
       host: {

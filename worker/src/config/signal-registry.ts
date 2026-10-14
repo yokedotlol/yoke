@@ -2205,12 +2205,13 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
     actionable: true,
     canBeNonGood: false,
     canBeGood: true,
-    effort: "~15 min — create /.well-known/ai-catalog.json",
-    fixDescription: "Publish an ARD ai-catalog.json to make your tools and APIs discoverable by AI agents",
+    effort: "~15 min — create /.well-known/ard.json",
+    fixDescription:
+      "Publish an ARD catalog at /.well-known/ard.json (canonical since spec v0.91; ai-catalog.json is the predecessor path) to make your tools and APIs discoverable by AI agents",
     weightRange: [1, 2],
     goodPrevalence: 0.01,
     promptGuidance:
-      "Agentic Resource Discovery (ARD) catalog at /.well-known/ai-catalog.json. Very new spec (v0.9, June 2026) — presence signals cutting-edge AI readiness. Absence is neutral — reward-only. More valuable for sites that expose APIs, MCP servers, or AI-accessible services.",
+      "Agentic Resource Discovery (ARD) catalog. Spec v0.91 (Aug 2026) made /.well-known/ard.json canonical; /.well-known/ai-catalog.json is the predecessor path and is still consulted. Yoke checks both. Presence signals cutting-edge AI readiness. Absence is neutral — reward-only. More valuable for sites that expose APIs, MCP servers, or AI-accessible services.",
     archetypeNotes: {
       corporate: "Enterprise sites with APIs or developer platforms benefit most.",
       application: "SaaS products with APIs or integrations should consider ARD for discoverability.",
