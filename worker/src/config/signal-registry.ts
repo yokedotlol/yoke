@@ -2201,7 +2201,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalDef> = {
   ai_catalog: {
     axis: "discoverability",
     label: "AI Catalog (ARD)",
-    absentLabel: "No ai-catalog.json",
+    absentLabel: "No ard.json",
     actionable: true,
     canBeNonGood: false,
     canBeGood: true,

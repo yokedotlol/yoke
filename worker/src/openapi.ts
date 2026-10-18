@@ -456,11 +456,21 @@ export const openApiSpec = {
         },
       },
     },
+    "/.well-known/ard.json": {
+      get: {
+        tags: ["utility"],
+        summary: "ARD catalog (canonical)",
+        description:
+          "Agentic Resource Discovery catalog. Canonical path since ARD spec v0.91; /.well-known/ai-catalog.json is the predecessor alias and serves the identical catalog.",
+        responses: { "200": { description: "ard catalog" } },
+      },
+    },
     "/.well-known/ai-catalog.json": {
       get: {
         tags: ["utility"],
-        summary: "ARD ai-catalog",
-        description: "Agentic Resource Discovery catalog.",
+        summary: "ARD ai-catalog (predecessor alias)",
+        description:
+          "Agentic Resource Discovery catalog. Predecessor path — canonical path is /.well-known/ard.json (ARD spec v0.91); both serve the identical catalog.",
         responses: { "200": { description: "ai-catalog" } },
       },
     },

@@ -1033,9 +1033,9 @@ export function calculateAiReadiness(
   const rssFeed = rssMatch?.[1] ?? null;
   checks.push({ name: "RSS/Atom feed", passed: !!rssFeed, points: rssFeed ? 5 : 0 });
 
-  // ARD ai-catalog.json (Agentic Resource Discovery)
+  // ARD ard.json (Agentic Resource Discovery; ai-catalog.json is the predecessor path)
   const hasAiCatalog = !!aiCatalog?.found;
-  checks.push({ name: "ARD ai-catalog.json", passed: hasAiCatalog, points: hasAiCatalog ? 15 : 0 });
+  checks.push({ name: "ARD ard.json", passed: hasAiCatalog, points: hasAiCatalog ? 15 : 0 });
 
   const hasTrustManifest = !!aiCatalog?.hasTrustManifest;
   if (hasAiCatalog) {

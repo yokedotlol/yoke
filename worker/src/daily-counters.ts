@@ -232,6 +232,9 @@ export async function pruneOldRows(env: Env): Promise<void> {
   await safeRun("DELETE FROM endpoint_rate_limits WHERE ts < ?", cutoff1d);
   await safeRun("DELETE FROM api_errors WHERE ts < ?", cutoff7d);
   await safeRun("DELETE FROM request_aggregates WHERE day < ?", rmCutoffDay);
+  await safeRun("DELETE FROM endpoint_usage WHERE day < ?", rmCutoffDay);
+  await safeRun("DELETE FROM tab_views WHERE day < ?", rmCutoffDay);
+  await safeRun("DELETE FROM daily_counters WHERE day < ?", rmCutoffDay);
   await cleanupPrivacyResidue(env);
 }
 
