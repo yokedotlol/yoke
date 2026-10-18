@@ -638,7 +638,7 @@ export async function handle(rc: RouteContext): Promise<Response | null> {
         },
         "POST /api/ai-analysis": {
           description:
-            "AI-powered domain analysis from 6 expert personas. Uses the shared service key (10/hr per IP), or your own OpenRouter key via X-OpenRouter-Key header — a key is required to customize the model or prompt.",
+            "AI-powered domain analysis of the scan results. Uses the shared service key (10/hr per IP), or your own OpenRouter key via X-OpenRouter-Key header — a key is required to customize the model or prompt.",
           body: '{"domain": "example.com", "model": "optional-model-id"}',
           rate_limit: "10 req/hr (shared key)",
         },

@@ -11,7 +11,7 @@
 | Worker (service) | 2.4.0 | `YOKE_VERSION` in `worker/src/helpers.ts` |
 | CLI | 2.2.0 | `cli/` GoReleaser tag `cli/v2.2.0` |
 | MCP Server | 1.0.0 | `mcp/package.json` |
-| Chrome Extension | 2.0.0 | `extension/manifest.json` (code committed; CWS publish blocked — OAuth expired, older version ~1.5.x still live on CWS) |
+| Chrome Extension | 2.2.1 | `extension/manifest.json` (code committed; CWS publish blocked — OAuth expired, older version ~1.5.x still live on CWS) |
 
 ## Scoring
 
@@ -19,7 +19,7 @@
 |--------|-------|
 | Scoring model | Deductive (budget-based, start at 100) |
 | Axes | 6: Security, Speed, Foundations, Reputation, Discoverability, Email |
-| Signal count | 158 |
+| Signal count | 160 |
 | Composite method | Weighted arithmetic mean + outlier floor cap |
 | Tier labels | Excellent, Strong, Moderate, Weak, Critical |
 | Absent penalty | 0.30 × (1 + goodPrevalence) per signal (IDF-influenced) |
@@ -48,7 +48,7 @@
 | Chrome Extension ID | fghkhjlelidaepapcdfjifnlcjmkgpcj |
 | Themes | 12 |
 | API endpoints | 24 total (13 public documented at `/api/docs`) |
-| Cron triggers | Badge pre-warm hourly (`0 */1 * * *`) |
+| Cron triggers | Hourly maintenance (`0 */1 * * *`): flush budget-DO aggregates to daily_counters, prune stale rows. Badge pre-warm sweep removed; badges refresh lazily on view |
 | UptimeRobot | Monitoring `/api/health`, status page linked from `/status` footer |
 
 ### Self-Hosted Instance (yoke-test.lol)
@@ -91,8 +91,8 @@ Worker-side: `flyProbeFetch()` helper in `helpers.ts` handles auth + 429 retry (
 | Aspect | Implementation |
 |--------|---------------|
 | User IP storage | SHA-256 hashed with static salt — raw IPs never persisted |
-| Rate limiting | D1 `endpoint_rate_limits` + `ai_rate_limits` tables store hashed IPs |
-| Anonymous analytics | `request_meta` table: visitor_hash, country, client_type, endpoint, status, latency |
+| Rate limiting | `RateLimiterDO` Durable Object (default backend, `RATE_LIMIT_BACKEND = "do"`); D1 `endpoint_rate_limits` is the fallback. IPs are hashed before storage |
+| Anonymous analytics | Hourly aggregate counters only (`request_aggregates`, `daily_counters`); the per-request `request_meta` table was dropped |
 | BYO API keys | Client `localStorage` only, ephemeral on server (single-request memory, never logged) |
 | Cookies/trackers | None |
 

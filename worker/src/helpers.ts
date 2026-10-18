@@ -93,6 +93,10 @@ export function isValidDomain(domain: string): boolean {
 
 /** Normalize and validate a domain string. Returns the cleaned domain or null if invalid. */
 export function cleanDomain(raw: string): string | null {
+  // Reject email-shaped input outright: domains never contain "@", and
+  // URL-parsing below would otherwise silently strip userinfo from an
+  // address supplied in a URL (POST-only convention: no emails in URLs).
+  if (raw.includes("@")) return null;
   const d = normalizeDomain(raw);
   // Reject IP literals (IPv4 and IPv6)
   if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(d)) return null;

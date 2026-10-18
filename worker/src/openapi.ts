@@ -3,7 +3,7 @@ export const openApiSpec = {
   openapi: "3.1.0",
   info: {
     title: "yoke.lol",
-    version: "1.0.0",
+    version: "2.4.0",
     description:
       "Free domain intelligence & OSINT tool — 160 signals scored across 6 axes (Security, Speed, Foundations, Reputation, Discoverability, Email). No auth required for public endpoints. Cached results skip rate limits. Source: https://github.com/yokedotlol/yoke — MIT licensed.",
     license: { name: "MIT", url: "https://github.com/yokedotlol/yoke/blob/main/LICENSE" },
@@ -197,7 +197,7 @@ export const openApiSpec = {
         tags: ["ai"],
         summary: "AI-powered domain analysis",
         description:
-          "6 expert personas. Shared service key (10/hr per IP), or BYO OpenRouter key via X-OpenRouter-Key header (required to customize model or prompt).",
+          "LLM-powered analysis of the domain's scan results. Shared service key (10/hr per IP), or BYO OpenRouter key via X-OpenRouter-Key header (required to customize model or prompt).",
         requestBody: {
           required: true,
           content: {

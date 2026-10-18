@@ -101,7 +101,7 @@
 - [ ] **White-label env vars are optional with sensible defaults.** Missing `SITE_NAME` defaults to "Yoke", missing `HIDE_*` defaults to showing everything.
   - _Verify:_ Check `config.js` generation in `index.ts` — all white-label vars must have fallback values.
 
-- [ ] **Self-hosted instances have zero rate limits.** Rate limiting is a hosted-service concern, not a self-hosting concern. Self-hosters control their own traffic.
+- [ ] **Self-hosted instances enforce the same per-IP limits when rate-limit storage is configured.** Rate limiting is not a hosted-only concern; self-hosters get the documented default per-endpoint limits (see SELF-HOSTING.md).
   - _Verify:_ Docker Compose and self-hosting docs must not impose rate limits.
 
 - [ ] **Self-hosted instances must not phone home.** No analytics, telemetry, or API calls to yoke.lol from self-hosted instances.
